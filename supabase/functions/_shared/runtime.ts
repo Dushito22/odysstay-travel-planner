@@ -31,15 +31,29 @@ function env(...names: string[]): string {
   throw new HttpError(500, `Server is missing ${names[0]}`);
 }
 
-/** Service-role client. Every query made with it must check ownership explicitly. */
+/**
+ * The server-side key. Prefers the new secret keys (SUPABASE_SECRET_KEYS, a JSON object of name to key)
+ * and falls back to the legacy service role key while it still exists.
+ */
+function secretKey(): string {
+  const raw = Deno.env.get("SUPABASE_SECRET_KEYS");
+  if (raw) {
+    try {
+      const keys = JSON.parse(raw) as Record<string, string>;
+      const key = keys["default"] ?? Object.values(keys)[0];
+      if (key) return key;
+    } catch {
+      // fall through to the legacy key
+    }
+  }
+  return env("SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SECRET_KEY");
+}
+
+/** Admin client. Every query made with it must check ownership explicitly. */
 export function adminClient(): SupabaseClient {
-  return createClient(
-    env("SUPABASE_URL"),
-    env("SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SECRET_KEY"),
-    {
-      auth: { persistSession: false, autoRefreshToken: false },
-    },
-  );
+  return createClient(env("SUPABASE_URL"), secretKey(), {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 }
 
 export async function requireUser(req: Request, admin: SupabaseClient): Promise<User> {

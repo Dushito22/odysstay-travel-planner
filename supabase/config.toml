@@ -1,1 +1,13 @@
 project_id = "nryhvtxprjiylajolcef"
+
+# The functions check the user's session themselves (requireUser), which works with both the
+# legacy JWT secret and the new signing keys. The gateway check is off so it can't reject valid
+# sessions signed with the new keys.
+[functions.agent-chat]
+verify_jwt = false
+
+[functions.draft-message]
+verify_jwt = false
+
+[functions.generate-render]
+verify_jwt = false
