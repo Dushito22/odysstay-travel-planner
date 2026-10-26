@@ -21,8 +21,10 @@ export type ListingBundle = {
 };
 
 export const FACT_ORDER = [
-  "price_eur", "deposit_eur", "deadline", "auction_date", "surface_sqm", "land_sqm", "property_type",
-  "occupancy", "sale_type", "previous_auction_failed", "bid_method", "contact",
+  "price_eur", "min_offer_eur", "appraisal_eur", "min_raise_eur", "deposit_eur", "deposit", "deadline", "auction_date",
+  "surface_sqm", "perizia_surface_sqm", "land_sqm", "property_type", "condition", "year_built", "energy_class",
+  "regularisation_cost_eur", "condo_arrears_eur", "occupancy", "sale_type", "previous_auction_failed", "sale_mode",
+  "bid_method", "court", "contact", "description",
 ];
 
 export function orderFacts(facts: Fact[]) {

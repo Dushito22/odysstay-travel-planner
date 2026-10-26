@@ -65,6 +65,9 @@ def test_build_maps_official_record():
                               "phone": "3330000000", "handles_visits": False}]
     assert l["case_ref"] == "R.G.E. 43/2025, lotto 1"
     assert l["title_en"] == "Apartment in Corciano (PG), 142 m²"
+    assert l["court"] == "Tribunale di Perugia" and l["sale_mode"] == "Online, asynchronous bidding"
+    assert facts["court"]["quote"].startswith("Tribunale di PERUGIA") and facts["court"]["value_text"].startswith("Tribunale di Perugia")
+    assert pvp.court_name("Tribunale di REGGIO NELL'EMILIA") == "Tribunale di Reggio Nell'Emilia"
     assert facts["price_eur"]["quote"] == "Prezzo base: € 231.000,00"
     assert facts["appraisal_eur"]["quote"] == "Valore di stima: € 308.000,00"
     assert facts["surface_sqm"]["quote"] in ITEM["descLotto"]
