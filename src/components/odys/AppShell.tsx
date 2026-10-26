@@ -1,8 +1,10 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bookmark, Compass, Handshake, Inbox, LogOut, Map, User } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { inboxCountQuery } from "@/lib/deal";
+import { useInboxRealtime } from "@/lib/use-deal";
 import { LEGAL_LINE, Wordmark } from "./primitives";
 
 const desktopNav = [
@@ -25,6 +27,8 @@ export function AppShell() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const inboxCount = useQuery({ ...inboxCountQuery, refetchInterval: 60_000 }).data ?? 0;
+  useInboxRealtime();
 
   if (pathname === "/onboarding") return <Outlet />;
 
@@ -51,6 +55,7 @@ export function AppShell() {
             >
               <Icon className="h-4 w-4" />
               {label}
+              {to === "/inbox" && inboxCount > 0 && <CountBadge n={inboxCount} className="ml-auto" />}
             </Link>
           ))}
         </nav>
@@ -99,12 +104,26 @@ export function AppShell() {
             className="flex flex-col items-center gap-1 py-2.5 text-[11px] text-muted-foreground"
             activeProps={{ className: "!text-foreground font-semibold" }}
           >
-            <Icon className="h-5 w-5" />
+            <span className="relative">
+              <Icon className="h-5 w-5" />
+              {to === "/inbox" && inboxCount > 0 && <CountBadge n={inboxCount} className="absolute -right-3 -top-2" />}
+            </span>
             {label}
           </Link>
         ))}
       </nav>
     </div>
+  );
+}
+
+function CountBadge({ n, className }: { n: number; className?: string }) {
+  return (
+    <span
+      aria-label={`${n} item${n === 1 ? "" : "s"} need you`}
+      className={`inline-flex min-w-5 items-center justify-center rounded-full bg-caution px-1.5 text-[11px] font-semibold leading-5 text-background tnum ${className ?? ""}`}
+    >
+      {n > 99 ? "99+" : n}
+    </span>
   );
 }
 

@@ -2,7 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { notFound } from "@tanstack/react-router";
 
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/integrations/supabase/types";
 import type { FeedRow } from "./feed";
 
 type T = Database["public"]["Tables"];
@@ -105,8 +105,8 @@ export function parseDealNotes(raw: string | null): DealNotes {
     if (j && typeof j === "object" && !Array.isArray(j)) {
       const o = j as Record<string, unknown>;
       return {
-        text: typeof o.text === "string" ? o.text : "",
-        documents: Array.isArray(o.documents) ? o.documents.filter((x): x is string => typeof x === "string") : [],
+        text: typeof o["text"] === "string" ? o["text"] : "",
+        documents: Array.isArray(o["documents"]) ? o["documents"].filter((x): x is string => typeof x === "string") : [],
       };
     }
   } catch {
@@ -126,7 +126,7 @@ async function myId() {
   return data.user.id;
 }
 
-async function logEvent(dealId: string, action: string, detail: Record<string, unknown> = {}) {
+async function logEvent(dealId: string, action: string, detail: { [key: string]: Json | undefined } = {}) {
   const { error } = await supabase.from("deal_events").insert({ deal_id: dealId, actor: "user", action, detail });
   if (error) throw error;
 }
