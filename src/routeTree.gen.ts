@@ -13,7 +13,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as StyleguideRouteImport } from './routes/styleguide'
-import { Route as ZzpreviewRouteImport } from './routes/zzpreview'
 import { Route as AuthenticatedDiscoverRouteImport } from './routes/_authenticated/discover'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
 import { Route as AuthenticatedMapRouteImport } from './routes/_authenticated/map'
@@ -41,11 +40,6 @@ const LoginRoute = LoginRouteImport.update({
 const StyleguideRoute = StyleguideRouteImport.update({
   id: '/styleguide',
   path: '/styleguide',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ZzpreviewRoute = ZzpreviewRouteImport.update({
-  id: '/zzpreview',
-  path: '/zzpreview',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedDiscoverRoute = AuthenticatedDiscoverRouteImport.update({
@@ -98,7 +92,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/styleguide': typeof StyleguideRoute
-  '/zzpreview': typeof ZzpreviewRoute
   '/discover': typeof AuthenticatedDiscoverRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/map': typeof AuthenticatedMapRoute
@@ -113,7 +106,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/styleguide': typeof StyleguideRoute
-  '/zzpreview': typeof ZzpreviewRoute
   '/discover': typeof AuthenticatedDiscoverRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/map': typeof AuthenticatedMapRoute
@@ -130,7 +122,6 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/styleguide': typeof StyleguideRoute
-  '/zzpreview': typeof ZzpreviewRoute
   '/_authenticated/discover': typeof AuthenticatedDiscoverRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/map': typeof AuthenticatedMapRoute
@@ -147,7 +138,6 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/styleguide'
-    | '/zzpreview'
     | '/discover'
     | '/inbox'
     | '/map'
@@ -162,7 +152,6 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/styleguide'
-    | '/zzpreview'
     | '/discover'
     | '/inbox'
     | '/map'
@@ -178,7 +167,6 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/login'
     | '/styleguide'
-    | '/zzpreview'
     | '/_authenticated/discover'
     | '/_authenticated/inbox'
     | '/_authenticated/map'
@@ -195,7 +183,6 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   LoginRoute: typeof LoginRoute
   StyleguideRoute: typeof StyleguideRoute
-  ZzpreviewRoute: typeof ZzpreviewRoute
   ListingIdRoute: typeof ListingIdRoute
 }
 
@@ -227,13 +214,6 @@ declare module '@tanstack/react-router' {
       path: '/styleguide'
       fullPath: '/styleguide'
       preLoaderRoute: typeof StyleguideRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/zzpreview': {
-      id: '/zzpreview'
-      path: '/zzpreview'
-      fullPath: '/zzpreview'
-      preLoaderRoute: typeof ZzpreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/discover': {
@@ -332,7 +312,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   LoginRoute: LoginRoute,
   StyleguideRoute: StyleguideRoute,
-  ZzpreviewRoute: ZzpreviewRoute,
   ListingIdRoute: ListingIdRoute,
 }
 export const routeTree = rootRouteImport
