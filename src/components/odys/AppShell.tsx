@@ -97,7 +97,7 @@ export function AppShell() {
             key={to}
             to={to}
             className="flex flex-col items-center gap-1 py-2.5 text-[11px] text-muted-foreground"
-            activeProps={{ className: "text-primary font-medium" }}
+            activeProps={{ className: "text-brand font-medium" }}
           >
             <Icon className="h-5 w-5" />
             {label}

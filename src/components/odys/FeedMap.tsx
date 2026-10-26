@@ -41,7 +41,7 @@ function BoundsWatcher({ onBounds }: { onBounds: (b: Bounds) => void }) {
 export default function FeedMap({ rows, profile, onBounds }: { rows: FeedRow[]; profile: Profile | null; onBounds: (b: Bounds) => void }) {
   const markers = useMemo(() => rows.map((r) => ({ r, icon: icon(r.score) })), [rows]);
   return (
-    <MapContainer center={[42.0, 12.6]} zoom={6} minZoom={4} className="map-warm-tiles h-full w-full" zoomControl={false}>
+    <MapContainer center={[42.0, 12.6]} zoom={6} minZoom={4} className="map-tone-tiles h-full w-full" zoomControl={false}>
       <TileLayer
         url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution="&copy; OpenStreetMap contributors"

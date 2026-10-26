@@ -14,7 +14,7 @@ export function Chip({ active, onClick, children }: { active: boolean; onClick: 
       onClick={onClick}
       className={cn(
         "rounded-md border px-3 py-2 text-sm transition-colors",
-        active ? "border-primary bg-primary-soft text-primary font-medium" : "bg-card hover:bg-muted",
+        active ? "border-foreground bg-brand-soft text-brand font-medium" : "bg-card hover:bg-muted",
       )}
     >
       {children}
@@ -33,7 +33,7 @@ export function IntentPicker({ value, onChange }: { value: string | null; onChan
           onClick={() => onChange(i.value)}
           className={cn(
             "rounded-lg border bg-card p-5 text-left font-display text-lg transition-all hover:shadow-hover",
-            value === i.value && "border-primary bg-primary-soft text-primary",
+            value === i.value && "border-foreground bg-brand-soft text-brand",
           )}
         >
           {i.label}

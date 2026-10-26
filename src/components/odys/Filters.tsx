@@ -112,7 +112,7 @@ export function FilterChips({ value: v, onChange, onReset }: Props & { onReset: 
       {v.prefs && (
         <span className="text-muted-foreground">
           Using your preferences,{" "}
-          <button className="text-aegean underline-offset-4 hover:underline" onClick={onReset}>reset</button>
+          <button className="text-brand underline-offset-4 hover:underline" onClick={onReset}>reset</button>
         </span>
       )}
       {chips.map((c) => (

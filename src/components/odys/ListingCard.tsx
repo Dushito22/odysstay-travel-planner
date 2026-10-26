@@ -28,9 +28,9 @@ export function CardImage({ row, compact }: { row: FeedRow; compact?: boolean })
       ) : (
         <>
           {row.lat != null && row.lng != null ? (
-            <img src={osmTile(row.lat, row.lng)} alt="" aria-hidden className="map-warm h-full w-full scale-125 object-cover" loading="lazy" />
+            <img src={osmTile(row.lat, row.lng)} alt="" aria-hidden className="map-tone h-full w-full scale-125 object-cover" loading="lazy" />
           ) : (
-            <div className="texture-warm h-full w-full" />
+            <div className="texture-muted h-full w-full" />
           )}
           <div className="absolute inset-0 flex items-end bg-background/40 p-4">
             <span className={cn("font-display font-medium text-foreground", compact ? "text-lg" : "text-2xl")}>
@@ -44,13 +44,13 @@ export function CardImage({ row, compact }: { row: FeedRow; compact?: boolean })
   );
 }
 
-function Chip({ children, tone = "muted" }: { children: React.ReactNode; tone?: "muted" | "terra" | "warn" | "olive" | "aegean" }) {
+function Chip({ children, tone = "muted" }: { children: React.ReactNode; tone?: "muted" | "terra" | "warn" | "success" | "brand" }) {
   const tones = {
     muted: "bg-muted text-muted-foreground",
-    terra: "bg-primary-soft text-primary",
+    terra: "bg-brand-soft text-brand",
     warn: "bg-warning-soft text-warning",
-    olive: "bg-olive-soft text-olive",
-    aegean: "border text-aegean",
+    success: "bg-success-soft text-success",
+    brand: "border text-brand",
   };
   return <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium", tones[tone])}>{children}</span>;
 }
@@ -93,9 +93,9 @@ function SaveButton({ id }: { id: string }) {
       aria-label={isSaved ? "Remove from saved" : "Save listing"}
       aria-pressed={isSaved}
       onClick={(e) => { e.preventDefault(); m.mutate(); }}
-      className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
+      className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-brand"
     >
-      <Heart className={cn("h-5 w-5", isSaved && "fill-primary text-primary")} />
+      <Heart className={cn("h-5 w-5", isSaved && "fill-primary text-brand")} />
     </button>
   );
 }
@@ -140,19 +140,19 @@ export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: 
         <div className="flex flex-wrap gap-1.5">
           {row.property_type && <Chip>{TYPE_LABELS[row.property_type] ?? row.property_type}</Chip>}
           {row.sale_type && row.sale_type !== "sale" && row.sale_type !== "one_euro" && (
-            <Chip tone="aegean">{SALE_TYPE_LABELS[row.sale_type] ?? row.sale_type}</Chip>
+            <Chip tone="brand">{SALE_TYPE_LABELS[row.sale_type] ?? row.sale_type}</Chip>
           )}
           {row.previous_auction_failed && <Chip tone="terra">Unsold before</Chip>}
           <DeadlinePill deadline={row.deadline_at} />
           {(row.red_flag_count ?? 0) > 0 && (
             <Chip tone="warn">{row.red_flag_count} red flag{row.red_flag_count === 1 ? "" : "s"}</Chip>
           )}
-          {fit === "within" && <Chip tone="olive">Matches your budget</Chip>}
-          {inRegions(row, profile) && <Chip tone="olive">In your regions</Chip>}
+          {fit === "within" && <Chip tone="success">Matches your budget</Chip>}
+          {inRegions(row, profile) && <Chip tone="success">In your regions</Chip>}
         </div>
         {!compact && row.summary_en && <p className="line-clamp-2 text-sm text-muted-foreground">{row.summary_en}</p>}
         {compact && (
-          <Link to="/listing/$id" params={{ id: row.id }} className="inline-block text-sm font-medium text-aegean hover:underline">
+          <Link to="/listing/$id" params={{ id: row.id }} className="inline-block text-sm font-medium text-brand hover:underline">
             View
           </Link>
         )}

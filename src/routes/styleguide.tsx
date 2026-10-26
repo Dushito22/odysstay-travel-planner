@@ -15,11 +15,11 @@ export const Route = createFileRoute("/styleguide")({
   component: Styleguide,
 });
 
-const swatches = ["background", "card", "foreground", "muted-foreground", "border", "primary", "primary-soft", "olive", "olive-soft", "aegean", "warning", "warning-soft"];
+const swatches = ["background", "card", "foreground", "muted-foreground", "border", "primary", "brand-soft", "success", "success-soft", "brand", "warning", "warning-soft"];
 const swatchClass: Record<string, string> = {
   background: "bg-background", card: "bg-card", foreground: "bg-foreground", "muted-foreground": "bg-muted-foreground",
-  border: "bg-border", primary: "bg-primary", "primary-soft": "bg-primary-soft", olive: "bg-olive",
-  "olive-soft": "bg-olive-soft", aegean: "bg-aegean", warning: "bg-warning", "warning-soft": "bg-warning-soft",
+  border: "bg-border", primary: "bg-primary", "brand-soft": "bg-brand-soft", success: "bg-success",
+  "success-soft": "bg-success-soft", brand: "bg-brand", warning: "bg-warning", "warning-soft": "bg-warning-soft",
 };
 
 function Panel({ dark }: { dark: boolean }) {

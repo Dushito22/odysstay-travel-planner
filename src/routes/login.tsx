@@ -56,12 +56,12 @@ function Login() {
       <div className="w-full max-w-sm rounded-lg border bg-card p-8">
         {sent ? (
           <div className="text-center">
-            <MailCheck className="mx-auto h-10 w-10 text-olive" />
+            <MailCheck className="mx-auto h-10 w-10 text-success" />
             <h1 className="mt-4 text-2xl font-medium">Check your inbox</h1>
             <p className="mt-2 text-sm text-muted-foreground">
               We sent a sign-in link to <span className="font-medium text-foreground">{email}</span>. Open it on this device.
             </p>
-            <button onClick={() => setSent(false)} className="mt-6 text-sm text-aegean hover:underline">
+            <button onClick={() => setSent(false)} className="mt-6 text-sm text-brand hover:underline">
               Use a different email
             </button>
           </div>
