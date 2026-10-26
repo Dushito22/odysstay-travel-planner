@@ -66,7 +66,7 @@ export function ScoreBadge({
           className={cn(
             "inline-flex shrink-0 items-center justify-center rounded-full font-display font-semibold tnum transition-shadow hover:shadow-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             size === "sm" ? "h-9 w-9 text-sm" : "h-12 w-12 text-lg",
-            strong ? "bg-primary text-brand-foreground" : "bg-brand-soft text-brand",
+            strong ? "bg-foreground text-background" : "bg-card text-foreground ring-1 ring-border",
           )}
         >
           {score}
@@ -116,7 +116,7 @@ export function DeadlinePill({
     tone = "bg-warning-soft text-warning";
   } else if (days < 15) {
     label = days === 0 ? "Closes today" : `Closes in ${days} day${days === 1 ? "" : "s"}`;
-    tone = "bg-brand-soft text-brand";
+    tone = "bg-caution-soft text-caution";
   } else {
     label = `${days} days left`;
     tone = "bg-success-soft text-success";

@@ -47,7 +47,7 @@ export function CardImage({ row, compact }: { row: FeedRow; compact?: boolean })
 function Chip({ children, tone = "muted" }: { children: React.ReactNode; tone?: "muted" | "terra" | "warn" | "success" | "brand" }) {
   const tones = {
     muted: "bg-muted text-muted-foreground",
-    terra: "bg-brand-soft text-brand",
+    terra: "bg-caution-soft text-caution",
     warn: "bg-warning-soft text-warning",
     success: "bg-success-soft text-success",
     brand: "border text-brand",
