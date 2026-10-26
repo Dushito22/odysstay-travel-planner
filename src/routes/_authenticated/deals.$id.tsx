@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 
+import { AgentChatButton } from "@/components/odys/AgentChat";
 import { CardImage } from "@/components/odys/ListingCard";
 import { ApprovalCard } from "@/components/odys/deal/MessageView";
 import {
@@ -126,7 +127,12 @@ function DealRoom({ bundle }: { bundle: DealBundle }) {
           </div>
         </div>
         <div className="sm:self-start">
-          <DealSettings bundle={bundle} run={run} pending={pending} />
+          <div className="flex flex-wrap gap-2">
+            {listing?.id && (
+              <AgentChatButton listingId={listing.id} dealId={deal.id} signedIn variant="default" />
+            )}
+            <DealSettings bundle={bundle} run={run} pending={pending} />
+          </div>
         </div>
       </section>
 

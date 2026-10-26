@@ -317,6 +317,14 @@ export async function addTask(dealId: string, title: string, sort: number) {
   if (error) throw error;
 }
 
+/** Adds a task at the end of the plan. */
+export async function appendTask(dealId: string, title: string) {
+  const { data, error } = await supabase
+    .from("deal_tasks").select("sort").eq("deal_id", dealId).order("sort", { ascending: false }).limit(1).maybeSingle();
+  if (error) throw error;
+  await addTask(dealId, title, (data?.sort ?? 0) + 1);
+}
+
 /** Swap the sort values of two tasks to move one up or down. */
 export async function moveTask(a: DealTask, b: DealTask) {
   const r1 = await supabase.from("deal_tasks").update({ sort: b.sort }).eq("id", a.id);

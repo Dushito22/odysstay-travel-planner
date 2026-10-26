@@ -11,7 +11,7 @@ vi.mock("@/lib/deal", async (orig) => {
     ...actual,
     approveMessage: (...a: Parameters<typeof actual.approveMessage>) => {
       actual.assertConfirmed(a[0].is_binding, a[2]); // keep the real guard
-      return approveMessage(...(a as []));
+      return approveMessage(...(a as unknown as []));
     },
     rejectMessage: (...a: unknown[]) => rejectMessage(...(a as [])),
   };
