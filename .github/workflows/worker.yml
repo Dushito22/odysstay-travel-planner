@@ -13,7 +13,7 @@ on:
       task:
         description: "What to run"
         type: choice
-        options: [daily, retry-errors, check, comuni-crawl, comuni-discover, status]
+        options: [daily, retry-errors, check, pvp-probe, comuni-crawl, comuni-discover, status]
         default: daily
 
 concurrency:
@@ -73,6 +73,7 @@ jobs:
             comuni-crawl)    { python -m odysstay_worker comuni crawl --limit 2500 --workers 12 && python -m odysstay_worker extract --limit 150 && python -m odysstay_worker geocode && python -m odysstay_worker score && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             comuni-discover) { python -m odysstay_worker comuni discover && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             status)          python -m odysstay_worker status 2>&1 | tee run.log ;;
+            pvp-probe)       python -m odysstay_worker pvp-probe 2>&1 | tee run.log ;;
             check)           python -m odysstay_worker check 2>&1 | tee run.log ;;
             retry-errors)    { python -m odysstay_worker check && python -m odysstay_worker extract --retry-errors --limit 150 && python -m odysstay_worker geocode && python -m odysstay_worker grants && python -m odysstay_worker score && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
           esac
@@ -83,5 +84,6 @@ jobs:
           { echo '```'; tail -n 60 run.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           # One-line annotation so the result is visible from the run page and the API.
           if grep -qi "error" run.log; then echo "::warning title=Worker errors::$(grep -i "error" run.log | grep -v '"errors": 0' | head -n 6 | tr '\n' ' ' | cut -c1-1500)"; fi
+          if [ "${{ github.event.inputs.task }}" = "pvp-probe" ]; then i=0; while IFS= read -r line; do i=$((i+1)); [ $i -le 9 ] && echo "::notice title=Probe $i::$(echo "$line" | cut -c1-3500)"; done < run.log; fi
           echo "::notice title=Worker start::$(head -n 12 run.log | tr '\n' ' ' | cut -c1-900)"
           echo "::notice title=Worker ${{ github.event.inputs.task || 'scheduled' }}::$(tail -n 8 run.log | tr '\n' ' ' | cut -c1-900)"
