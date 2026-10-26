@@ -4,7 +4,13 @@ const OFFLINE = "/offline.html";
 const PRECACHE = [OFFLINE, "/icon-192.png", "/icon-512.png", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
+  // Cache each file on its own so one missing file never blocks installation.
+  event.waitUntil(
+    caches
+      .open(CACHE)
+      .then((c) => Promise.allSettled(PRECACHE.map((url) => c.add(url))))
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener("activate", (event) => {
