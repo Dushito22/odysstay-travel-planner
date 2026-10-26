@@ -25,7 +25,7 @@ function Index() {
         <Button asChild variant="outline"><Link to="/login">Sign in</Link></Button>
       </header>
       <main className="mx-auto flex max-w-3xl flex-1 flex-col justify-center py-20">
-        <h1 className="text-5xl font-medium leading-[1.05] md:text-7xl">
+        <h1 className="text-5xl leading-[1.02] md:text-7xl">
           The Italian houses that never reach the property portals.
         </h1>
         <p className="mt-6 max-w-xl text-lg text-muted-foreground">

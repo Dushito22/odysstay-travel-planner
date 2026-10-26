@@ -37,7 +37,7 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen md:flex">
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r bg-sidebar px-4 py-6 md:flex">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r bg-sidebar px-4 py-7 md:flex">
         <Link to="/discover" className="px-3">
           <Wordmark />
         </Link>
@@ -46,8 +46,8 @@ export function AppShell() {
             <Link
               key={to}
               to={to}
-              className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              activeProps={{ className: "bg-accent text-foreground font-medium" }}
+              className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              activeProps={{ className: "!bg-foreground !text-background font-medium" }}
             >
               <Icon className="h-4 w-4" />
               {label}
@@ -57,8 +57,8 @@ export function AppShell() {
         <div className="mt-auto flex flex-col gap-1 border-t pt-4">
           <Link
             to="/profile"
-            className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-            activeProps={{ className: "bg-accent text-foreground font-medium" }}
+            className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+            activeProps={{ className: "!bg-foreground !text-background font-medium" }}
           >
             <User className="h-4 w-4" /> Profile
           </Link>
@@ -72,7 +72,7 @@ export function AppShell() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col pb-20 md:pb-0">
-        <header className="flex items-center border-b px-5 py-4 md:hidden">
+        <header className="sticky top-0 z-30 flex items-center border-b bg-background/85 px-5 py-4 backdrop-blur-xl md:hidden">
           <Wordmark className="text-xl" />
         </header>
         {pathname === "/map" ? (
@@ -91,13 +91,13 @@ export function AppShell() {
         )}
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-card md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-card/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
         {mobileNav.map(({ to, label, icon: Icon }) => (
           <Link
             key={to}
             to={to}
             className="flex flex-col items-center gap-1 py-2.5 text-[11px] text-muted-foreground"
-            activeProps={{ className: "text-brand font-medium" }}
+            activeProps={{ className: "!text-foreground font-semibold" }}
           >
             <Icon className="h-5 w-5" />
             {label}
@@ -111,7 +111,7 @@ export function AppShell() {
 export function PageHeader({ title, intro }: { title: string; intro?: string }) {
   return (
     <div className="mb-8">
-      <h1 className="text-3xl font-medium md:text-4xl">{title}</h1>
+      <h1 className="text-4xl md:text-5xl">{title}</h1>
       {intro && <p className="mt-2 max-w-xl text-muted-foreground">{intro}</p>}
     </div>
   );

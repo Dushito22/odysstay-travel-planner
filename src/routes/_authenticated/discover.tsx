@@ -41,7 +41,7 @@ function DiscoverPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-medium md:text-5xl">Discover</h1>
+          <h1 className="text-4xl md:text-5xl">Discover</h1>
           <p className="mt-2 text-muted-foreground tnum">
             {isLoading ? "Loading opportunities" : `${rows.length} ${rows.length === 1 ? "opportunity" : "opportunities"} across Italy, ranked by deal score`}
           </p>
