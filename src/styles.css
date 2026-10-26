@@ -1,6 +1,8 @@
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
+@import "leaflet/dist/leaflet.css";
+@import "react-leaflet-cluster/dist/assets/MarkerCluster.css";
 
 @custom-variant dark (&:is(.dark *, .dark));
 
@@ -154,4 +156,64 @@
   svg.lucide {
     stroke-width: 1.5;
   }
+}
+
+/* Maps: desaturated, warm-tinted OpenStreetMap */
+@utility map-warm {
+  filter: grayscale(0.85) sepia(0.35) contrast(0.9) brightness(1.02);
+}
+@utility texture-warm {
+  background-color: var(--muted);
+  background-image: radial-gradient(var(--border) 1px, transparent 1px);
+  background-size: 14px 14px;
+}
+.map-warm-tiles .leaflet-tile-pane {
+  filter: grayscale(0.85) sepia(0.35) contrast(0.9) brightness(1.02);
+}
+.dark .map-warm-tiles .leaflet-tile-pane {
+  filter: grayscale(0.9) sepia(0.3) invert(0.9) brightness(0.9);
+}
+.leaflet-container {
+  background: var(--muted);
+  font-family: var(--font-sans);
+}
+.odys-marker {
+  display: block;
+  border-radius: 9999px;
+  background: var(--primary-soft);
+  border: 2px solid var(--primary);
+  box-shadow: 0 1px 4px oklch(0 0 0 / 0.25);
+}
+.odys-marker-strong {
+  background: var(--primary);
+  border-color: var(--card);
+}
+.odys-cluster {
+  display: flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--card);
+  border: 2px solid var(--primary);
+  color: var(--primary);
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+.odys-popup .leaflet-popup-content-wrapper {
+  padding: 0;
+  border-radius: 12px;
+  background: var(--card);
+  overflow: hidden;
+}
+.odys-popup .leaflet-popup-content {
+  margin: 0;
+  width: 260px !important;
+}
+.odys-popup .leaflet-popup-content article {
+  border: 0;
+}
+.odys-popup .leaflet-popup-tip {
+  background: var(--card);
 }

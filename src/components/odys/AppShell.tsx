@@ -75,12 +75,20 @@ export function AppShell() {
         <header className="flex items-center border-b px-5 py-4 md:hidden">
           <Wordmark className="text-xl" />
         </header>
-        <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-8 md:px-10 md:py-12">
-          <Outlet />
-        </main>
-        <footer className="mx-auto w-full max-w-5xl px-5 pb-8 text-xs text-muted-foreground md:px-10">
-          {LEGAL_LINE}
-        </footer>
+        {pathname === "/map" ? (
+          <main className="relative flex-1">
+            <Outlet />
+          </main>
+        ) : (
+          <>
+            <main className="mx-auto w-full max-w-7xl flex-1 px-5 py-8 md:px-10 md:py-12">
+              <Outlet />
+            </main>
+            <footer className="mx-auto w-full max-w-7xl px-5 pb-8 text-xs text-muted-foreground md:px-10">
+              {LEGAL_LINE}
+            </footer>
+          </>
+        )}
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-card md:hidden">
