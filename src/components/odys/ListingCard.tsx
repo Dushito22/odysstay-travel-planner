@@ -135,7 +135,8 @@ export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: 
           )}
           <p className="mt-1 text-sm text-muted-foreground tnum">
             {[
-              row.surface_sqm != null ? `${row.surface_sqm} m²` : null,
+              row.surface_sqm != null ? `${Math.round(row.surface_sqm).toLocaleString("en-GB")} m²` : null,
+              row.surface_sqm == null && row.land_sqm != null ? `${Math.round(row.land_sqm).toLocaleString("en-GB")} m² of land` : null,
               row.price_per_sqm != null && row.price_eur !== 1 ? `${formatEur(Math.round(row.price_per_sqm))}/m²` : null,
             ].filter(Boolean).join(" · ") || "Surface not stated"}
           </p>

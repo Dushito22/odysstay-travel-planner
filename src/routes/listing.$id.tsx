@@ -136,8 +136,8 @@ function ListingPage() {
                 ["Deposit", <FactValue key="d" fact={byKey["deposit_eur"] ?? byKey["deposit"]} sourceUrl={src} />],
                 byKey["auction_date"] ? ["Sale date", <FactValue key="sd" fact={byKey["auction_date"]} sourceUrl={src} />] : null,
                 ["Offer deadline", <FactValue key="dl" fact={byKey["deadline"]} sourceUrl={src} />],
-              ].filter(Boolean) as [string, ReactNode][]).map(([label, node]) => (
-                <div key={label} className="bg-card p-5">
+              ].filter(Boolean) as [string, ReactNode][]).map(([label, node], i, all) => (
+                <div key={label} className={cn("bg-card p-5", fillClass(i, all.length))}>
                   <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt>
                   <dd className="mt-2 text-lg font-semibold tnum">{node}</dd>
                 </div>
@@ -235,6 +235,14 @@ function ListingPage() {
       </div>
     </Shell>
   );
+}
+
+/** Stretch the last cell so the grid has no empty slots (2 columns on mobile, 3 from md). */
+function fillClass(i: number, n: number) {
+  if (i !== n - 1) return "";
+  const mobile = n % 2 === 1 ? "col-span-2" : "";
+  const desk = { 0: "", 1: "md:col-span-3", 2: "md:col-span-2" }[n % 3 as 0 | 1 | 2];
+  return cn(mobile, desk, mobile && !desk && "md:col-span-1");
 }
 
 function Appraisal({ fact, discount, sourceUrl }: { fact: Fact | undefined; discount: number | null; sourceUrl: string | null }) {
@@ -438,7 +446,11 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
     <>
       <Section title="Renovation" kicker="Estimated ranges">
         {isLoading ? <div className="h-40 animate-pulse rounded-2xl bg-muted" /> : !estimates.length ? (
-          <p className="text-muted-foreground">No estimate yet</p>
+          <p className="max-w-2xl rounded-2xl border bg-card p-5 text-muted-foreground">
+            {l.property_type === "land" || l.property_type === "garage"
+              ? "No renovation estimate for this type of property."
+              : "No estimate yet: the notice doesn't state the surface. It is added automatically once the surface is known, for court sales from the appraisal report."}
+          </p>
         ) : (
           <>
             <div className="mb-5 inline-flex rounded-full border bg-card p-1">
@@ -485,7 +497,7 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
       <Section title="Total cost picture">
         <div className="rounded-2xl border bg-card p-6">
           <Row label={priceLabel}>{price != null ? <Money value={price} /> : <NotStated />}</Row>
-          <Row label={`Renovation, ${sel?.scenario ?? "none"}`}>{sel ? <span className="tnum">{range(sel.low_eur, sel.high_eur)}</span> : <span className="text-muted-foreground">No estimate yet</span>}</Row>
+          <Row label={sel ? `Renovation, ${sel.scenario}` : "Renovation"}>{sel ? <span className="tnum">{range(sel.low_eur, sel.high_eur)}</span> : <span className="text-muted-foreground">No estimate yet</span>}</Row>
           <div className="my-3 border-t" />
           <Row label="Total" strong>
             {price != null && sel ? <span className="tnum">{range(price + sel.low_eur, price + sel.high_eur)}</span> : <span className="text-sm font-normal text-muted-foreground">Needs a price and an estimate</span>}

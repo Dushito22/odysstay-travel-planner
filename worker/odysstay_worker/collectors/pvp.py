@@ -92,6 +92,24 @@ def parse_num(s: str) -> float | None:
         return None
 
 
+def court_name(raw: str | None) -> str | None:
+    """'Tribunale di REGGIO EMILIA' -> 'Tribunale di Reggio Emilia'."""
+    if not raw:
+        return None
+    m = re.match(r"^(Tribunale|Corte d'Appello)( di | )(.+)$", raw.strip(), re.I)
+    if not m:
+        return raw.strip()
+    place = " ".join(w if w.lower() in ("di", "del", "della") else w[:1].upper() + w[1:].lower() for w in m.group(3).split())
+    place = re.sub(r"'(\w)", lambda x: "'" + x.group(1).upper(), place)
+    return f"{m.group(1).title()}{m.group(2)}{place}"
+
+
+SALE_MODE_EN = {
+    "Asincrona Telematica": "Online, asynchronous bidding", "Sincrona Telematica": "Online, live bidding",
+    "Sincrona Mista": "Online or in person, live", "Presso Il Venditore": "In person at the delegate's office",
+}
+
+
 def file_url(link: str | None) -> str | None:
     if not link:
         return None
@@ -270,10 +288,7 @@ def build(item: dict, det: dict, today: date) -> dict:
         fact("occupancy", "Occupancy", OCCUPANCY_EN[occ_code], None, f"Disponibilità: {OCCUPANCY_IT[occ_code]}", OCCUPANCY_EN[occ_code])
     if det.get("descModVendita"):
         m = det["descModVendita"]
-        fact("sale_mode", "How bids are made", m, None, f"Modalità vendita: {m}", {
-            "Asincrona Telematica": "Online, asynchronous bidding", "Sincrona Telematica": "Online, live bidding",
-            "Sincrona Mista": "Online or in person, live", "Presso Il Venditore": "In person at the delegate's office",
-        }.get(m, m))
+        fact("sale_mode", "How bids are made", SALE_MODE_EN.get(m, m), None, f"Modalità vendita: {m}", SALE_MODE_EN.get(m, m))
     dep = (det.get("datiDeposito") or {}).get("depoCauzionale")
     dep_pct = None
     if dep:
@@ -281,14 +296,16 @@ def build(item: dict, det: dict, today: date) -> dict:
         dep_pct = parse_num(mm.group(1)) if mm else None
         fact("deposit", "Deposit", f"{dep} of your offer" if dep_pct else str(dep), dep_pct, f"Cauzione: {dep}",
              f"Deposit: {dep}" + (" of the amount you offer" if dep_pct else ""))
-    court = proc.get("descUfficio") or item.get("tribunale")
+    court_raw = proc.get("descUfficio") or item.get("tribunale")
+    court = court_name(court_raw)
     case = None
     if proc.get("numeRg") and proc.get("numeAnnoRg"):
         case = f"R.G.E. {proc['numeRg']}/{proc['numeAnnoRg']}"
     if court:
         lot_no = lotto.get("codLotto") or item.get("numeroLotto")
-        q = court + (f", {case}" if case else "") + (f", lotto {lot_no}" if lot_no else "")
-        fact("court", "Court and case", q, None, q, q.replace("lotto", "lot").replace("Tribunale di", "Court of"))
+        q = court_raw + (f", {case}" if case else "") + (f", lotto {lot_no}" if lot_no else "")
+        shown = court + (f", {case}" if case else "") + (f", lot {lot_no}" if lot_no else "")
+        fact("court", "Court and case", shown, None, q, shown.replace("Tribunale di", "Court of"))
         if lot_no and case:
             case = f"{case}, lotto {lot_no}"
 
@@ -373,7 +390,7 @@ def build(item: dict, det: dict, today: date) -> dict:
         "deadline_at": deadline_d.isoformat() if deadline_d else None,
         "auction_at": sale_d.isoformat() if sale_d else None,
         "occupancy": OCCUPANCY.get(occ_code or "", "unknown"),
-        "court": court, "case_ref": case, "sale_mode": det.get("descModVendita"),
+        "court": court, "case_ref": case, "sale_mode": SALE_MODE_EN.get(det.get("descModVendita") or "", det.get("descModVendita")),
         "contacts": contacts, "attachments": attachments, "photo_urls": photos,
         "hero_image_path": photos[0] if photos else None,
         "is_demo": False,
