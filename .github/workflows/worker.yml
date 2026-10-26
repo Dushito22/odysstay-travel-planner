@@ -80,5 +80,6 @@ jobs:
           [ -f run.log ] || exit 0
           { echo '```'; tail -n 60 run.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           # One-line annotation so the result is visible from the run page and the API.
+          if grep -qi "error" run.log; then echo "::warning title=Worker errors::$(grep -i "error" run.log | grep -v '"errors": 0' | head -n 6 | tr '\n' ' ' | cut -c1-1500)"; fi
           echo "::notice title=Worker start::$(head -n 12 run.log | tr '\n' ' ' | cut -c1-900)"
           echo "::notice title=Worker ${{ github.event.inputs.task || 'scheduled' }}::$(tail -n 8 run.log | tr '\n' ' ' | cut -c1-900)"
