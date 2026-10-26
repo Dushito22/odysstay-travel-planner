@@ -110,6 +110,7 @@ export function searchFromFilters(j: Json): FeedSearch {
     maxPrice: num(f["maxPrice"]),
     minSurface: num(f["minSurface"]),
     minScore: num(f["minScore"]),
+    minDiscount: num(f["minDiscount"]),
     leases: bool(f["leases"], DEFAULT_FILTERS.leases),
     oneEuro: bool(f["oneEuro"], DEFAULT_FILTERS.oneEuro),
     unsold: bool(f["unsold"], DEFAULT_FILTERS.unsold),
@@ -128,6 +129,7 @@ export function summarizeFilters(j: Json): string {
     parts.push(s.types.map((t) => PLURAL[t] ?? (TYPE_LABELS[t] ?? t).toLowerCase()).join(", "));
   if (s.minSurface > 0) parts.push(`${s.minSurface} m² or more`);
   if (s.minScore > 0) parts.push(`score ${s.minScore}+`);
+  if (s.minDiscount > 0) parts.push(`${s.minDiscount}%+ below appraisal`);
   if (s.unsold) parts.push("previously unsold");
   if (s.leases) parts.push("incl. concessions and leases");
   if (!s.oneEuro) parts.push("no one-euro schemes");

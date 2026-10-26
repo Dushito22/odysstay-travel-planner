@@ -72,6 +72,10 @@ export function FilterPanel({ value: v, onChange }: Props) {
         <Toggle label="Previously unsold only" checked={v.unsold} onChange={(c) => set({ unsold: c })} />
         <Toggle label="Hide closed" checked={v.hideClosed} onChange={(c) => set({ hideClosed: c })} />
       </Group>
+      <Group title={v.minDiscount ? `Below court appraisal: ${v.minDiscount}%+` : "Below court appraisal"}>
+        <Slider value={[v.minDiscount]} min={0} max={70} step={5} onValueChange={([d]) => set({ minDiscount: d ?? 0 })} aria-label="Minimum discount below the court appraisal" />
+        <p className="text-xs text-muted-foreground">Court sales only: how far the minimum offer sits below the court expert's valuation.</p>
+      </Group>
       <Group title={`Min score: ${v.minScore}`}>
         <Slider value={[v.minScore]} min={0} max={100} step={5} onValueChange={([s]) => set({ minScore: s ?? 0 })} aria-label="Minimum score" />
       </Group>
@@ -102,6 +106,7 @@ export function FilterChips({ value: v, onChange, onReset }: Props & { onReset: 
   if (v.maxPrice) chips.push({ label: `Up to ${formatEur(v.maxPrice)}`, clear: () => set({ maxPrice: 0 }) });
   if (v.minSurface) chips.push({ label: `From ${v.minSurface} m²`, clear: () => set({ minSurface: 0 }) });
   if (v.minScore) chips.push({ label: `Score ${v.minScore}+`, clear: () => set({ minScore: 0 }) });
+  if (v.minDiscount) chips.push({ label: `${v.minDiscount}%+ below appraisal`, clear: () => set({ minDiscount: 0 }) });
   if (v.leases) chips.push({ label: "Concessions and leases", clear: () => set({ leases: false }) });
   if (!v.oneEuro) chips.push({ label: "No one-euro schemes", clear: () => set({ oneEuro: true }) });
   if (v.unsold) chips.push({ label: "Previously unsold", clear: () => set({ unsold: false }) });

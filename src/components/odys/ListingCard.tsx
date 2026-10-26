@@ -24,7 +24,7 @@ export function CardImage({ row, compact }: { row: FeedRow; compact?: boolean })
   return (
     <div className={cn("relative aspect-[4/3] overflow-hidden bg-muted", !compact && "rounded-2xl")}>
       {render ? (
-        <img src={render} alt={row.title_en ?? row.comune ?? "Property"} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" loading="lazy" />
+        <img src={render} alt={row.title_en ?? row.comune ?? "Property"} referrerPolicy="no-referrer" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" loading="lazy" />
       ) : (
         <>
           {row.lat != null && row.lng != null ? (
@@ -130,6 +130,9 @@ export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: 
         </div>
         <div>
           <Money value={row.price_eur} className={cn("font-semibold", compact ? "text-xl" : "text-2xl")} />
+          {row.min_offer_eur != null && row.price_eur != null && row.min_offer_eur < row.price_eur && (
+            <p className="mt-0.5 text-sm tnum">Offers from {formatEur(row.min_offer_eur)}</p>
+          )}
           <p className="mt-1 text-sm text-muted-foreground tnum">
             {[
               row.surface_sqm != null ? `${row.surface_sqm} m²` : null,
@@ -142,8 +145,11 @@ export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: 
           {row.sale_type && row.sale_type !== "sale" && row.sale_type !== "one_euro" && (
             <Chip tone="brand">{SALE_TYPE_LABELS[row.sale_type] ?? row.sale_type}</Chip>
           )}
+          {(row.discount_pct ?? 0) >= 15 && <Chip tone="success">{row.discount_pct}% below appraisal</Chip>}
+          {row.occupancy === "free" && <Chip>Vacant</Chip>}
+          {row.occupancy === "occupied" && <Chip tone="warn">Occupied</Chip>}
           {row.previous_auction_failed && <Chip tone="terra">Unsold before</Chip>}
-          <DeadlinePill deadline={row.deadline_at} />
+          <DeadlinePill deadline={row.deadline_at ?? row.auction_at} />
           {(row.red_flag_count ?? 0) > 0 && (
             <Chip tone="warn">{row.red_flag_count} red flag{row.red_flag_count === 1 ? "" : "s"}</Chip>
           )}

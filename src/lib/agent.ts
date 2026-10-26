@@ -125,10 +125,10 @@ export function draftMessage(input: {
   );
 }
 
-export function generateRender(listingId: string, style: string) {
+export function generateRender(listingId: string, style: string, photo?: string) {
   return callFunction<{ image: Database["public"]["Tables"]["listing_images"]["Row"] }>(
     "generate-render",
-    { listing_id: listingId, style },
+    photo ? { listing_id: listingId, style, photo } : { listing_id: listingId, style },
   );
 }
 

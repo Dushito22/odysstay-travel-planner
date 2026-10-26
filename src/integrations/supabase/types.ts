@@ -665,6 +665,16 @@ export type Database = {
       }
       listings: {
         Row: {
+          appraisal_eur: number | null
+          attachments: Json
+          case_ref: string | null
+          contacts: Json
+          court: string | null
+          discount_pct: number | null
+          external_id: string | null
+          min_offer_eur: number | null
+          photo_urls: Json
+          sale_mode: string | null
           address: string | null
           auction_at: string | null
           comune: string | null
@@ -696,6 +706,16 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          appraisal_eur?: number | null
+          attachments?: Json
+          case_ref?: string | null
+          contacts?: Json
+          court?: string | null
+          discount_pct?: number | null
+          external_id?: string | null
+          min_offer_eur?: number | null
+          photo_urls?: Json
+          sale_mode?: string | null
           address?: string | null
           auction_at?: string | null
           comune?: string | null
@@ -727,6 +747,16 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          appraisal_eur?: number | null
+          attachments?: Json
+          case_ref?: string | null
+          contacts?: Json
+          court?: string | null
+          discount_pct?: number | null
+          external_id?: string | null
+          min_offer_eur?: number | null
+          photo_urls?: Json
+          sale_mode?: string | null
           address?: string | null
           auction_at?: string | null
           comune?: string | null
@@ -1134,6 +1164,16 @@ export type Database = {
     Views: {
       listing_feed: {
         Row: {
+          appraisal_eur: number | null
+          attachments: Json | null
+          case_ref: string | null
+          contacts: Json | null
+          court: string | null
+          discount_pct: number | null
+          external_id: string | null
+          min_offer_eur: number | null
+          photo_urls: Json | null
+          sale_mode: string | null
           address: string | null
           auction_at: string | null
           comune: string | null

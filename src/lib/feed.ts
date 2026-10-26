@@ -14,6 +14,7 @@ export const feedSearchSchema = z.object({
   maxPrice: fallback(z.number(), 0).default(0),
   minSurface: fallback(z.number(), 0).default(0),
   minScore: fallback(z.number(), 0).default(0),
+  minDiscount: fallback(z.number(), 0).default(0),
   leases: fallback(z.boolean(), false).default(false),
   oneEuro: fallback(z.boolean(), true).default(true),
   unsold: fallback(z.boolean(), false).default(false),
@@ -25,7 +26,7 @@ export type FeedSearch = z.infer<typeof feedSearchSchema>;
 export type FeedFilters = Omit<FeedSearch, "sort" | "prefs">;
 
 export const DEFAULT_FILTERS: FeedFilters = {
-  regions: [], types: [], maxPrice: 0, minSurface: 0, minScore: 0,
+  regions: [], types: [], maxPrice: 0, minSurface: 0, minScore: 0, minDiscount: 0,
   leases: false, oneEuro: true, unsold: false, hideClosed: true,
 };
 
@@ -33,6 +34,7 @@ export const SORTS = [
   { value: "best", label: "Best deals" },
   { value: "cheapest", label: "Cheapest" },
   { value: "closing", label: "Closing soon" },
+  { value: "discount", label: "Furthest below appraisal" },
   { value: "newest", label: "Newest" },
   { value: "foryou", label: "For you" },
 ];
@@ -67,8 +69,24 @@ export function allowedSaleTypes(f: Pick<FeedFilters, "leases" | "oneEuro">) {
 
 export const showDemo = import.meta.env['VITE_SHOW_DEMO'] === "true";
 
-export async function fetchFeed(f: FeedFilters): Promise<FeedRow[]> {
-  let q = supabase.from("listing_feed").select("*").limit(1000);
+export const FEED_LIMIT = 600;
+
+/** Server-side order for each sort, so the best rows come back first even when thousands match. */
+const SERVER_ORDER: Record<string, { col: string; asc: boolean }> = {
+  best: { col: "score", asc: false },
+  foryou: { col: "score", asc: false },
+  cheapest: { col: "price_eur", asc: true },
+  closing: { col: "days_left", asc: true },
+  newest: { col: "created_at", asc: false },
+  discount: { col: "discount_pct", asc: false },
+};
+
+export async function fetchFeed(f: FeedFilters, sort = "best"): Promise<{ rows: FeedRow[]; total: number }> {
+  const o = SERVER_ORDER[sort] ?? SERVER_ORDER["best"]!;
+  let q = supabase.from("listing_feed").select("*", { count: "estimated" })
+    .order(o.col, { ascending: o.asc, nullsFirst: false }).limit(FEED_LIMIT);
+  if (sort === "closing") q = q.gt("days_left", 0);
+  if (f.minDiscount > 0) q = q.gte("discount_pct", f.minDiscount);
   if (!showDemo) q = q.eq("is_demo", false);
   if (f.regions.length) q = q.in("region", f.regions);
   if (f.types.length) q = q.in("property_type", f.types);
@@ -78,9 +96,9 @@ export async function fetchFeed(f: FeedFilters): Promise<FeedRow[]> {
   if (f.unsold) q = q.eq("previous_auction_failed", true);
   if (f.hideClosed) q = q.not("status", "in", "(closed,withdrawn)");
   q = q.or(`sale_type.in.(${allowedSaleTypes(f).join(",")}),sale_type.is.null`);
-  const { data, error } = await q;
+  const { data, error, count } = await q;
   if (error) throw error;
-  return data ?? [];
+  return { rows: data ?? [], total: count ?? data?.length ?? 0 };
 }
 
 export function forYouScore(r: FeedRow, p: Profile | null) {
@@ -112,6 +130,8 @@ export function sortFeed(rows: FeedRow[], sort: string, p: Profile | null) {
       return r
         .filter((x) => (x.days_left ?? 0) > 0)
         .sort((a, b) => num(a.days_left, Infinity) - num(b.days_left, Infinity));
+    case "discount":
+      return r.sort((a, b) => num(b.discount_pct, -1) - num(a.discount_pct, -1));
     case "newest":
       return r.sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
     case "foryou":
@@ -121,12 +141,18 @@ export function sortFeed(rows: FeedRow[], sort: string, p: Profile | null) {
   }
 }
 
+export function photoUrls(r: Pick<FeedRow, "photo_urls">): string[] {
+  return Array.isArray(r.photo_urls) ? r.photo_urls.filter((u): u is string => typeof u === "string") : [];
+}
+
 export function filtersOf(s: FeedSearch): FeedFilters {
   const { sort: _s, prefs: _p, ...f } = s;
   return f;
 }
 
+/** Storage path in 'listing-images', or a full URL for official photos hotlinked from the source. */
 export function renderUrl(path: string | null | undefined) {
   if (!path) return null;
+  if (/^https?:\/\//.test(path)) return path;
   return supabase.storage.from("listing-images").getPublicUrl(path).data.publicUrl;
 }

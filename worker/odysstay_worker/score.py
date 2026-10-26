@@ -1,8 +1,7 @@
 """Deal score, 0 to 100, with the reasons shown to the user. Uses verified listing columns only.
 
-v1 ranks on absolute price, price per m², ownership vs concession, vacancy, previous failed auctions
-and red flags. Next: local price benchmarks (Agenzia delle Entrate OMI zones) so "cheap for the area"
-beats "cheap".
+Ranks on absolute price, price per m², how far below the court's own appraisal you can buy,
+ownership vs concession, vacancy, previous failed auctions and red flags.
 """
 from __future__ import annotations
 
@@ -40,10 +39,21 @@ def score_listing(l: dict, red_flags: int, today: date | None = None) -> tuple[f
                 reasons.append(f"+{pts} €{ppsqm:,.0f}/m²")
                 break
 
+    disc = l.get("discount_pct")
+    if disc is not None:
+        for limit, pts in ((60, 22), (45, 15), (30, 9), (15, 4)):
+            if disc >= limit:
+                s += pts
+                reasons.append(f"+{pts} minimum offer {disc:.0f}% below the court appraisal")
+                break
+
     st = l.get("sale_type")
     if st in ("sale", "one_euro"):
         s += 8
         reasons.append("+8 you own it outright")
+    elif st == "auction_judicial":
+        s += 6
+        reasons.append("+6 court sale: mortgages and liens are cancelled on transfer")
     elif st == "concession":
         s -= 30
         reasons.append("-30 concession: use, not ownership")
@@ -69,19 +79,24 @@ def score_listing(l: dict, red_flags: int, today: date | None = None) -> tuple[f
         reasons.append(f"-{pen} {red_flags} red flag{'s' if red_flags > 1 else ''}")
 
     status = "active"
-    if l.get("deadline_at"):
-        days = (date.fromisoformat(l["deadline_at"]) - today).days
+    end = l.get("deadline_at") or l.get("auction_at")
+    if end:
+        days = (date.fromisoformat(end) - today).days
         if days < 0:
             status = "closed"
         elif days <= 14:
             status = "closing_soon"
-    if status == "closed":
+    if l.get("status") == "withdrawn":
+        status = "withdrawn"
+    if status in ("closed", "withdrawn"):
         s = 0.0
     return max(0.0, min(100.0, round(s))), reasons, status
 
 
 def run(db: Supa, log=print) -> int:
-    listings = db.select("listings", {"select": "*", "is_demo": "eq.false", "status": "neq.withdrawn"})
+    listings = db.select("listings", {"select": "id,price_eur,surface_sqm,property_type,sale_type,discount_pct,"
+                                      "previous_auction_failed,occupancy,deadline_at,auction_at,status,score,score_reasons",
+                                      "is_demo": "eq.false", "status": "neq.withdrawn"})
     flags: dict[str, int] = {}
     for f in db.select("listing_red_flags", {"select": "listing_id"}):
         flags[f["listing_id"]] = flags.get(f["listing_id"], 0) + 1

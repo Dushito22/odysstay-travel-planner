@@ -344,7 +344,7 @@ export function renderPrompt(
   edit: boolean,
 ): string {
   if (edit) {
-    return `Show this same building after a careful renovation in a "${style}" style. Keep the structure, the number and position of windows and doors, the roofline and the setting exactly. Change only finishes, materials, colours, light and landscaping. Photorealistic. Concept illustration, not a real photo.`;
+    return `Show this same place after a careful renovation in a "${style}" style. If it is an exterior, keep the structure, the number and position of windows and doors, the roofline and the setting exactly. If it is an interior, keep the walls, openings, ceiling height and room shape exactly, remove clutter and debris, and furnish it simply. Change only finishes, materials, colours, light and landscaping. Photorealistic. Concept illustration, not a real photo.`;
   }
   const what = TYPE_WORDS[listing.property_type ?? "other"] ?? "a property";
   const size = listing.surface_sqm

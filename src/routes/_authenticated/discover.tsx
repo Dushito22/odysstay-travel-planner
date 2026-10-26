@@ -22,7 +22,7 @@ function DiscoverPage() {
   const navigate = useNavigate({ from: "/discover" });
   const replace = useCallback((s: FeedSearch) => navigate({ search: s, replace: true }), [navigate]);
   const patch = (p: Partial<FeedSearch>) => navigate({ search: (prev) => ({ ...prev, ...p }), replace: true });
-  const { profile, filters, rows, isLoading, error } = useFeed(search, replace);
+  const { profile, filters, rows, total, isLoading, error } = useFeed(search, replace);
 
   const [shown, setShown] = useState(PAGE);
   const sentinel = useRef<HTMLDivElement>(null);
@@ -43,7 +43,9 @@ function DiscoverPage() {
         <div>
           <h1 className="text-4xl md:text-5xl">Discover</h1>
           <p className="mt-2 text-muted-foreground tnum">
-            {isLoading ? "Loading opportunities" : `${rows.length} ${rows.length === 1 ? "opportunity" : "opportunities"} across Italy, ranked by deal score`}
+            {isLoading ? "Loading opportunities" : total > rows.length
+              ? `${total.toLocaleString("en-GB")} opportunities across Italy. Showing the top ${rows.length}, narrow with filters.`
+              : `${rows.length} ${rows.length === 1 ? "opportunity" : "opportunities"} across Italy`}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

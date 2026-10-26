@@ -40,7 +40,7 @@ serve(async (req, body) => {
 
   const { data: listing } = await admin
     .from("listings")
-    .select("id, property_type, surface_sqm, land_sqm, comune, region")
+    .select("id, property_type, surface_sqm, land_sqm, comune, region, photo_urls")
     .eq("id", listingId)
     .maybeSingle();
   if (!listing) throw new HttpError(404, "Listing not found");
@@ -54,19 +54,37 @@ serve(async (req, body) => {
     .limit(1)
     .maybeSingle();
 
+  // Official photos are hotlinked from the court portal. Only URLs stored on this listing are used,
+  // never a URL from the request, and only from the portal's file host.
+  const photos = (Array.isArray(listing.photo_urls) ? listing.photo_urls : [])
+    .filter((u): u is string => typeof u === "string" && u.startsWith("https://resource-pvp.giustizia.it/"));
+  const wanted = typeof body["photo"] === "string" ? body["photo"] : null;
+  const officialUrl = wanted && photos.includes(wanted) ? wanted : photos[0] ?? null;
+
+  let file: Blob | null = null;
+  if (original) {
+    const { data, error } = await admin.storage.from("listing-images").download(original.storage_path);
+    if (error || !data) throw new HttpError(500, "Could not read the original photo");
+    file = data;
+  } else if (officialUrl) {
+    const r = await fetch(officialUrl);
+    const buf = r.ok ? await r.arrayBuffer() : null;
+    if (buf && buf.byteLength > 1000 && buf.byteLength < 20_000_000) {
+      const type = /\.png(\?|$)/i.test(officialUrl) ? "image/png" : "image/jpeg";
+      file = new Blob([buf], { type });
+    }
+  }
+
   let b64: string | undefined;
   let prompt: string;
-  if (original) {
+  if (file) {
     prompt = renderPrompt(listing, style, true);
-    const { data: file, error } = await admin.storage
-      .from("listing-images")
-      .download(original.storage_path);
-    if (error || !file) throw new HttpError(500, "Could not read the original photo");
     const form = new FormData();
     form.append("model", model);
     form.append("prompt", prompt);
     form.append("size", "1536x1024");
-    form.append("image", new File([file], "original.png", { type: file.type || "image/png" }));
+    const ext = file.type === "image/jpeg" ? "jpg" : "png";
+    form.append("image", new File([file], `original.${ext}`, { type: file.type || "image/png" }));
     const res = await fetch("https://api.openai.com/v1/images/edits", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}` },
