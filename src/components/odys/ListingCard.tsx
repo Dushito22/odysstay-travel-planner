@@ -163,9 +163,9 @@ export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: 
 
 export function ListingCardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-lg border bg-card">
-      <div className="aspect-[4/3] animate-pulse bg-muted" />
-      <div className="space-y-3 p-5">
+    <div>
+      <div className="aspect-[4/3] animate-pulse rounded-2xl bg-muted" />
+      <div className="space-y-3 px-1 pt-4">
         <div className="h-5 w-1/2 animate-pulse rounded bg-muted" />
         <div className="h-4 w-1/3 animate-pulse rounded bg-muted" />
         <div className="h-7 w-2/5 animate-pulse rounded bg-muted" />

@@ -53,7 +53,7 @@ function Login() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-5">
       <Link to="/" className="mb-8"><Wordmark /></Link>
-      <div className="w-full max-w-sm rounded-lg border bg-card p-8">
+      <div className="w-full max-w-sm rounded-2xl border bg-card p-8">
         {sent ? (
           <div className="text-center">
             <MailCheck className="mx-auto h-10 w-10 text-success" />

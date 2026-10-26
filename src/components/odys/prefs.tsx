@@ -95,7 +95,7 @@ const PAPER_ITEMS: { key: keyof Paperwork; label: string }[] = [
 
 export function PaperworkPicker({ value, onChange }: { value: Paperwork; onChange: (v: Paperwork) => void }) {
   return (
-    <div className="divide-y rounded-lg border bg-card">
+    <div className="divide-y rounded-2xl border bg-card">
       {PAPER_ITEMS.map((p) => (
         <label key={p.key} className="flex cursor-pointer items-center justify-between gap-4 p-4 text-sm">
           <span>{p.label}</span>

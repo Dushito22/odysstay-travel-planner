@@ -46,7 +46,7 @@ export function AppShell() {
             <Link
               key={to}
               to={to}
-              className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               activeProps={{ className: "bg-accent text-foreground font-medium" }}
             >
               <Icon className="h-4 w-4" />
@@ -57,14 +57,14 @@ export function AppShell() {
         <div className="mt-auto flex flex-col gap-1 border-t pt-4">
           <Link
             to="/profile"
-            className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
             activeProps={{ className: "bg-accent text-foreground font-medium" }}
           >
             <User className="h-4 w-4" /> Profile
           </Link>
           <button
             onClick={signOut}
-            className="flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="flex items-center gap-3 rounded-xl px-3 py-2 text-left text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <LogOut className="h-4 w-4" /> Sign out
           </button>
@@ -121,7 +121,7 @@ export function ComingSoon({ title, intro }: { title: string; intro: string }) {
   return (
     <>
       <PageHeader title={title} />
-      <div className="rounded-lg border border-dashed bg-card p-10 text-center text-muted-foreground">{intro}</div>
+      <div className="rounded-2xl border border-dashed bg-card p-10 text-center text-muted-foreground">{intro}</div>
     </>
   );
 }

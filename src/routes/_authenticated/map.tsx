@@ -44,7 +44,7 @@ function MapPage() {
               <div className="px-4 pb-6"><FilterPanel value={search} onChange={patch} /></div>
             </SheetContent>
           </Sheet>
-          <div className="rounded-md bg-card/95 px-3 py-1.5"><FilterChips value={search} onChange={patch} onReset={() => replace(RESET_SEARCH)} /></div>
+          <div className="rounded-xl bg-card/95 px-3 py-1.5"><FilterChips value={search} onChange={patch} onReset={() => replace(RESET_SEARCH)} /></div>
         </div>
         <ClientOnly fallback={<div className="h-full w-full animate-pulse bg-muted" />}>
           <Suspense fallback={<div className="h-full w-full animate-pulse bg-muted" />}>
