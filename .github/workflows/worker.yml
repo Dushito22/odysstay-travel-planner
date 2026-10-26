@@ -67,9 +67,17 @@ jobs:
           if [ -z "$TASK" ]; then
             if [ "${{ github.event.schedule }}" = "43 1 * * 0" ]; then TASK=comuni-crawl; else TASK=daily; fi
           fi
+          set -o pipefail
           case "$TASK" in
-            daily)           python -m odysstay_worker daily --comuni 0 --limit 150 ;;
-            comuni-crawl)    python -m odysstay_worker comuni crawl --limit 2500 --workers 12 && python -m odysstay_worker extract --limit 150 && python -m odysstay_worker geocode && python -m odysstay_worker score ;;
-            comuni-discover) python -m odysstay_worker comuni discover ;;
-            status)          python -m odysstay_worker status ;;
+            daily)           python -m odysstay_worker daily --comuni 0 --limit 150 2>&1 | tee run.log ;;
+            comuni-crawl)    { python -m odysstay_worker comuni crawl --limit 2500 --workers 12 && python -m odysstay_worker extract --limit 150 && python -m odysstay_worker geocode && python -m odysstay_worker score && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
+            comuni-discover) { python -m odysstay_worker comuni discover && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
+            status)          python -m odysstay_worker status 2>&1 | tee run.log ;;
           esac
+      - name: Summary
+        if: always() && steps.secrets.outputs.ok == 'true'
+        run: |
+          [ -f run.log ] || exit 0
+          { echo '```'; tail -n 60 run.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          # One-line annotation so the result is visible from the run page and the API.
+          echo "::notice title=Worker ${{ github.event.inputs.task || 'scheduled' }}::$(tail -n 8 run.log | tr '\n' ' ' | cut -c1-900)"
