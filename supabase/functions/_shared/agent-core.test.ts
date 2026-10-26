@@ -182,6 +182,22 @@ describe("context builders", () => {
     expect(c.length).toBeLessThan(45000); // notice text is capped
   });
 
+  it("adds court-sale details and published contacts when present", () => {
+    const c = buildAgentContext({
+      listing: {
+        ...listing, court: "Tribunale di Perugia", case_ref: "R.G.E. 43/2025, lotto 1", min_offer_eur: 28500,
+        appraisal_eur: 71000, discount_pct: 60,
+        contacts: [{ role: "Sale delegate", name: "Mario Rossi", email: "m@example.it", phone: "333" }],
+        attachments: [{ kind: "appraisal", name: "Perizia.pdf", url: "https://x" }],
+      },
+      facts, flags, estimates: [], grants, noticeText: null, deal: null, profile: null,
+    });
+    expect(c).toContain('"court":"Tribunale di Perugia"');
+    expect(c).toContain('"name":"Mario Rossi"');
+    expect(c).toContain('"kind":"appraisal"');
+    expect(c).not.toContain("333"); // phone numbers are not needed by the agent
+  });
+
   it("draft context only carries the facts a letter needs", () => {
     const c = buildDraftContext({
       listing,

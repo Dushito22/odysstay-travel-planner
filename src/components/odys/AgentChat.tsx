@@ -32,7 +32,7 @@ const KIND_LABEL: Record<string, string> = {
   notary: "a notary",
   surveyor: "a surveyor",
   lawyer: "a lawyer",
-  seller: "the seller",
+  seller: "the seller or sale delegate",
   agency: "the agency",
   contractor: "a contractor",
   translator: "a translator",
