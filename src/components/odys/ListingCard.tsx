@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { DeadlinePill, formatEur, IllustrationLabel, Money, ScoreBadge } from "./primitives";
 
 /** Single OSM tile around a point, used as a warm designed placeholder. */
-function osmTile(lat: number, lng: number, z = 13) {
+function osmTile(lat: number, lng: number, z = 11) {
   const n = 2 ** z;
   const x = Math.floor(((lng + 180) / 360) * n);
   const r = (lat * Math.PI) / 180;
@@ -32,7 +32,7 @@ export function CardImage({ row, compact }: { row: FeedRow; compact?: boolean })
           ) : (
             <div className="texture-warm h-full w-full" />
           )}
-          <div className="absolute inset-0 flex items-end bg-background/25 p-4">
+          <div className="absolute inset-0 flex items-end bg-background/40 p-4">
             <span className={cn("font-display font-medium text-foreground", compact ? "text-lg" : "text-2xl")}>
               {row.comune ?? "Unknown comune"}
             </span>
