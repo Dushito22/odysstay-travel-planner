@@ -55,7 +55,7 @@ function Chip({ children, tone = "muted" }: { children: React.ReactNode; tone?: 
   return <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium", tones[tone])}>{children}</span>;
 }
 
-const savedQuery = {
+export const savedQuery = {
   queryKey: ["saved-ids"],
   queryFn: async () => {
     const { data: u } = await supabase.auth.getUser();
@@ -66,7 +66,7 @@ const savedQuery = {
   },
 };
 
-function SaveButton({ id }: { id: string }) {
+export function SaveButton({ id }: { id: string }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const { data: saved } = useQuery(savedQuery);
