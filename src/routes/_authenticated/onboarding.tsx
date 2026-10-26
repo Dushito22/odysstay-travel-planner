@@ -45,7 +45,7 @@ function Onboarding() {
   async function next() {
     setSaving(true);
     try {
-      await saveProfile(patches[step]);
+      await saveProfile(patches[step] ?? {});
       await qc.invalidateQueries({ queryKey: profileQuery.queryKey });
       if (step === 4) navigate({ to: "/discover" });
       else setStep(step + 1);

@@ -52,7 +52,7 @@ export function BudgetSlider({
         <span className="text-sm font-medium">{label}</span>
         <Money value={value} className="text-2xl" showOneEuroChip={false} />
       </div>
-      <Slider value={[value]} min={0} max={max} step={5000} onValueChange={([v]) => onChange(v)} aria-label={label} />
+      <Slider value={[value]} min={0} max={max} step={5000} onValueChange={([v]) => onChange(v ?? 0)} aria-label={label} />
     </div>
   );
 }
