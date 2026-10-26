@@ -16,7 +16,7 @@ export function PublicFooter() {
           aria-label="Footer"
           className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground"
         >
-          <Link to="/discover" className="hover:text-foreground">
+          <Link to="/explore" className="hover:text-foreground">
             Explore
           </Link>
           <Link to="/pricing" className="hover:text-foreground">
@@ -51,7 +51,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
               <Link to="/pricing">Pricing</Link>
             </Button>
             <Button asChild size="sm">
-              <Link to="/discover">Explore</Link>
+              <Link to="/explore">Explore</Link>
             </Button>
           </nav>
         </div>
