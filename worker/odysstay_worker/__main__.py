@@ -68,6 +68,18 @@ def main(argv=None):
     if a.cmd == "check":
         n = len(db.select("sources", {"select": "id"}))
         print(f"Connected to Supabase. {n} sources configured.")
+        from . import config
+        k = config.ANTHROPIC_API_KEY
+        print(f"Anthropic key: {config.key_shape(k)}")
+        if k and not k.startswith("sk-ant-api"):
+            print("  error: this does not look like an Anthropic API key. It should start with sk-ant-api, from console.anthropic.com > API keys.")
+        elif k:
+            import anthropic
+            try:
+                anthropic.Anthropic(api_key=k).models.list(limit=1)
+                print("  Anthropic key works.")
+            except Exception as e:  # noqa: BLE001
+                print(f"  error: Anthropic rejected the key: {str(e)[:200]}")
     elif a.cmd == "gazzetta":
         from .collectors import gazzetta
         print(json.dumps(gazzetta.collect(db, a.days), indent=2))
