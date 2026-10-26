@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Sparkles } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -97,9 +97,9 @@ export function GenerateRender({
             {limit && (
               <div className="rounded-2xl bg-caution-soft p-4 text-sm text-caution">
                 <p>{limit}</p>
-                <a href="/pricing" className="mt-1 inline-block font-medium underline">
+                <Link to="/pricing" className="mt-1 inline-block font-medium underline">
                   See plans
-                </a>
+                </Link>
               </div>
             )}
             <Button className="w-full" onClick={go} disabled={busy}>

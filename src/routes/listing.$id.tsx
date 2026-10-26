@@ -553,7 +553,10 @@ function ActionCard({ data, userId }: { data: ListingBundle; userId: string | nu
         <div className="mt-4 rounded-2xl bg-caution-soft p-4 text-sm text-caution">
           <p className="font-semibold">You already have an active deal</p>
           <p className="mt-1">The free plan includes one active deal at a time. Upgrade to Pro to work on several, or close your current deal first.</p>
-          <Link to="/deals" className="mt-2 inline-block font-medium underline">See your deals</Link>
+          <div className="mt-2 flex gap-4">
+            <Link to="/deals" className="font-medium underline">See your deals</Link>
+            <Link to="/pricing" className="font-medium underline">See plans</Link>
+          </div>
         </div>
       )}
 

@@ -866,7 +866,7 @@ export function DocumentsTab({ bundle, run, pending }: TabProps) {
         <div className="mb-3 flex items-center justify-between">
           <h3 className="font-medium">Your documents for this deal</h3>
           <Button asChild variant="outline" size="sm">
-            <Link to="/profile">Manage vault</Link>
+            <Link to="/vault">Manage vault</Link>
           </Button>
         </div>
         {!vaultDocs.length ? (
