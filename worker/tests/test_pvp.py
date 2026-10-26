@@ -130,3 +130,37 @@ def test_collect_upserts_and_skips_unchanged():
     est = db.select("cost_estimates")
     assert {e["scenario"] for e in est} == {"light", "standard", "full"}
     assert costs.run(db, log=lambda *_: None) == 0  # not duplicated
+
+
+def test_perizia_verification_drops_unquoted():
+    from odysstay_worker import perizia
+    pages = ["Superficie commerciale complessiva pari a mq 128,50.\nLo stato di manutenzione è scadente, con infiltrazioni dal tetto.",
+             "Si rilevano difformità urbanistiche sanabili con costi stimati in euro 6.500,00.\nSpese condominiali insolute: nessuna."]
+    out = {
+        "surface_sqm": {"value": 128.5, "quote": "Superficie commerciale complessiva pari a mq 128,50", "quote_en": "Total commercial surface 128.50 m²"},
+        "condition": {"value": "poor", "quote": "Lo stato di manutenzione è scadente", "quote_en": "Maintenance is poor"},
+        "regularisation_cost_eur": {"value": 6500, "quote": "costi stimati in euro 6.500,00", "quote_en": "estimated costs €6,500"},
+        "year_built": {"value": 1965, "quote": "costruito nel 1965", "quote_en": "built in 1965"},  # not in report
+        "condo_arrears_eur": {"value": 3000, "quote": "Spese condominiali insolute: nessuna", "quote_en": "none"},  # number not in quote
+        "condition_summary_en": {"value": "Poor condition with roof leaks.", "quotes": ["con infiltrazioni dal tetto"]},
+        "red_flags": [
+            {"flag_en": "Unpermitted changes, fixable for about €6,500", "severity": "high",
+             "quote": "Si rilevano difformità urbanistiche sanabili con costi stimati in euro 6.500,00.", "quote_en": "..."},
+            {"flag_en": "Asbestos roof", "severity": "high", "quote": "copertura in amianto", "quote_en": "asbestos roof"},
+        ],
+    }
+    v = perizia.verify(out, pages)
+    assert set(v["facts"]) == {"surface_sqm", "condition", "regularisation_cost_eur"}
+    assert v["facts"]["regularisation_cost_eur"]["page"] == 2
+    assert sorted(v["rejected"]) == ["condo_arrears_eur", "year_built"]
+    assert [f["flag_en"] for f in v["flags"]] == ["Unpermitted changes, fixable for about €6,500"]
+    assert v["summary"] == "Poor condition with roof leaks."
+    rows = {r["key"]: r for r in perizia.fact_rows("L1", v["facts"])}
+    assert rows["perizia_surface_sqm"]["value_text"] == "128 m²" or rows["perizia_surface_sqm"]["value_text"] == "129 m²"
+    assert rows["condition"]["value_text"] == "Poor, needs renovation"
+
+
+def test_score_weights_flags_by_severity():
+    s_low, r_low, _ = score.score_listing({"price_eur": 30000}, {"low": 3}, TODAY)
+    s_high, r_high, _ = score.score_listing({"price_eur": 30000}, {"high": 2}, TODAY)
+    assert s_low - s_high == 13 and "-16 2 red flags (2 high)" in r_high

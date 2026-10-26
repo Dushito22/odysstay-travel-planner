@@ -11,6 +11,7 @@
   python -m odysstay_worker geocode                    put new listings on the map
   python -m odysstay_worker score                      rank listings and update open/closing/closed
   python -m odysstay_worker costs                      add default renovation estimates
+  python -m odysstay_worker perizia [--limit 40]       read court appraisal reports of the best listings with AI
   python -m odysstay_worker grants                     link regional grants to listings as possible fits
   python -m odysstay_worker status                     counts at a glance
   python -m odysstay_worker daily [--limit 200]        everything above, in order
@@ -45,6 +46,8 @@ def main(argv=None):
     sub.add_parser("check")
     g = sub.add_parser("gazzetta")
     g.add_argument("--days", type=int, default=14)
+    pz = sub.add_parser("perizia")
+    pz.add_argument("--limit", type=int, default=40)
     pv = sub.add_parser("pvp")
     pv.add_argument("--max-price", type=float, default=300_000)
     pv.add_argument("--limit", type=int, default=6000, help="max lot details to read this run")
@@ -93,6 +96,9 @@ def main(argv=None):
     elif a.cmd == "pvp":
         from .collectors import pvp
         print(json.dumps(pvp.collect(db, max_price=a.max_price, detail_limit=a.limit), indent=2))
+    elif a.cmd == "perizia":
+        from . import perizia
+        print(json.dumps(perizia.run(db, limit=a.limit), indent=2))
     elif a.cmd == "costs":
         from . import costs
         costs.run(db)
@@ -141,6 +147,9 @@ def main(argv=None):
         geocode.run(db)
         extract.link_grants(db)
         score.run(db)
+        from . import perizia
+        print(json.dumps(perizia.run(db), indent=2))
+        score.run(db)  # again: report red flags change scores
         costs.run(db)
         status(db)
 

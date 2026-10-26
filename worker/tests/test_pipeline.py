@@ -132,7 +132,7 @@ def test_full_pipeline(monkeypatch):
     [l] = db.select("listings")
     assert l["status"] == "active" and l["score"] >= 70
     assert any("unsold before" in r for r in l["score_reasons"])
-    assert "-5 1 red flag" in l["score_reasons"]
+    assert "-4 1 red flag (1 medium)" in l["score_reasons"]
 
 
 def test_score_status_and_concessions():

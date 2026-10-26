@@ -12,7 +12,11 @@ from .supa import Supa, eq
 RESIDENTIAL = {"house", "apartment", "rural_house", "building", "mixed"}
 
 
-def score_listing(l: dict, red_flags: int, today: date | None = None) -> tuple[float, list[str], str]:
+FLAG_POINTS = {"high": 8, "medium": 4, "low": 1}
+
+
+def score_listing(l: dict, red_flags: int | dict[str, int], today: date | None = None) -> tuple[float, list[str], str]:
+    """red_flags: count by severity, e.g. {"high": 1, "medium": 2}. A bare int counts as medium."""
     today = today or date.today()
     reasons: list[str] = []
     s = 30.0
@@ -73,10 +77,13 @@ def score_listing(l: dict, red_flags: int, today: date | None = None) -> tuple[f
     elif l.get("occupancy") == "occupied":
         s -= 15
         reasons.append("-15 occupied")
-    if red_flags:
-        pen = min(20, 5 * red_flags)
+    sev = {"medium": red_flags} if isinstance(red_flags, int) else dict(red_flags)
+    n_flags = sum(sev.values())
+    if n_flags:
+        pen = min(24, sum(FLAG_POINTS.get(k, 4) * v for k, v in sev.items()))
+        detail = ", ".join(f"{sev[k]} {k}" for k in ("high", "medium", "low") if sev.get(k))
         s -= pen
-        reasons.append(f"-{pen} {red_flags} red flag{'s' if red_flags > 1 else ''}")
+        reasons.append(f"-{pen} {n_flags} red flag{'s' if n_flags > 1 else ''} ({detail})")
 
     status = "active"
     end = l.get("deadline_at") or l.get("auction_at")
@@ -97,12 +104,13 @@ def run(db: Supa, log=print) -> int:
     listings = db.select("listings", {"select": "id,price_eur,surface_sqm,property_type,sale_type,discount_pct,"
                                       "previous_auction_failed,occupancy,deadline_at,auction_at,status,score,score_reasons",
                                       "is_demo": "eq.false", "status": "neq.withdrawn"})
-    flags: dict[str, int] = {}
-    for f in db.select("listing_red_flags", {"select": "listing_id"}):
-        flags[f["listing_id"]] = flags.get(f["listing_id"], 0) + 1
+    flags: dict[str, dict[str, int]] = {}
+    for f in db.select("listing_red_flags", {"select": "listing_id,severity"}):
+        d = flags.setdefault(f["listing_id"], {})
+        d[f.get("severity") or "medium"] = d.get(f.get("severity") or "medium", 0) + 1
     n = 0
     for l in listings:
-        s, reasons, status = score_listing(l, flags.get(l["id"], 0))
+        s, reasons, status = score_listing(l, flags.get(l["id"], {}))
         if (l.get("score"), l.get("score_reasons"), l.get("status")) != (s, reasons, status):
             db.update("listings", {"id": eq(l["id"])}, {"score": s, "score_reasons": reasons, "status": status})
             n += 1

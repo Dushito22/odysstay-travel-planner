@@ -130,7 +130,8 @@ function ListingPage() {
                 ["Base price", <FactValue key="p" fact={byKey["price_eur"]} sourceUrl={src} />],
                 byKey["min_offer_eur"] ? ["Minimum offer", <FactValue key="mo" fact={byKey["min_offer_eur"]} sourceUrl={src} />] : null,
                 byKey["appraisal_eur"] ? ["Court appraisal", <Appraisal key="a" fact={byKey["appraisal_eur"]} discount={l.discount_pct} sourceUrl={src} />] : null,
-                ["Surface", <FactValue key="s" fact={byKey["surface_sqm"] ?? byKey["land_sqm"]} sourceUrl={src} />],
+                ["Surface", <FactValue key="s" fact={byKey["surface_sqm"] ?? byKey["perizia_surface_sqm"] ?? byKey["land_sqm"]} sourceUrl={src} />],
+                byKey["condition"] ? ["Condition", <FactValue key="c" fact={byKey["condition"]} sourceUrl={src} />] : null,
                 ["Price per m²", <PricePerSqm key="m" facts={byKey} />],
                 ["Deposit", <FactValue key="d" fact={byKey["deposit_eur"] ?? byKey["deposit"]} sourceUrl={src} />],
                 byKey["auction_date"] ? ["Sale date", <FactValue key="sd" fact={byKey["auction_date"]} sourceUrl={src} />] : null,
@@ -184,7 +185,9 @@ function ListingPage() {
               </ul>
             ) : (
               <p className="max-w-2xl rounded-2xl border bg-card p-5 text-muted-foreground">
-                No red flags were found in the notice. That does not mean there are none: a site visit with a surveyor is still essential.
+                {l.sale_type === "auction_judicial"
+                  ? "No red flags recorded yet. For court sales the problems are listed in the appraisal report under Official documents: read it before bidding, and visit with a surveyor."
+                  : "No red flags were found in the notice. That does not mean there are none: a site visit with a surveyor is still essential."}
               </p>
             )}
           </Section>
@@ -316,7 +319,7 @@ function SaleContacts({ data }: { data: ListingBundle }) {
 
 function PricePerSqm({ facts }: { facts: Record<string, Fact | undefined> }) {
   const p = facts["price_eur"]?.value_num;
-  const s = facts["surface_sqm"]?.value_num;
+  const s = facts["surface_sqm"]?.value_num ?? facts["perizia_surface_sqm"]?.value_num;
   if (p == null || !s || p <= 1) return <NotStated />;
   return (
     <span>
@@ -423,7 +426,10 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
       return pickEstimates(data, userId);
     },
   });
-  const [scenario, setScenario] = useState("standard");
+  const condition = data.facts.find((f) => f.key === "condition")?.value_text ?? "";
+  const [scenario, setScenario] = useState(
+    condition.startsWith("Good") ? "light" : condition.startsWith("Poor") || condition.startsWith("Derelict") ? "full" : "standard",
+  );
   const sel: CostEstimate | undefined = estimates.find((e) => e.scenario === scenario) ?? estimates[0];
   const price = l.min_offer_eur ?? l.price_eur;
   const priceLabel = l.min_offer_eur != null ? "Minimum offer" : "Base price";

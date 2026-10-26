@@ -13,10 +13,10 @@ on:
       task:
         description: "What to run"
         type: choice
-        options: [daily, pvp, retry-errors, check, pvp-probe, comuni-crawl, comuni-discover, status]
+        options: [daily, pvp, perizia, retry-errors, check, pvp-probe, comuni-crawl, comuni-discover, status]
         default: daily
       limit:
-        description: "Court sales: max lots to read (pvp task only)"
+        description: "pvp: max lots to read. perizia: max reports to read"
         required: false
         default: "25000"
 
@@ -79,6 +79,7 @@ jobs:
             comuni-discover) { python -m odysstay_worker comuni discover && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             status)          python -m odysstay_worker status 2>&1 | tee run.log ;;
             pvp)             { python -m odysstay_worker pvp --limit ${{ github.event.inputs.limit || '25000' }} && python -m odysstay_worker geocode && python -m odysstay_worker score && python -m odysstay_worker costs && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
+            perizia)         { python -m odysstay_worker perizia --limit ${{ github.event.inputs.limit || '40' }} && python -m odysstay_worker score && python -m odysstay_worker costs; } 2>&1 | tee run.log ;;
             pvp-probe)       python -m odysstay_worker pvp-probe 2>&1 | tee run.log ;;
             check)           python -m odysstay_worker check 2>&1 | tee run.log ;;
             retry-errors)    { python -m odysstay_worker check && python -m odysstay_worker extract --retry-errors --limit 150 && python -m odysstay_worker geocode && python -m odysstay_worker grants && python -m odysstay_worker score && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
