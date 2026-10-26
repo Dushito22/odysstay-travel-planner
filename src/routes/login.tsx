@@ -8,7 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 
+function safePath(p: unknown): string | null {
+  return typeof p === "string" && p.startsWith("/") && !p.startsWith("//") ? p : null;
+}
+
 export const Route = createFileRoute("/login")({
+  validateSearch: (s: Record<string, unknown>): { redirect?: string } => {
+    const r = safePath(s["redirect"]);
+    return r ? { redirect: r } : {};
+  },
   head: () => ({
     meta: [
       { title: "Sign in | Odysstay" },
@@ -22,20 +30,25 @@ export const Route = createFileRoute("/login")({
 
 function Login() {
   const navigate = useNavigate();
+  const { redirect } = Route.useSearch();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const go = () => {
+      if (redirect) navigate({ to: redirect as "/", replace: true });
+      else navigate({ to: "/discover", replace: true });
+    };
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/discover", replace: true });
+      if (data.session) go();
     });
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) navigate({ to: "/discover", replace: true });
+      if (event === "SIGNED_IN" && session) go();
     });
     return () => data.subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, redirect]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -43,7 +56,7 @@ function Login() {
     setError(null);
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { emailRedirectTo: `${window.location.origin}/login` },
+      options: { emailRedirectTo: `${window.location.origin}/login${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ""}` },
     });
     setBusy(false);
     if (error) setError(error.message);
