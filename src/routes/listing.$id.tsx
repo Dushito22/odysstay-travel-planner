@@ -131,7 +131,7 @@ function ListingPage() {
                 ["Deposit", <FactValue key="d" fact={byKey["deposit_eur"]} sourceUrl={src} />],
                 ["Deadline", <FactValue key="dl" fact={byKey["deadline"]} sourceUrl={src} />],
               ].map(([label, node]) => (
-                <div key={label as string} className="bg-card p-5">
+                <div key={label as string} className={cn("bg-card p-5", label === "Deadline" && "col-span-2")}>
                   <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt>
                   <dd className="mt-2 text-lg font-semibold tnum">{node}</dd>
                 </div>
@@ -379,7 +379,7 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
       <Section title="Total cost picture">
         <div className="rounded-2xl border bg-card p-6">
           <Row label="Base price">{price != null ? <Money value={price} /> : <NotStated />}</Row>
-          <Row label={`Renovation (${sel?.scenario ?? "none"})`}>{sel ? <span className="tnum">{range(sel.low_eur, sel.high_eur)}</span> : <span className="text-muted-foreground">No estimate yet</span>}</Row>
+          <Row label={`Renovation, ${sel?.scenario ?? "none"}`}>{sel ? <span className="tnum">{range(sel.low_eur, sel.high_eur)}</span> : <span className="text-muted-foreground">No estimate yet</span>}</Row>
           <div className="my-3 border-t" />
           <Row label="Total" strong>
             {price != null && sel ? <span className="tnum">{range(price + sel.low_eur, price + sel.high_eur)}</span> : <span className="text-sm font-normal text-muted-foreground">Needs a price and an estimate</span>}
@@ -431,7 +431,7 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
 function Row({ label, children, strong }: { label: string; children: ReactNode; strong?: boolean }) {
   return (
     <div className={cn("flex items-center justify-between gap-4 py-1.5", strong && "text-lg font-semibold")}>
-      <span className={cn(!strong && "text-muted-foreground", "capitalize")}>{label}</span>
+      <span className={cn(!strong && "text-muted-foreground")}>{label}</span>
       <span>{children}</span>
     </div>
   );
@@ -533,7 +533,7 @@ function ActionCard({ data, userId }: { data: ListingBundle; userId: string | nu
             {!userId && <Lock />} {busy ? "Starting" : userId ? "Start a deal" : "Sign in to start a deal"}
           </Button>
         )}
-        <Button variant="outline" className="w-full" disabled title="Coming soon">
+        <Button variant="outline" className="h-auto w-full whitespace-normal py-2.5" disabled title="Coming soon">
           <MessageCircle /> Ask the agent about this property · Coming soon
         </Button>
       </div>
