@@ -75,10 +75,24 @@ def test_relevance_and_split():
     assert [c for c, _ in split_notices(issue)] == ["TX26BIA374", "TX26BFC100"]
 
 
-def test_issue_list_parsing():
-    html = "n° 121 del 23-10-2026 ... n° 120 del 21-10-2026 ... n° 90 del 07-08-2026"
+def test_issue_list_parsing_from_labels():
+    html = "<li><a>n&deg; 121</a><br/> del 23-10-2026</li> n° 120 del 21-10-2026 ... n° 90 del 07-08-2026"
     got = parse_issue_list(html, date(2026, 10, 1))
-    assert got == [(120, date(2026, 10, 21)), (121, date(2026, 10, 23))]
+    assert got == [(120, date(2026, 10, 21), None), (121, date(2026, 10, 23), None)]
+
+
+def test_issue_list_parsing_from_links():
+    html = (
+        '<a href="/gazzetta/contratti/caricaDettaglio?dataPubblicazioneGazzetta=2026-10-23&amp;numeroGazzetta=121">x</a>'
+        '<a href="/do/gazzetta/downloadPdf?dataPubblicazioneGazzetta=20261023&amp;numeroGazzetta=121&amp;estensione=pdf">Download PDF</a>'
+        '<a href="/do/gazzetta/contratti/0/pdfPaginato?numeroGazzetta=120&amp;dataPubblicazioneGazzetta=20261021&amp;numPagina=1">x</a>'
+        '<a href="/do/gazzetta/downloadPdf?dataPubblicazioneGazzetta=20260807&amp;numeroGazzetta=90&amp;estensione=pdf">old</a>'
+    )
+    got = parse_issue_list(html, date(2026, 10, 1))
+    assert got == [
+        (120, date(2026, 10, 21), None),
+        (121, date(2026, 10, 23), "https://www.gazzettaufficiale.it/do/gazzetta/downloadPdf?dataPubblicazioneGazzetta=20261023&numeroGazzetta=121&estensione=pdf"),
+    ]
 
 
 def test_full_pipeline(monkeypatch):

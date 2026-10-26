@@ -6,8 +6,10 @@ We split each issue into notices and keep only the ones that look like property 
 """
 from __future__ import annotations
 
+import html as html_lib
 import re
 from datetime import date, timedelta
+from urllib.parse import urljoin
 
 from .. import http
 from ..pdftext import pdf_to_text
@@ -25,29 +27,84 @@ def pdf_url(num: int, d: date) -> str:
     return f"{BASE}/eli/gu/{d:%Y/%m/%d}/{num}/s5/pdf"
 
 
-def parse_issue_list(html: str, since: date) -> list[tuple[int, date]]:
-    found = set()
-    for m in ISSUE_RE.finditer(html):
-        num, dd, mm, yyyy = int(m[1]), int(m[2]), int(m[3]), int(m[4])
+_LINK_RE = re.compile(
+    r"""href=["']([^"']*?dataPubblicazioneGazzetta=(\d{4})-?(\d{2})-?(\d{2})[^"']*?numeroGazzetta=(\d+)[^"']*)["']""",
+    re.I,
+)
+_LINK_RE_REV = re.compile(
+    r"""href=["']([^"']*?numeroGazzetta=(\d+)[^"']*?dataPubblicazioneGazzetta=(\d{4})-?(\d{2})-?(\d{2})[^"']*)["']""",
+    re.I,
+)
+
+
+def parse_issue_list(html: str, since: date) -> list[tuple[int, date, str | None]]:
+    """[(number, date, download_url)]. Reads the issue links (their URLs carry the date and number),
+    and falls back to the visible "n° 121 del 23-10-2026" labels."""
+    found: dict[tuple[int, date], str | None] = {}
+
+    def add(num: int, d: date, href: str | None):
+        if d < since:
+            return
+        key = (num, d)
+        if href and "downloadPdf" in href:
+            found[key] = href
+        else:
+            found.setdefault(key, None)
+
+    for m in _LINK_RE.finditer(html):
         try:
-            d = date(yyyy, mm, dd)
+            add(int(m[5]), date(int(m[2]), int(m[3]), int(m[4])), html_lib.unescape(m[1]))
         except ValueError:
-            continue
-        if d >= since:
-            found.add((num, d))
-    return sorted(found, key=lambda x: x[1])
+            pass
+    for m in _LINK_RE_REV.finditer(html):
+        try:
+            add(int(m[2]), date(int(m[3]), int(m[4]), int(m[5])), html_lib.unescape(m[1]))
+        except ValueError:
+            pass
+    text = re.sub(r"\s+", " ", html_lib.unescape(re.sub(r"<[^>]+>", " ", html)))
+    for m in ISSUE_RE.finditer(text):
+        try:
+            add(int(m[1]), date(int(m[4]), int(m[3]), int(m[2])), None)
+        except ValueError:
+            pass
+    out = []
+    for (num, d), href in sorted(found.items(), key=lambda kv: kv[0][1]):
+        out.append((num, d, urljoin(BASE + "/", href) if href else None))
+    return out
 
 
-def list_issues(days: int) -> list[tuple[int, date]]:
+def list_issues(days: int, log=print) -> list[tuple[int, date, str | None]]:
     since = date.today() - timedelta(days=days)
     pages = [LAST_30]
     if days > 28:
         pages += [ARCHIVE.format(y=y) for y in sorted({since.year, date.today().year})]
-    out = set()
+    out: dict[tuple[int, date], str | None] = {}
     for url in pages:
         body, _, _ = http.get(url, max_age_hours=6)
-        out.update(parse_issue_list(body.decode("utf-8", "replace"), since))
-    return sorted(out, key=lambda x: x[1])
+        page = body.decode("utf-8", "replace")
+        got = parse_issue_list(page, since)
+        if not got:
+            i = page.find("numeroGazzetta")
+            sample = page[max(0, i - 200) : i + 200] if i >= 0 else page[:400]
+            log(f"  No issues recognised on {url} ({len(page)} chars). Sample: {' '.join(sample.split())[:400]}")
+        for num, d, href in got:
+            if href or (num, d) not in out:
+                out[(num, d)] = href
+    return [(n, d, h) for (n, d), h in sorted(out.items(), key=lambda kv: kv[0][1])]
+
+
+def fetch_issue_pdf(num: int, d: date, download_url: str | None) -> bytes:
+    """Tries the site's own download link first, then the stable /eli/ address."""
+    last = None
+    for url in [u for u in (download_url, pdf_url(num, d)) if u]:
+        try:
+            body, ctype, _ = http.get(url, max_age_hours=24 * 30)
+            if body.startswith(b"%PDF"):
+                return body
+            last = ValueError(f"not a PDF from {url} ({ctype})")
+        except Exception as e:  # noqa: BLE001
+            last = e
+    raise last or ValueError("no download link")
 
 
 def split_notices(text: str) -> list[tuple[str, str]]:
@@ -67,18 +124,15 @@ def split_notices(text: str) -> list[tuple[str, str]]:
 
 def collect(db: Supa, days: int = 14, log=print) -> dict:
     stats = {"issues": 0, "notices": 0, "candidates": 0, "errors": 0}
-    issues = list_issues(days)
+    issues = list_issues(days, log)
     done = {r["url"] for r in db.select("documents", {"select": "url", "source_id": eq("gazzetta"), "part": eq("__issue__")})}
-    log(f"Gazzetta: {len(issues)} issues in the last {days} days, {sum(1 for n, d in issues if pdf_url(n, d) in done)} already read")
-    for num, d in issues:
-        url = pdf_url(num, d)
+    log(f"Gazzetta: {len(issues)} issues in the last {days} days, {sum(1 for n, d, _ in issues if pdf_url(n, d) in done)} already read")
+    for num, d, download_url in issues:
+        url = pdf_url(num, d)  # stable address, used as the document's identity and source link
         if url in done:
             continue
         try:
-            body, ctype, _ = http.get(url, max_age_hours=24 * 30)
-            if not body.startswith(b"%PDF"):
-                raise ValueError(f"not a PDF ({ctype})")
-            text = pdf_to_text(body)
+            text = pdf_to_text(fetch_issue_pdf(num, d, download_url))
         except Exception as e:  # noqa: BLE001
             stats["errors"] += 1
             log(f"  n.{num} {d}: error {e}")
