@@ -17,7 +17,8 @@ on:
         default: daily
 
 concurrency:
-  group: worker
+  # Quick read-only tasks run alongside a long crawl; everything that writes listings queues.
+  group: ${{ contains(fromJSON('["pvp-probe","check","status"]'), github.event.inputs.task) && format('quick-{0}', github.run_id) || 'worker' }}
   cancel-in-progress: false
 
 jobs:
