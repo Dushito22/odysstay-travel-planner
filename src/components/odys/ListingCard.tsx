@@ -22,18 +22,18 @@ export function CardImage({ row, compact }: { row: FeedRow; compact?: boolean })
   const render = renderUrl(row.latest_render_path) ?? renderUrl(row.hero_image_path);
   const isRender = !!row.latest_render_path;
   return (
-    <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+    <div className={cn("relative aspect-[4/3] overflow-hidden bg-muted", !compact && "rounded-2xl")}>
       {render ? (
-        <img src={render} alt={row.title_en ?? row.comune ?? "Property"} className="h-full w-full object-cover" loading="lazy" />
+        <img src={render} alt={row.title_en ?? row.comune ?? "Property"} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" loading="lazy" />
       ) : (
         <>
           {row.lat != null && row.lng != null ? (
-            <img src={osmTile(row.lat, row.lng)} alt="" aria-hidden className="map-tone h-full w-full scale-125 object-cover" loading="lazy" />
+            <img src={osmTile(row.lat, row.lng)} alt="" aria-hidden className="map-tone h-full w-full scale-125 object-cover transition-transform duration-700 group-hover:scale-[1.32]" loading="lazy" />
           ) : (
             <div className="texture-muted h-full w-full" />
           )}
-          <div className="absolute inset-0 flex items-end bg-background/40 p-4">
-            <span className={cn("font-display font-medium text-foreground", compact ? "text-lg" : "text-2xl")}>
+          <div className="absolute inset-0 flex items-end bg-gradient-to-t from-foreground/55 via-foreground/5 to-transparent p-4">
+            <span className={cn("font-display font-semibold text-background", compact ? "text-lg" : "text-2xl")}>
               {row.comune ?? "Unknown comune"}
             </span>
           </div>
@@ -104,7 +104,7 @@ export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: 
   if (!row.id) return null;
   const fit = budgetFit(row, profile);
   return (
-    <article className="group overflow-hidden rounded-lg border bg-card transition-shadow hover:shadow-hover">
+    <article className={cn("group", compact && "overflow-hidden rounded-2xl bg-card")}>
       <Link to="/listing/$id" params={{ id: row.id }} className="block">
         <div className="relative">
           <CardImage row={row} compact={!!compact} />
@@ -112,15 +112,15 @@ export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: 
             <ScoreBadge score={row.score} reasons={row.score_reasons} size={compact ? "sm" : "md"} />
           </div>
           {row.is_demo && (
-            <span className="absolute left-3 top-3 rounded-md bg-background/90 px-2 py-0.5 text-[11px] font-medium">Demo</span>
+            <span className="absolute left-3 top-3 rounded-full bg-card/95 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide shadow-sm backdrop-blur">Demo</span>
           )}
         </div>
       </Link>
-      <div className={cn("space-y-3", compact ? "p-3" : "p-5")}>
+      <div className={cn("space-y-3", compact ? "p-4" : "px-1 pt-4")}>
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <Link to="/listing/$id" params={{ id: row.id }}>
-              <h3 className="truncate font-display text-xl font-medium">{row.comune ?? "Unknown comune"}</h3>
+              <h3 className="truncate text-lg font-semibold">{row.comune ?? "Unknown comune"}</h3>
             </Link>
             <p className="truncate text-sm text-muted-foreground">
               {[row.province, row.region].filter(Boolean).join(" · ") || "Location not stated"}
@@ -129,7 +129,7 @@ export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: 
           <SaveButton id={row.id} />
         </div>
         <div>
-          <Money value={row.price_eur} className={compact ? "text-xl" : "text-2xl"} />
+          <Money value={row.price_eur} className={cn("font-semibold", compact ? "text-xl" : "text-2xl")} />
           <p className="mt-1 text-sm text-muted-foreground tnum">
             {[
               row.surface_sqm != null ? `${row.surface_sqm} m²` : null,
