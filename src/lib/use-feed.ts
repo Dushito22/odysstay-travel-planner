@@ -15,10 +15,10 @@ export function useFeed(search: FeedSearch, replace: (s: FeedSearch) => void) {
 
   const filters = filtersOf(search);
   const q = useQuery({
-    queryKey: ["feed", filters],
-    queryFn: () => fetchFeed(filters),
+    queryKey: ["feed", filters, search.sort ?? "best"],
+    queryFn: () => fetchFeed(filters, search.sort ?? "best"),
     enabled: ready,
   });
-  const rows = useMemo(() => sortFeed(q.data ?? [], search.sort ?? "best", profile), [q.data, search.sort, profile]);
-  return { profile, filters, rows, isLoading: !ready || q.isLoading, error: q.error };
+  const rows = useMemo(() => sortFeed(q.data?.rows ?? [], search.sort ?? "best", profile), [q.data, search.sort, profile]);
+  return { profile, filters, rows, total: q.data?.total ?? 0, isLoading: !ready || q.isLoading, error: q.error };
 }

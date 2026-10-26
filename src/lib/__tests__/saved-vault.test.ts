@@ -41,6 +41,7 @@ describe("saved search summaries", () => {
       maxPrice: 0,
       minSurface: 0,
       minScore: 0,
+      minDiscount: 0,
       leases: false,
       oneEuro: true,
       unsold: false,

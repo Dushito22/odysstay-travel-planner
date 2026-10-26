@@ -24,7 +24,11 @@ def _match(row: dict, key: str, expr: str) -> bool:
     if op == "neq":
         return sv != val
     if op == "in":
-        return sv in [json.loads(x) for x in val.strip("()").split(",") if x]
+        return sv in [json.loads(x) if x.startswith('"') else x for x in val.strip("()").split(",") if x]
+    if op == "not" and val.startswith("in."):
+        return not _match(row, key, val)
+    if op == "gt":
+        return v is not None and float(v) > float(val)
     raise ValueError(expr)
 
 

@@ -20,11 +20,14 @@ export function GenerateRender({
   listingId,
   signedIn,
   hasOriginal,
+  photo,
   onCreated,
 }: {
   listingId: string;
   signedIn: boolean;
   hasOriginal: boolean;
+  /** Official photo currently shown, used as the starting point. */
+  photo?: string | undefined;
   onCreated?: (imageId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -38,7 +41,7 @@ export function GenerateRender({
     setBusy(true);
     setLimit(null);
     try {
-      const { image } = await generateRender(listingId, style);
+      const { image } = await generateRender(listingId, style, photo);
       await qc.invalidateQueries({ queryKey: ["listing-images", listingId] });
       await qc.invalidateQueries({ queryKey: ["feed"] });
       toast.success("Illustration ready");

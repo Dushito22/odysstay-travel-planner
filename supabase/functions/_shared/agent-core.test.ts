@@ -205,6 +205,6 @@ describe("renderPrompt", () => {
     expect(p).toContain("Concept illustration, not a real photo.");
   });
   it("keeps structure when editing a real photo", () => {
-    expect(renderPrompt(listing, "Rustic farmhouse", true)).toContain("Keep the structure");
+    expect(renderPrompt(listing, "Rustic farmhouse", true)).toContain("keep the structure");
   });
 });

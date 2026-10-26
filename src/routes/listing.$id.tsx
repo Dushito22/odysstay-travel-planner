@@ -3,7 +3,7 @@ import {
   ClientOnly, createFileRoute, Link, useNavigate, useRouter, type ErrorComponentProps,
 } from "@tanstack/react-router";
 import {
-  AlertTriangle, ArrowLeft, ExternalLink, FileText, Lock, MapPin, MessageCircle, Sparkles,
+  AlertTriangle, ArrowLeft, ExternalLink, FileText, Lock, Mail, MapPin, MessageCircle, Phone,
 } from "lucide-react";
 import { lazy, Suspense, useState, type ReactNode } from "react";
 import { toast } from "sonner";
@@ -16,7 +16,7 @@ import {
 } from "@/components/odys/primitives";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { renderUrl, SALE_TYPE_LABELS, TYPE_LABELS } from "@/lib/feed";
+import { photoUrls, renderUrl, SALE_TYPE_LABELS, TYPE_LABELS } from "@/lib/feed";
 import {
   factValue, grantDeduction, listingQuery, orderImages, pickEstimates, startDeal, UpgradeRequired,
   type CostEstimate, type Fact, type ListingBundle,
@@ -126,14 +126,17 @@ function ListingPage() {
         <div className="min-w-0">
           <Section title="Key numbers">
             <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border bg-border md:grid-cols-3">
-              {[
+              {([
                 ["Base price", <FactValue key="p" fact={byKey["price_eur"]} sourceUrl={src} />],
-                ["Surface", <FactValue key="s" fact={byKey["surface_sqm"]} sourceUrl={src} />],
+                byKey["min_offer_eur"] ? ["Minimum offer", <FactValue key="mo" fact={byKey["min_offer_eur"]} sourceUrl={src} />] : null,
+                byKey["appraisal_eur"] ? ["Court appraisal", <Appraisal key="a" fact={byKey["appraisal_eur"]} discount={l.discount_pct} sourceUrl={src} />] : null,
+                ["Surface", <FactValue key="s" fact={byKey["surface_sqm"] ?? byKey["land_sqm"]} sourceUrl={src} />],
                 ["Price per m²", <PricePerSqm key="m" facts={byKey} />],
-                ["Deposit", <FactValue key="d" fact={byKey["deposit_eur"]} sourceUrl={src} />],
-                ["Deadline", <FactValue key="dl" fact={byKey["deadline"]} sourceUrl={src} />],
-              ].map(([label, node]) => (
-                <div key={label as string} className={cn("bg-card p-5", label === "Deadline" && "col-span-2")}>
+                ["Deposit", <FactValue key="d" fact={byKey["deposit_eur"] ?? byKey["deposit"]} sourceUrl={src} />],
+                byKey["auction_date"] ? ["Sale date", <FactValue key="sd" fact={byKey["auction_date"]} sourceUrl={src} />] : null,
+                ["Offer deadline", <FactValue key="dl" fact={byKey["deadline"]} sourceUrl={src} />],
+              ].filter(Boolean) as [string, ReactNode][]).map(([label, node]) => (
+                <div key={label} className="bg-card p-5">
                   <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt>
                   <dd className="mt-2 text-lg font-semibold tnum">{node}</dd>
                 </div>
@@ -187,6 +190,8 @@ function ListingPage() {
           </Section>
 
           <CostSection data={data} userId={userId} />
+          <OfficialDocuments data={data} />
+          <SaleContacts data={data} />
           <HowBuying saleType={l.sale_type} />
 
           <Section title="Location">
@@ -229,6 +234,86 @@ function ListingPage() {
   );
 }
 
+function Appraisal({ fact, discount, sourceUrl }: { fact: Fact | undefined; discount: number | null; sourceUrl: string | null }) {
+  return (
+    <span>
+      <FactValue fact={fact} sourceUrl={sourceUrl} />
+      {discount != null && discount > 0 && (
+        <span className="mt-1 block text-xs font-medium text-success">Minimum offer is {discount}% below it</span>
+      )}
+    </span>
+  );
+}
+
+type Attachment = { kind: string; name: string; url: string };
+type Contact = { role: string; name: string | null; email: string | null; phone: string | null; handles_visits?: boolean };
+const asAttachments = (j: unknown): Attachment[] =>
+  Array.isArray(j) ? (j as Attachment[]).filter((a) => a && typeof a.url === "string" && /^https:\/\//.test(a.url)) : [];
+const asContacts = (j: unknown): Contact[] => (Array.isArray(j) ? (j as Contact[]).filter((c) => c && typeof c.role === "string") : []);
+const DOC_LABEL: Record<string, string> = {
+  appraisal: "Appraisal report (perizia)", sale_notice: "Sale notice (avviso di vendita)", court_order: "Court order", other: "Other document",
+};
+const DOC_ORDER = ["appraisal", "sale_notice", "court_order", "other"];
+
+function OfficialDocuments({ data }: { data: ListingBundle }) {
+  const docs = asAttachments(data.listing.attachments)
+    .sort((a, b) => DOC_ORDER.indexOf(a.kind) - DOC_ORDER.indexOf(b.kind));
+  if (!docs.length) return null;
+  return (
+    <Section title="Official documents" kicker="Filed with the court">
+      <ul className="divide-y rounded-2xl border bg-card">
+        {docs.map((d) => (
+          <li key={d.url}>
+            <a href={d.url} target="_blank" rel="noreferrer" className="flex items-center gap-4 p-4 hover:bg-muted/50">
+              <FileText className="h-5 w-5 shrink-0 text-brand" />
+              <div className="min-w-0 flex-1">
+                <p className="font-medium">{DOC_LABEL[d.kind] ?? "Document"}</p>
+                <p className="truncate text-sm text-muted-foreground">{d.name}</p>
+              </div>
+              <ExternalLink className="h-4 w-4 text-muted-foreground" />
+            </a>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-3 text-sm text-muted-foreground">
+        The appraisal report is the most important read: it describes the condition, legal issues, building irregularities and occupancy in detail. In Italian.
+      </p>
+    </Section>
+  );
+}
+
+function SaleContacts({ data }: { data: ListingBundle }) {
+  const l = data.listing;
+  const people = asContacts(l.contacts);
+  if (!people.length && !l.court) return null;
+  return (
+    <Section title="Who runs the sale">
+      {l.court && (
+        <p className="mb-4 text-muted-foreground">
+          {l.court}{l.case_ref ? `, ${l.case_ref}` : ""}{l.sale_mode ? `. Bidding: ${l.sale_mode}` : ""}
+        </p>
+      )}
+      {people.length > 0 && (
+        <ul className="grid gap-3 sm:grid-cols-2">
+          {people.map((c, i) => (
+            <li key={i} className="rounded-2xl border bg-card p-5">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{c.role}</p>
+              {c.name && <p className="mt-1 font-semibold">{c.name}</p>}
+              <div className="mt-3 space-y-1.5 text-sm">
+                {c.email && <a href={`mailto:${c.email}`} className="flex items-center gap-2 text-brand hover:underline"><Mail className="h-4 w-4" />{c.email}</a>}
+                {c.phone && <a href={`tel:${c.phone}`} className="flex items-center gap-2 text-brand hover:underline"><Phone className="h-4 w-4" />{c.phone}</a>}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="mt-4 text-sm text-muted-foreground">
+        As published on the court portal. Viewings of court-sale properties are requested through the portal itself, using the "Prenota visita" button on the official page.
+      </p>
+    </Section>
+  );
+}
+
 function PricePerSqm({ facts }: { facts: Record<string, Fact | undefined> }) {
   const p = facts["price_eur"]?.value_num;
   const s = facts["surface_sqm"]?.value_num;
@@ -248,7 +333,7 @@ function Identity({ data }: { data: ListingBundle }) {
       <div className="min-w-0">
         <div className="mb-4 flex flex-wrap items-center gap-2">
           {l.is_demo && <span className="rounded-full bg-foreground px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-background">Demo</span>}
-          <DeadlinePill deadline={l.deadline_at} />
+          <DeadlinePill deadline={l.deadline_at ?? l.auction_at} />
           {l.property_type && <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">{TYPE_LABELS[l.property_type] ?? l.property_type}</span>}
           {l.sale_type && <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-medium text-brand">{SALE_TYPE_LABELS[l.sale_type] ?? l.sale_type}</span>}
         </div>
@@ -279,14 +364,18 @@ function Gallery({ data, userId }: { data: ListingBundle; userId: string | null 
       return orderImages(data);
     },
   });
+  const official = photoUrls(data.listing).map((url, i) => ({
+    id: `official-${i}`, kind: "original", storage_path: url, caption_en: "Official photo from the court listing",
+  }));
+  const all = [...images.filter((i) => i.kind === "render"), ...(official.length ? official : images.filter((i) => i.kind !== "render"))];
   const [active, setActive] = useState(0);
-  const img = images[active];
+  const img = all[active];
   return (
     <div>
       <div className="relative overflow-hidden rounded-3xl">
         {img ? (
           <div className="relative aspect-[16/9] bg-muted">
-            <img src={renderUrl(img.storage_path) ?? ""} alt={img.caption_en ?? "Property image"} className="h-full w-full object-cover" />
+            <img src={renderUrl(img.storage_path) ?? ""} alt={img.caption_en ?? "Property image"} referrerPolicy="no-referrer" className="h-full w-full object-cover" />
             {img.kind === "render" && <IllustrationLabel className="bottom-4 left-4" />}
           </div>
         ) : (
@@ -297,18 +386,19 @@ function Gallery({ data, userId }: { data: ListingBundle; userId: string | null 
             <GenerateRender
               listingId={data.listing.id}
               signedIn={!!userId}
-              hasOriginal={images.some((i) => i.kind === "original")}
+              hasOriginal={all.some((i) => i.kind === "original")}
+              photo={img?.id.startsWith("official-") ? img.storage_path : undefined}
               onCreated={() => setActive(0)}
             />
           )}
         </div>
       </div>
-      {images.length > 1 && (
+      {all.length > 1 && (
         <div className="mt-3 flex gap-2 overflow-x-auto">
-          {images.map((im, i) => (
+          {all.map((im, i) => (
             <button key={im.id} onClick={() => setActive(i)}
               className={cn("relative h-16 w-24 shrink-0 overflow-hidden rounded-xl ring-2", i === active ? "ring-foreground" : "ring-transparent")}>
-              <img src={renderUrl(im.storage_path) ?? ""} alt="" className="h-full w-full object-cover" loading="lazy" />
+              <img src={renderUrl(im.storage_path) ?? ""} alt="" referrerPolicy="no-referrer" className="h-full w-full object-cover" loading="lazy" />
             </button>
           ))}
         </div>
@@ -335,7 +425,8 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
   });
   const [scenario, setScenario] = useState("standard");
   const sel: CostEstimate | undefined = estimates.find((e) => e.scenario === scenario) ?? estimates[0];
-  const price = l.price_eur;
+  const price = l.min_offer_eur ?? l.price_eur;
+  const priceLabel = l.min_offer_eur != null ? "Minimum offer" : "Base price";
 
   return (
     <>
@@ -387,7 +478,7 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
 
       <Section title="Total cost picture">
         <div className="rounded-2xl border bg-card p-6">
-          <Row label="Base price">{price != null ? <Money value={price} /> : <NotStated />}</Row>
+          <Row label={priceLabel}>{price != null ? <Money value={price} /> : <NotStated />}</Row>
           <Row label={`Renovation, ${sel?.scenario ?? "none"}`}>{sel ? <span className="tnum">{range(sel.low_eur, sel.high_eur)}</span> : <span className="text-muted-foreground">No estimate yet</span>}</Row>
           <div className="my-3 border-t" />
           <Row label="Total" strong>
@@ -431,7 +522,12 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
             })}
           </div>
         )}
-        <p className="mt-4 text-sm text-muted-foreground">Taxes and notary fees: ask the agent, they depend on your situation.</p>
+        {l.min_offer_eur != null && (
+          <p className="mt-4 text-sm text-muted-foreground">
+            Uses the minimum offer. If other people bid, the price goes up from there in steps of the minimum raise.
+          </p>
+        )}
+        <p className="mt-2 text-sm text-muted-foreground">Purchase taxes: ask the agent, they depend on your situation.</p>
       </Section>
     </>
   );
@@ -447,6 +543,14 @@ function Row({ label, children, strong }: { label: string; children: ReactNode; 
 }
 
 const STEPS: Record<string, string[]> = {
+  auction_judicial: [
+    "Read the appraisal report (perizia) and the sale notice. They list the condition, legal issues and exact rules.",
+    "Book a free viewing through the court portal, with the \"Prenota visita\" button on the official page.",
+    "Before the deadline, file your offer with the deposit, exactly as the sale notice describes. Online sales use the Ministry's online offer form.",
+    "On the sale date, if there are several offers, bidding starts from the highest one.",
+    "If you win, pay the balance within the period set in the notice.",
+    "The court issues the transfer decree. Mortgages and liens on the property are cancelled.",
+  ],
   sale: [
     "Read the full notice carefully.",
     "Inspect the property with a surveyor.",
@@ -467,7 +571,7 @@ const STEPS: Record<string, string[]> = {
 function HowBuying({ saleType }: { saleType: string | null }) {
   const t = saleType ?? "sale";
   const isUse = t === "concession" || t === "lease";
-  const steps = STEPS[t === "one_euro" ? "one_euro" : "sale"]!;
+  const steps = STEPS[t === "one_euro" || t === "auction_judicial" ? t : "sale"]!;
   return (
     <Section title="How buying works">
       {isUse ? (
@@ -532,7 +636,10 @@ function ActionCard({ data, userId }: { data: ListingBundle; userId: string | nu
         <Money value={l.price_eur} className="text-3xl font-semibold" />
         {l.id && <SaveButton id={l.id} />}
       </div>
-      <div className="mt-2"><DeadlinePill deadline={l.deadline_at} /></div>
+      {l.min_offer_eur != null && l.price_eur != null && l.min_offer_eur < l.price_eur && (
+        <p className="mt-1 text-sm tnum">Offers valid from <span className="font-semibold">{formatEur(l.min_offer_eur)}</span></p>
+      )}
+      <div className="mt-2"><DeadlinePill deadline={l.deadline_at ?? l.auction_at} /></div>
 
       <div className="mt-6 space-y-2">
         {deal ? (
