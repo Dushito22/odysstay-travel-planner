@@ -83,7 +83,7 @@ export function SaveButton({ id }: { id: string }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: savedQuery.queryKey }),
     onError: (e) => {
       if (e instanceof Error && e.message === "signin") {
-        toast("Sign in to save listings", { action: { label: "Sign in", onClick: () => navigate({ to: "/login" }) } });
+        toast("Sign in to save listings", { action: { label: "Sign in", onClick: () => navigate({ to: "/login", search: { redirect: window.location.pathname + window.location.search } }) } });
       } else toast.error("Could not save. Please try again.");
     },
   });
