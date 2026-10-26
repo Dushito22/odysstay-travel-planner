@@ -13,7 +13,7 @@ on:
       task:
         description: "What to run"
         type: choice
-        options: [daily, comuni-crawl, comuni-discover, status]
+        options: [daily, retry-errors, comuni-crawl, comuni-discover, status]
         default: daily
 
 concurrency:
@@ -73,6 +73,7 @@ jobs:
             comuni-crawl)    { python -m odysstay_worker comuni crawl --limit 2500 --workers 12 && python -m odysstay_worker extract --limit 150 && python -m odysstay_worker geocode && python -m odysstay_worker score && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             comuni-discover) { python -m odysstay_worker comuni discover && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             status)          python -m odysstay_worker status 2>&1 | tee run.log ;;
+            retry-errors)    { python -m odysstay_worker extract --retry-errors --limit 150 && python -m odysstay_worker geocode && python -m odysstay_worker grants && python -m odysstay_worker score && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
           esac
       - name: Summary
         if: always() && steps.secrets.outputs.ok == 'true'

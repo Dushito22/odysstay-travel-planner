@@ -55,6 +55,7 @@ def main(argv=None):
     imp.add_argument("file")
     e = sub.add_parser("extract")
     e.add_argument("--limit", type=int, default=50)
+    e.add_argument("--retry-errors", action="store_true", help="also retry notices that failed before")
     for name in ("geocode", "score", "grants", "status"):
         sub.add_parser(name)
     d = sub.add_parser("daily")
@@ -83,7 +84,7 @@ def main(argv=None):
             print(f"Updated {comuni.import_sites(db, a.file)} comuni")
     elif a.cmd == "extract":
         from . import extract
-        print(json.dumps(extract.run(db, a.limit), indent=2))
+        print(json.dumps(extract.run(db, a.limit, retry_errors=a.retry_errors), indent=2))
     elif a.cmd == "geocode":
         from . import geocode
         geocode.run(db)

@@ -268,10 +268,11 @@ def fact_rows(listing_id: str, lot: dict) -> list[dict]:
     return rows
 
 
-def run(db: Supa, limit: int = 50, log=print) -> dict:
+def run(db: Supa, limit: int = 50, log=print, retry_errors: bool = False) -> dict:
     stats = {"documents": 0, "listings": 0, "errors": 0, "rejected_fields": 0}
     docs = db.select("documents", {
-        "select": "id,url,part,title,meta,text_content", "status": eq("candidate"),
+        "select": "id,url,part,title,meta,text_content",
+        "status": "in.(candidate,error)" if retry_errors else eq("candidate"),
         "order": "published_at.desc.nullslast", "limit": str(limit),
     })
     if not docs:
