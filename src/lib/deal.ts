@@ -53,7 +53,7 @@ export const CONTACT_KINDS = [
   { value: "notary", label: "Notary" },
   { value: "surveyor", label: "Surveyor (geometra)" },
   { value: "lawyer", label: "Lawyer" },
-  { value: "seller", label: "Seller" },
+  { value: "seller", label: "Seller or court sale delegate" },
   { value: "other", label: "Other" },
 ] as const;
 

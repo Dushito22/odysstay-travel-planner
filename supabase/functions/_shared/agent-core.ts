@@ -52,7 +52,20 @@ export type ListingRow = {
   source_url: string | null;
   source_title: string | null;
   source_published_at: string | null;
+  court?: string | null;
+  case_ref?: string | null;
+  sale_mode?: string | null;
+  min_offer_eur?: number | null;
+  appraisal_eur?: number | null;
+  discount_pct?: number | null;
+  auction_at?: string | null;
+  contacts?: unknown;
+  attachments?: unknown;
 };
+
+type PublishedContact = { role?: string; name?: string | null; email?: string | null };
+type PublishedDoc = { kind?: string; name?: string };
+const asList = <T,>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
 
 export type Citation = {
   type: "fact" | "flag" | "notice" | "grant" | "estimate";
@@ -81,7 +94,7 @@ export const CONTACT_KINDS = [
 
 export const AGENT_SYSTEM = `You are Odysstay's Italy property agent. You help an English-speaking buyer understand and act on one Italian public property notice.
 1. Answer only from CONTEXT: listing facts, red flags, estimates, grants, the notice text and the deal. Cite every claim right after it with [fact:KEY], [flag:N], [estimate], [grant:NAME] or [notice].
-2. If CONTEXT does not contain the answer, say so in one sentence, say who would know (the comune office named in the notice, a notary, a geometra surveyor, a lawyer or a tax adviser), and offer to draft a message to them. Never guess prices, sizes, dates, legal rules, tax rates or eligibility.
+2. If CONTEXT does not contain the answer, say so in one sentence, say who would know (for court sales the sale delegate in published_contacts, otherwise the comune office named in the notice; or a notary, a geometra surveyor, a lawyer or a tax adviser), and offer to draft a message to them. For court sales, the appraisal report in official_documents is where condition and legal issues are described: point the buyer to it when relevant. Never guess prices, sizes, dates, legal rules, tax rates or eligibility.
 3. When quoting the notice, quote the Italian exactly, then give the English.
 4. Be direct and practical. Short paragraphs. No marketing language. No em dashes.
 5. You may end with one line: ACTIONS: draft_message(contact_kind, purpose) | add_task(title). contact_kind is one of: ${CONTACT_KINDS.join(", ")}. Only when useful.
@@ -126,6 +139,21 @@ export function buildAgentContext(input: {
       summary: l.summary_en,
       notice_title: l.source_title,
       notice_published: l.source_published_at,
+      ...(l.court
+        ? {
+          court_sale: {
+            court: l.court,
+            case: l.case_ref,
+            bidding: l.sale_mode,
+            sale_date: l.auction_at,
+            minimum_offer_eur: l.min_offer_eur,
+            appraisal_eur: l.appraisal_eur,
+            minimum_offer_below_appraisal_pct: l.discount_pct,
+            published_contacts: asList<PublishedContact>(l.contacts).map((c) => ({ role: c.role, name: c.name, email: c.email })),
+            official_documents: asList<PublishedDoc>(l.attachments).map((d) => ({ kind: d.kind, name: d.name })),
+          },
+        }
+        : {}),
     }),
   );
   lines.push("## Facts (each verified against the notice)");
@@ -295,14 +323,17 @@ export function buildDraftContext(input: {
     "bid_method",
     "contact",
     "deposit_eur",
+    "deposit",
     "auction_date",
+    "court",
+    "min_offer_eur",
   ]);
   return [
     "<CONTEXT>",
     `Buyer full name: ${input.fullName}`,
     `Recipient type: ${input.contactKind}${input.contact?.name ? `; name: ${input.contact.name}` : ""}${input.contact?.organisation ? `; organisation: ${input.contact.organisation}` : ""}`,
     `Purpose of the email (from the buyer, in English): ${input.purpose}`,
-    `Property: ${JSON.stringify({ comune: l.comune, province: l.province, address: l.address, lot: l.lot, notice_title: l.source_title, notice_published: l.source_published_at, notice_url: l.source_url })}`,
+    `Property: ${JSON.stringify({ comune: l.comune, province: l.province, address: l.address, lot: l.lot, notice_title: l.source_title, notice_published: l.source_published_at, notice_url: l.source_url, ...(l.court ? { court: l.court, case: l.case_ref } : {}) })}`,
     "Relevant facts:",
     ...input.facts
       .filter((f) => keep.has(f.key))

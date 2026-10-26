@@ -366,6 +366,8 @@ export function ConversationsTab({ bundle, run, pending }: TabProps) {
       <div className="flex justify-end">
         <NewRequest
           dealId={deal.id}
+          published={asPublishedContacts(bundle.listing?.contacts)}
+          court={bundle.listing?.court ?? null}
           run={run}
           pending={pending}
           onCreated={(id) => setSelected(id)}
@@ -553,13 +555,22 @@ function Attachments({ value }: { value: unknown }) {
   );
 }
 
+type PublishedContact = { role: string; name: string | null; email: string | null };
+function asPublishedContacts(j: unknown): PublishedContact[] {
+  return Array.isArray(j) ? (j as PublishedContact[]).filter((c) => c && typeof c.role === "string" && (c.email || c.name)) : [];
+}
+
 function NewRequest({
   dealId,
+  published,
+  court,
   run,
   pending,
   onCreated,
 }: {
   dealId: string;
+  published: PublishedContact[];
+  court: string | null;
   run: Run;
   pending: string | null;
   onCreated: (threadId: string) => void;
@@ -626,6 +637,28 @@ function NewRequest({
               />
             )}
           </div>
+          {published.length > 0 && (
+            <div className="space-y-2">
+              <Label>Published for this sale</Label>
+              <div className="flex flex-wrap gap-2">
+                {published.map((c) => (
+                  <button
+                    key={`${c.role}-${c.email ?? c.name}`}
+                    type="button"
+                    onClick={() => {
+                      setKind("seller");
+                      setName(c.name ?? c.role);
+                      setOrganisation(court ? `${c.role}, ${court}` : c.role);
+                      setEmail(c.email ?? "");
+                    }}
+                    className="rounded-full border px-3 py-1.5 text-left text-sm hover:bg-muted"
+                  >
+                    {c.role}{c.name ? `: ${c.name}` : ""}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="space-y-2">
             <Label>Recipient details (optional)</Label>
             <p className="text-xs text-muted-foreground">
