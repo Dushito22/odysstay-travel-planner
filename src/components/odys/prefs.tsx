@@ -13,8 +13,8 @@ export function Chip({ active, onClick, children }: { active: boolean; onClick: 
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        "rounded-md border px-3 py-2 text-sm transition-colors",
-        active ? "border-primary bg-primary-soft text-primary font-medium" : "bg-card hover:bg-muted",
+        "rounded-full border px-3.5 py-1.5 text-sm transition-all",
+        active ? "border-foreground bg-foreground text-background font-medium" : "bg-card hover:border-foreground/40",
       )}
     >
       {children}
@@ -32,8 +32,8 @@ export function IntentPicker({ value, onChange }: { value: string | null; onChan
           aria-pressed={value === i.value}
           onClick={() => onChange(i.value)}
           className={cn(
-            "rounded-lg border bg-card p-5 text-left font-display text-lg transition-all hover:shadow-hover",
-            value === i.value && "border-primary bg-primary-soft text-primary",
+            "rounded-2xl border bg-card p-6 text-left text-lg font-medium tracking-tight transition-all hover:-translate-y-0.5 hover:shadow-hover",
+            value === i.value && "border-foreground ring-1 ring-foreground",
           )}
         >
           {i.label}
@@ -95,7 +95,7 @@ const PAPER_ITEMS: { key: keyof Paperwork; label: string }[] = [
 
 export function PaperworkPicker({ value, onChange }: { value: Paperwork; onChange: (v: Paperwork) => void }) {
   return (
-    <div className="divide-y rounded-lg border bg-card">
+    <div className="divide-y rounded-2xl border bg-card">
       {PAPER_ITEMS.map((p) => (
         <label key={p.key} className="flex cursor-pointer items-center justify-between gap-4 p-4 text-sm">
           <span>{p.label}</span>

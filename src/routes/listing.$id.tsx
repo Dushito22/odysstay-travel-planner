@@ -18,7 +18,7 @@ function ListingPage() {
   return (
     <div className="mx-auto max-w-3xl px-5 py-8">
       <Link to="/"><Wordmark className="text-xl" /></Link>
-      <div className="mt-12 rounded-lg border border-dashed bg-card p-10 text-center text-muted-foreground">
+      <div className="mt-12 rounded-2xl border border-dashed bg-card p-10 text-center text-muted-foreground">
         The listing page arrives here soon.
       </div>
     </div>

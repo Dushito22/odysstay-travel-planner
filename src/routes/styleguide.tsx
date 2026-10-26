@@ -15,11 +15,11 @@ export const Route = createFileRoute("/styleguide")({
   component: Styleguide,
 });
 
-const swatches = ["background", "card", "foreground", "muted-foreground", "border", "primary", "primary-soft", "olive", "olive-soft", "aegean", "warning", "warning-soft"];
+const swatches = ["background", "card", "foreground", "muted-foreground", "border", "primary", "brand-soft", "success", "success-soft", "brand", "warning", "warning-soft"];
 const swatchClass: Record<string, string> = {
   background: "bg-background", card: "bg-card", foreground: "bg-foreground", "muted-foreground": "bg-muted-foreground",
-  border: "bg-border", primary: "bg-primary", "primary-soft": "bg-primary-soft", olive: "bg-olive",
-  "olive-soft": "bg-olive-soft", aegean: "bg-aegean", warning: "bg-warning", "warning-soft": "bg-warning-soft",
+  border: "bg-border", primary: "bg-primary", "brand-soft": "bg-brand-soft", success: "bg-success",
+  "success-soft": "bg-success-soft", brand: "bg-brand", warning: "bg-warning", "warning-soft": "bg-warning-soft",
 };
 
 function Panel({ dark }: { dark: boolean }) {
@@ -42,7 +42,7 @@ function Panel({ dark }: { dark: boolean }) {
         </div>
         <div>
           <h1 className="text-4xl font-medium">Casa colonica, Montefalco</h1>
-          <p className="mt-2 text-muted-foreground">Inter body copy. Plain, direct English with short sentences.</p>
+          <p className="mt-2 text-muted-foreground">Geist body copy. Plain, direct English with short sentences.</p>
         </div>
         <div className="flex flex-wrap items-center gap-4 text-2xl">
           <Money value={36000} /> <Money value={1} /> <Money value={null} />

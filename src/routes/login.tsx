@@ -53,21 +53,21 @@ function Login() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-5">
       <Link to="/" className="mb-8"><Wordmark /></Link>
-      <div className="w-full max-w-sm rounded-lg border bg-card p-8">
+      <div className="w-full max-w-sm rounded-3xl border bg-card p-8 shadow-hover">
         {sent ? (
           <div className="text-center">
-            <MailCheck className="mx-auto h-10 w-10 text-olive" />
-            <h1 className="mt-4 text-2xl font-medium">Check your inbox</h1>
+            <MailCheck className="mx-auto h-10 w-10 text-success" />
+            <h1 className="mt-4 text-3xl">Check your inbox</h1>
             <p className="mt-2 text-sm text-muted-foreground">
               We sent a sign-in link to <span className="font-medium text-foreground">{email}</span>. Open it on this device.
             </p>
-            <button onClick={() => setSent(false)} className="mt-6 text-sm text-aegean hover:underline">
+            <button onClick={() => setSent(false)} className="mt-6 text-sm text-brand hover:underline">
               Use a different email
             </button>
           </div>
         ) : (
           <form onSubmit={submit}>
-            <h1 className="text-2xl font-medium">Sign in to Odysstay</h1>
+            <h1 className="text-3xl">Sign in to Odysstay</h1>
             <div className="mt-6 space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" required autoComplete="email" value={email}

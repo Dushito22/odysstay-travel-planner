@@ -41,7 +41,7 @@ function DiscoverPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-medium md:text-5xl">Discover</h1>
+          <h1 className="text-4xl md:text-5xl">Discover</h1>
           <p className="mt-2 text-muted-foreground tnum">
             {isLoading ? "Loading opportunities" : `${rows.length} ${rows.length === 1 ? "opportunity" : "opportunities"} across Italy, ranked by deal score`}
           </p>
@@ -66,13 +66,13 @@ function DiscoverPage() {
         </aside>
         <div className="min-w-0 flex-1">
           {error ? (
-            <p className="rounded-lg border bg-card p-8 text-warning">Could not load listings. Please refresh.</p>
+            <p className="rounded-2xl border bg-card p-8 text-warning">Could not load listings. Please refresh.</p>
           ) : isLoading ? (
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
               {Array.from({ length: 6 }, (_, i) => <ListingCardSkeleton key={i} />)}
             </div>
           ) : rows.length === 0 ? (
-            <div className="rounded-lg border border-dashed bg-card p-12 text-center">
+            <div className="rounded-2xl border border-dashed bg-card p-12 text-center">
               <p className="font-display text-xl">No listings match these filters yet.</p>
               <p className="mt-2 text-muted-foreground">New notices are added every day.</p>
               <div className="mt-6"><SaveSearchButton filters={filters} sort={sort} variant="default" /></div>

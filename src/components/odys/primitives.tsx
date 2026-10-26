@@ -37,7 +37,7 @@ export function Money({
     <span className={cn("inline-flex items-center gap-2", className)}>
       <span className="font-display tnum">{formatEur(value)}</span>
       {value === 1 && showOneEuroChip && (
-        <span className="rounded-full bg-primary-soft px-2 py-0.5 font-sans text-xs font-medium text-primary">
+        <span className="rounded-full bg-brand-soft px-2 py-0.5 font-sans text-xs font-medium text-brand">
           One-euro scheme
         </span>
       )}
@@ -66,13 +66,13 @@ export function ScoreBadge({
           className={cn(
             "inline-flex shrink-0 items-center justify-center rounded-full font-display font-semibold tnum transition-shadow hover:shadow-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             size === "sm" ? "h-9 w-9 text-sm" : "h-12 w-12 text-lg",
-            strong ? "bg-primary text-primary-foreground" : "bg-primary-soft text-primary",
+            strong ? "bg-foreground text-background" : "bg-card text-foreground ring-1 ring-border",
           )}
         >
           {score}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 rounded-lg">
+      <PopoverContent className="w-72 rounded-2xl">
         <p className="font-display text-base">Why it scores {score}</p>
         {list.length ? (
           <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-muted-foreground">
@@ -116,10 +116,10 @@ export function DeadlinePill({
     tone = "bg-warning-soft text-warning";
   } else if (days < 15) {
     label = days === 0 ? "Closes today" : `Closes in ${days} day${days === 1 ? "" : "s"}`;
-    tone = "bg-primary-soft text-primary";
+    tone = "bg-caution-soft text-caution";
   } else {
     label = `${days} days left`;
-    tone = "bg-olive-soft text-olive";
+    tone = "bg-success-soft text-success";
   }
   return (
     <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium tnum", tone)}>
@@ -132,7 +132,7 @@ export function IllustrationLabel({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "pointer-events-none absolute bottom-2 left-2 rounded-md bg-background/90 px-2 py-1 text-[11px] font-medium text-foreground",
+        "pointer-events-none absolute bottom-2 left-2 rounded-full bg-foreground/80 px-2.5 py-1 text-[11px] font-medium text-background backdrop-blur",
         className,
       )}
     >
@@ -162,17 +162,17 @@ export function SourceQuote({
           <PopoverTrigger asChild>
             <button
               type="button"
-              className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium text-aegean hover:bg-muted"
+              className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium text-brand hover:bg-muted"
             >
               <Quote className="h-3 w-3" />
               Source
             </button>
           </PopoverTrigger>
-          <PopoverContent className="w-80 rounded-lg">
+          <PopoverContent className="w-80 rounded-2xl">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
               Official notice{page ? `, page ${page}` : ""}
             </p>
-            <blockquote lang="it" className="mt-2 border-l-2 border-primary pl-3 font-display text-sm italic">
+            <blockquote lang="it" className="mt-2 border-l-2 border-foreground pl-3 text-sm font-medium leading-relaxed">
               {quote}
             </blockquote>
             {quoteEn && <p className="mt-2 text-sm text-muted-foreground">{quoteEn}</p>}
@@ -181,7 +181,7 @@ export function SourceQuote({
                 href={sourceUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-3 inline-flex items-center gap-1 text-sm text-aegean underline-offset-4 hover:underline"
+                className="mt-3 inline-flex items-center gap-1 text-sm text-brand underline-offset-4 hover:underline"
               >
                 Open original notice <ExternalLink className="h-3.5 w-3.5" />
               </a>
@@ -194,7 +194,11 @@ export function SourceQuote({
 }
 
 export function Wordmark({ className }: { className?: string }) {
-  return <span className={cn("font-display text-2xl font-semibold tracking-tight", className)}>Odysstay</span>;
+  return (
+    <span className={cn("inline-flex items-baseline font-display text-2xl font-semibold", className)}>
+      Odysstay<span className="ml-0.5 inline-block h-[0.28em] w-[0.28em] rounded-full bg-brand" aria-hidden />
+    </span>
+  );
 }
 
 export const LEGAL_LINE =

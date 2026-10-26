@@ -61,10 +61,10 @@ function Onboarding() {
       <Wordmark className="text-xl" />
       <div className="mt-10 flex gap-2" aria-label={`Step ${step + 1} of 5`}>
         {TITLES.map((t, i) => (
-          <span key={t} className={cn("h-2 w-2 rounded-full", i <= step ? "bg-primary" : "bg-border")} />
+          <span key={t} className={cn("h-1.5 rounded-full transition-all", i === step ? "w-8 bg-foreground" : i < step ? "w-1.5 bg-foreground" : "w-1.5 bg-border")} />
         ))}
       </div>
-      <h1 className="mt-6 text-3xl font-medium md:text-4xl">{TITLES[step]}</h1>
+      <h1 className="mt-6 text-4xl md:text-5xl">{TITLES[step]}</h1>
       <div className="mt-8 flex-1">
         {step === 0 && <IntentPicker value={intent} onChange={setIntent} />}
         {step === 1 && (

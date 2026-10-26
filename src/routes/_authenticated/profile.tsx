@@ -19,8 +19,8 @@ export const Route = createFileRoute("/_authenticated/profile")({
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-lg border bg-card p-6">
-      <h2 className="mb-5 text-xl font-medium">{title}</h2>
+    <section className="rounded-2xl border bg-card p-6">
+      <h2 className="mb-5 text-xl">{title}</h2>
       {children}
     </section>
   );
