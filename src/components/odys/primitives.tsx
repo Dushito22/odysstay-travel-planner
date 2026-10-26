@@ -122,7 +122,12 @@ export function DeadlinePill({
     tone = "bg-success-soft text-success";
   }
   return (
-    <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium tnum", tone)}>
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium tnum",
+        tone,
+      )}
+    >
       {label}
     </span>
   );
@@ -141,51 +146,94 @@ export function IllustrationLabel({ className }: { className?: string }) {
   );
 }
 
-export function SourceQuote({
-  children,
-  quote,
-  quoteEn,
-  page,
-  sourceUrl,
-}: {
-  children: ReactNode;
+type QuoteProps = {
   quote: string | null | undefined;
-  quoteEn?: string | null;
-  page?: number | null;
-  sourceUrl?: string | null;
-}) {
+  quoteEn?: string | null | undefined;
+  page?: number | null | undefined;
+  sourceUrl?: string | null | undefined;
+};
+
+/** The Italian quote, its English translation and a link to the original notice. */
+export function QuoteDetails({ quote, quoteEn, page, sourceUrl }: QuoteProps) {
+  return (
+    <>
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+        Official notice{page ? `, page ${page}` : ""}
+      </p>
+      <blockquote
+        lang="it"
+        className="mt-2 border-l-2 border-foreground pl-3 text-sm font-medium leading-relaxed"
+      >
+        {quote}
+      </blockquote>
+      {quoteEn && <p className="mt-2 text-sm text-muted-foreground">{quoteEn}</p>}
+      {sourceUrl && (
+        <a
+          href={sourceUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-3 inline-flex items-center gap-1 text-sm text-brand underline-offset-4 hover:underline"
+        >
+          Open original notice <ExternalLink className="h-3.5 w-3.5" />
+        </a>
+      )}
+    </>
+  );
+}
+
+/** A small labelled chip that reveals the source quote. Used for agent citations. */
+export function SourceChip({ label, ...q }: QuoteProps & { label: string }) {
+  if (!q.quote) {
+    return q.sourceUrl ? (
+      <a
+        href={q.sourceUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-brand hover:bg-muted"
+      >
+        <ExternalLink className="h-3 w-3" /> {label}
+      </a>
+    ) : (
+      <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
+        {label}
+      </span>
+    );
+  }
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-brand hover:bg-muted"
+        >
+          <Quote className="h-3 w-3" aria-hidden /> {label}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 rounded-2xl">
+        <QuoteDetails {...q} />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+export function SourceQuote({ children, ...q }: QuoteProps & { children: ReactNode }) {
   return (
     <span className="inline-flex flex-wrap items-center gap-2">
       <span>{children}</span>
-      {quote && (
+      {q.quote && (
         <Popover>
           <PopoverTrigger asChild>
             <button
               type="button"
+              aria-label="Show the source in the official notice"
               className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium text-brand hover:bg-muted"
             >
-              <Quote className="h-3 w-3" />
+              <Quote className="h-3 w-3" aria-hidden />
               Source
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-80 rounded-2xl">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              Official notice{page ? `, page ${page}` : ""}
-            </p>
-            <blockquote lang="it" className="mt-2 border-l-2 border-foreground pl-3 text-sm font-medium leading-relaxed">
-              {quote}
-            </blockquote>
-            {quoteEn && <p className="mt-2 text-sm text-muted-foreground">{quoteEn}</p>}
-            {sourceUrl && (
-              <a
-                href={sourceUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-3 inline-flex items-center gap-1 text-sm text-brand underline-offset-4 hover:underline"
-              >
-                Open original notice <ExternalLink className="h-3.5 w-3.5" />
-              </a>
-            )}
+            <QuoteDetails {...q} />
           </PopoverContent>
         </Popover>
       )}
@@ -195,8 +243,14 @@ export function SourceQuote({
 
 export function Wordmark({ className }: { className?: string }) {
   return (
-    <span className={cn("inline-flex items-baseline font-display text-2xl font-semibold", className)}>
-      Odysstay<span className="ml-0.5 inline-block h-[0.28em] w-[0.28em] rounded-full bg-brand" aria-hidden />
+    <span
+      className={cn("inline-flex items-baseline font-display text-2xl font-semibold", className)}
+    >
+      Odysstay
+      <span
+        className="ml-0.5 inline-block h-[0.28em] w-[0.28em] rounded-full bg-brand"
+        aria-hidden
+      />
     </span>
   );
 }

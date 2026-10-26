@@ -1,11 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { ExternalLink, ListPlus, MessageCircle, Quote, Send, Sparkles } from "lucide-react";
+import { ListPlus, MessageCircle, Send, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
+import { SourceChip } from "@/components/odys/primitives";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Sheet,
   SheetContent,
@@ -291,54 +291,5 @@ function Bubble({ msg }: { msg: AgentMessage }) {
 }
 
 function CitationChip({ c }: { c: AgentCitation }) {
-  if (!c.quote && c.url && (c.type === "notice" || c.type === "grant")) {
-    return (
-      <a
-        href={c.url}
-        target="_blank"
-        rel="noreferrer"
-        className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-brand hover:bg-muted"
-      >
-        <ExternalLink className="h-3 w-3" /> {c.label}
-      </a>
-    );
-  }
-  if (!c.quote)
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
-        {c.label}
-      </span>
-    );
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-brand hover:bg-muted"
-        >
-          <Quote className="h-3 w-3" /> {c.label}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80 rounded-2xl">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">Official notice</p>
-        <blockquote
-          lang="it"
-          className="mt-2 border-l-2 border-foreground pl-3 text-sm font-medium leading-relaxed"
-        >
-          {c.quote}
-        </blockquote>
-        {c.quote_en && <p className="mt-2 text-sm text-muted-foreground">{c.quote_en}</p>}
-        {c.url && (
-          <a
-            href={c.url}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-3 inline-flex items-center gap-1 text-sm text-brand hover:underline"
-          >
-            Open original notice <ExternalLink className="h-3.5 w-3.5" />
-          </a>
-        )}
-      </PopoverContent>
-    </Popover>
-  );
+  return <SourceChip label={c.label} quote={c.quote} quoteEn={c.quote_en} sourceUrl={c.url} />;
 }
