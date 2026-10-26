@@ -8,6 +8,8 @@ import {
 import { lazy, Suspense, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
+import { AgentChatButton } from "@/components/odys/AgentChat";
+import { GenerateRender } from "@/components/odys/GenerateRender";
 import { CardImage, SaveButton } from "@/components/odys/ListingCard";
 import {
   DeadlinePill, formatEur, IllustrationLabel, LEGAL_LINE, Money, NotStated, ScoreBadge, SourceQuote, Wordmark,
@@ -291,7 +293,14 @@ function Gallery({ data, userId }: { data: ListingBundle; userId: string | null 
           <div className="[&>div]:aspect-[16/9] md:[&>div]:aspect-[21/9]"><CardImage row={data.listing} /></div>
         )}
         <div className="absolute right-4 top-4">
-          <Button variant="secondary" size="sm" disabled title="Coming soon"><Sparkles /> Generate an illustration · Coming soon</Button>
+          {data.listing.id && (
+            <GenerateRender
+              listingId={data.listing.id}
+              signedIn={!!userId}
+              hasOriginal={images.some((i) => i.kind === "original")}
+              onCreated={() => setActive(0)}
+            />
+          )}
         </div>
       </div>
       {images.length > 1 && (
@@ -533,9 +542,11 @@ function ActionCard({ data, userId }: { data: ListingBundle; userId: string | nu
             {!userId && <Lock />} {busy ? "Starting" : userId ? "Start a deal" : "Sign in to start a deal"}
           </Button>
         )}
-        <Button variant="outline" className="h-auto w-full whitespace-normal py-2.5" disabled title="Coming soon">
-          <MessageCircle /> Ask the agent about this property · Coming soon
-        </Button>
+        {l.id && (
+          <AgentChatButton listingId={l.id} dealId={deal?.id ?? null} signedIn={!!userId} className="h-auto w-full whitespace-normal py-2.5">
+            <MessageCircle /> Ask the agent about this property
+          </AgentChatButton>
+        )}
       </div>
 
       {upgrade && (

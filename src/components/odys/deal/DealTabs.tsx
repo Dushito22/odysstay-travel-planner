@@ -42,11 +42,11 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import { draftMessage } from "@/lib/agent";
 import {
   addNote,
   addTask,
   CONTACT_KINDS,
-  createRequest,
   isTaskOverdue,
   moveTask,
   parseDealNotes,
@@ -568,8 +568,12 @@ function NewRequest({
   const [kind, setKind] = useState<string>("comune_office");
   const [purpose, setPurpose] = useState<string>(REQUEST_PURPOSES[0]);
   const [custom, setCustom] = useState("");
+  const [name, setName] = useState("");
+  const [organisation, setOrganisation] = useState("");
+  const [email, setEmail] = useState("");
   const isCustom = purpose === "custom";
   const finalPurpose = isCustom ? custom.trim() : purpose;
+  const emailOk = !email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -622,26 +626,72 @@ function NewRequest({
               />
             )}
           </div>
+          <div className="space-y-2">
+            <Label>Recipient details (optional)</Label>
+            <p className="text-xs text-muted-foreground">
+              If you know who to write to, add them. You can also add the address later.
+            </p>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Name or office, e.g. Ufficio Patrimonio"
+              maxLength={200}
+            />
+            <Input
+              value={organisation}
+              onChange={(e) => setOrganisation(e.target.value)}
+              placeholder="Organisation, e.g. Comune di Ragusa"
+              maxLength={200}
+            />
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email or PEC"
+              maxLength={200}
+              aria-invalid={!emailOk}
+            />
+            {!emailOk && (
+              <p className="text-xs text-warning">That email address doesn't look right.</p>
+            )}
+          </div>
           <Button
             className="w-full"
-            disabled={!finalPurpose || pending === "request"}
+            disabled={!finalPurpose || !emailOk || pending === "request"}
             onClick={async () => {
               let threadId = "";
               const ok = await run(
                 "request",
                 async () => {
-                  threadId = await createRequest(dealId, kind, finalPurpose);
+                  const r = await draftMessage({
+                    deal_id: dealId,
+                    contact_kind: kind,
+                    purpose: finalPurpose,
+                    ...(name.trim()
+                      ? {
+                          contact: {
+                            name: name.trim(),
+                            organisation: organisation.trim(),
+                            email: email.trim(),
+                          },
+                        }
+                      : {}),
+                  });
+                  threadId = r.thread_id;
                 },
-                "Request created",
+                "Draft ready. Review it under Needs you.",
               );
               if (ok) {
                 setOpen(false);
                 setCustom("");
+                setName("");
+                setOrganisation("");
+                setEmail("");
                 onCreated(threadId);
               }
             }}
           >
-            Create request
+            {pending === "request" ? "Writing in Italian" : "Draft the message"}
           </Button>
         </div>
       </SheetContent>
