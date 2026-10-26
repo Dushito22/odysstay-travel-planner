@@ -79,7 +79,6 @@ def call_model(text: str, title: str = "") -> dict:
     msg = client.messages.create(
         model=config.MODEL,
         max_tokens=8000,
-        temperature=0,
         system=SYSTEM,
         messages=[{
             "role": "user",
