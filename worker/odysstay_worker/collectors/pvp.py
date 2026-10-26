@@ -405,9 +405,10 @@ def _fingerprint(item: dict) -> str:
 # ---------- run ----------
 
 def collect(db: Supa, max_price: float = 300_000, horizon_days: int = 400, detail_limit: int = 6000,
-            workers: int = 4, api: Api | None = None, today: date | None = None, log=print) -> dict:
+            workers: int = 10, api: Api | None = None, today: date | None = None, log=print) -> dict:
     today = today or date.today()
-    api = api or Api()
+    api = api or Api(delay=0.2)  # at most 5 requests a second; the portal is slow, so several run in parallel
+    started = time.monotonic()
     stats = {"upcoming": 0, "new": 0, "updated": 0, "unchanged": 0, "closed": 0, "errors": 0, "deferred": 0}
     body = {"tipoLotto": "IMMOBILI", "nazione": "ITA"}
     if max_price:
@@ -492,6 +493,7 @@ def collect(db: Supa, max_price: float = 300_000, horizon_days: int = 400, detai
             if len(batch) >= 50:
                 flush()
             if done % 500 == 0:
-                log(f"  {done}/{len(todo)} lots read")
+                rate = done / max(1.0, time.monotonic() - started) * 60
+                log(f"  {done}/{len(todo)} lots read ({rate:.0f} a minute)")
     flush()
     return stats
