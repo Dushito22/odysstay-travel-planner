@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import time
 from typing import Any
 
 import httpx
@@ -20,6 +21,21 @@ class Supa:
             headers["Authorization"] = f"Bearer {key}"
         self.http = client or httpx.Client(base_url=f"{self.url}/rest/v1", headers=headers, timeout=60)
 
+    def _send(self, method: str, url: str, **kw) -> httpx.Response:
+        """One request with retries on dropped connections and 5xx, which happen on long runs."""
+        for attempt in range(5):
+            try:
+                r = self.http.request(method, url, **kw)
+                if r.status_code in (502, 503, 504) and attempt < 4:
+                    time.sleep(2 * (attempt + 1))
+                    continue
+                return r
+            except (httpx.TransportError, httpx.TimeoutException):
+                if attempt == 4:
+                    raise
+                time.sleep(2 * (attempt + 1))
+        raise RuntimeError("unreachable")
+
     def _check(self, r: httpx.Response):
         if r.status_code >= 400:
             raise RuntimeError(f"Supabase {r.request.method} {r.request.url.path}: {r.status_code} {r.text[:500]}")
@@ -29,7 +45,7 @@ class Supa:
         out, offset = [], 0
         while True:
             p = {"select": "*", **(params or {}), "offset": str(offset), "limit": "1000"}
-            rows = self._check(self.http.get(f"/{table}", params=p)).json()
+            rows = self._check(self._send("GET", f"/{table}", params=p)).json()
             out.extend(rows)
             if len(rows) < 1000 or "limit" in (params or {}):
                 return out
@@ -41,7 +57,7 @@ class Supa:
         if not rows:
             return []
         prefer = "return=representation" if returning else "return=minimal"
-        r = self._check(self.http.post(f"/{table}", content=json.dumps(rows), headers={"Prefer": prefer}))
+        r = self._check(self._send("POST", f"/{table}", content=json.dumps(rows), headers={"Prefer": prefer}))
         return r.json() if returning else []
 
     def upsert(self, table: str, rows: list[dict], on_conflict: str, ignore_duplicates: bool = False) -> list[dict]:
@@ -49,7 +65,8 @@ class Supa:
             return []
         res = "ignore-duplicates" if ignore_duplicates else "merge-duplicates"
         r = self._check(
-            self.http.post(
+            self._send(
+                "POST",
                 f"/{table}",
                 params={"on_conflict": on_conflict},
                 content=json.dumps(rows),
@@ -59,11 +76,11 @@ class Supa:
         return r.json()
 
     def update(self, table: str, filters: dict[str, str], patch: dict) -> list[dict]:
-        r = self._check(self.http.patch(f"/{table}", params=filters, content=json.dumps(patch), headers={"Prefer": "return=representation"}))
+        r = self._check(self._send("PATCH", f"/{table}", params=filters, content=json.dumps(patch), headers={"Prefer": "return=representation"}))
         return r.json()
 
     def delete(self, table: str, filters: dict[str, str]):
-        self._check(self.http.delete(f"/{table}", params=filters))
+        self._check(self._send("DELETE", f"/{table}", params=filters))
 
 
 def eq(v: Any) -> str:

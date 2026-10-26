@@ -491,7 +491,12 @@ def collect(db: Supa, max_price: float = 300_000, horizon_days: int = 400, detai
                 stats["new"] += 1
             batch.append(rec)
             if len(batch) >= 50:
-                flush()
+                try:
+                    flush()
+                except Exception as e:  # noqa: BLE001  keep going; these lots are retried next run
+                    stats["errors"] += len(batch)
+                    log(f"  error saving a batch: {str(e)[:200]}")
+                    batch.clear()
             if done % 500 == 0:
                 rate = done / max(1.0, time.monotonic() - started) * 60
                 log(f"  {done}/{len(todo)} lots read ({rate:.0f} a minute)")
