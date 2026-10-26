@@ -20,7 +20,7 @@ function icon(score: number | null) {
   });
 }
 
-function clusterIcon(c: L.MarkerCluster) {
+function clusterIcon(c: { getChildCount(): number }) {
   const n = c.getChildCount();
   return L.divIcon({ className: "", html: `<span class="odys-cluster">${n}</span>`, iconSize: [36, 36] });
 }

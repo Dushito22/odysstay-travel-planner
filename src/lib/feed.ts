@@ -65,7 +65,7 @@ export function allowedSaleTypes(f: Pick<FeedFilters, "leases" | "oneEuro">) {
   return t;
 }
 
-export const showDemo = import.meta.env.VITE_SHOW_DEMO === "true";
+export const showDemo = import.meta.env['VITE_SHOW_DEMO'] === "true";
 
 export async function fetchFeed(f: FeedFilters): Promise<FeedRow[]> {
   let q = supabase.from("listing_feed").select("*").limit(1000);

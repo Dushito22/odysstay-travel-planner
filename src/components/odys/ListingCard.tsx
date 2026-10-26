@@ -107,7 +107,7 @@ export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: 
     <article className="group overflow-hidden rounded-lg border bg-card transition-shadow hover:shadow-hover">
       <Link to="/listing/$id" params={{ id: row.id }} className="block">
         <div className="relative">
-          <CardImage row={row} compact={compact} />
+          <CardImage row={row} compact={!!compact} />
           <div className="absolute right-3 top-3" onClick={(e) => e.preventDefault()}>
             <ScoreBadge score={row.score} reasons={row.score_reasons} size={compact ? "sm" : "md"} />
           </div>
