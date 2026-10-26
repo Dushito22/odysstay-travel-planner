@@ -35,9 +35,18 @@ def status(db: Supa):
         print(f"  {src:10} {st:11} {n}")
     comuni = db.select("comuni", {"select": "site,last_crawl"})
     print(f"Comuni: {len(comuni)} known, {sum(1 for c in comuni if c['site'])} with website, {sum(1 for c in comuni if c['last_crawl'])} crawled")
-    listings = db.select("listings", {"select": "score,status", "is_demo": "eq.false"})
+    listings = db.select("listings", {"select": "score,status,discount_pct,surface_sqm,photo_urls,lat", "is_demo": "eq.false"})
+    open_ = [l for l in listings if l["status"] not in ("closed", "withdrawn")]
     print(f"Listings: {len(listings)} real ({sum(1 for l in listings if (l['score'] or 0) >= 70)} scoring 70+, "
-          f"{sum(1 for l in listings if l['status'] != 'closed')} open)")
+          f"{len(open_)} open)")
+    if open_:
+        buckets = [0] * 11
+        for l in open_:
+            buckets[int((l["score"] or 0) // 10)] += 1
+        print("Open by score: " + " ".join(f"{i * 10}s:{n}" for i, n in enumerate(buckets) if n))
+        pct = lambda f: round(100 * sum(1 for l in open_ if f(l)) / len(open_))  # noqa: E731
+        print(f"Open with: appraisal discount {pct(lambda l: l['discount_pct'] is not None)}%, surface {pct(lambda l: l['surface_sqm'])}%, "
+              f"photos {pct(lambda l: l['photo_urls'])}%, on map {pct(lambda l: l['lat'] is not None)}%")
 
 
 def main(argv=None):
