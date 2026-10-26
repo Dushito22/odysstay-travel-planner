@@ -42,7 +42,7 @@ function Panel({ dark }: { dark: boolean }) {
         </div>
         <div>
           <h1 className="text-4xl font-medium">Casa colonica, Montefalco</h1>
-          <p className="mt-2 text-muted-foreground">Inter body copy. Plain, direct English with short sentences.</p>
+          <p className="mt-2 text-muted-foreground">Geist body copy. Plain, direct English with short sentences.</p>
         </div>
         <div className="flex flex-wrap items-center gap-4 text-2xl">
           <Money value={36000} /> <Money value={1} /> <Money value={null} />
