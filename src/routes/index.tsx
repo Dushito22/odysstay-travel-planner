@@ -19,7 +19,7 @@ import { exampleFactQuery, sendMagicLink, topListingsQuery } from "@/lib/public"
 
 const TITLE = "Odysstay | Italy's hidden property, found and explained";
 const DESC =
-  "Thousands of Italian homes are sold every year by town halls, the state and notaries through notices most buyers never see. Odysstay finds them, explains them line by line, and helps you bid.";
+  "Thousands of Italian homes are sold every year by courts and town halls through notices most buyers never see. Odysstay finds them, explains them line by line, and helps you bid.";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -37,18 +37,16 @@ export const Route = createFileRoute("/")({
 });
 
 const SOURCES = [
+  "Court sales, Portale Vendite Pubbliche",
   "Comune notice boards",
   "Gazzetta Ufficiale",
-  "Notary auctions",
-  "State property agency",
-  "ISMEA land bank",
 ];
 
 const STEPS = [
   {
     icon: FileSearch,
     title: "Found",
-    body: "We watch thousands of official sources every day: town hall notice boards, the national gazette, notary and state auctions. Most of it never reaches the property portals.",
+    body: "We read official sources every day: every court-ordered sale in Italy, town hall notice boards and the national gazette. Most of it never reaches the property portals.",
   },
   {
     icon: Languages,
@@ -58,7 +56,7 @@ const STEPS = [
   {
     icon: Send,
     title: "Handled",
-    body: "Your agent writes to the comune, notaries and surveyors in Italian. You approve every message. Replies, quotes and deadlines land in one deal room.",
+    body: "Your agent drafts messages in Italian to the sale delegate, the comune or a surveyor. You approve every message. Replies, quotes and deadlines land in one deal room.",
   },
 ];
 
@@ -154,7 +152,7 @@ function Hero() {
             Italy's hidden property market, in English.
           </h1>
           <p className="mt-6 max-w-xl text-lg text-background/80">
-            Thousands of homes are sold every year by Italian town halls, the state and notaries,
+            Thousands of homes are sold every year by Italian courts and town halls,
             through notices most buyers never see. Odysstay finds them, explains them line by line,
             and helps you bid.
           </p>
