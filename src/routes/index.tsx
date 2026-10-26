@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowRight } from "lucide-react";
 
+import hero from "@/assets/hero-villa.jpg";
 import { LEGAL_LINE, Wordmark } from "@/components/odys/primitives";
 import { Button } from "@/components/ui/button";
 
@@ -19,21 +21,27 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   return (
-    <div className="flex min-h-screen flex-col px-5 py-6 md:px-10">
-      <header className="flex items-center justify-between">
-        <Wordmark />
-        <Button asChild variant="outline"><Link to="/login">Sign in</Link></Button>
-      </header>
-      <main className="mx-auto flex max-w-3xl flex-1 flex-col justify-center py-20">
-        <h1 className="text-5xl leading-[1.02] md:text-7xl">
-          The Italian houses that never reach the property portals.
-        </h1>
-        <p className="mt-6 max-w-xl text-lg text-muted-foreground">
-          Town halls, notaries and courts publish them in Italian PDFs. We find them, translate every line and help you buy.
-        </p>
-        <div className="mt-10"><Button asChild size="lg"><Link to="/login">Sign in</Link></Button></div>
-      </main>
-      <footer className="text-xs text-muted-foreground">{LEGAL_LINE}</footer>
+    <div className="min-h-screen p-3 md:p-4">
+      <section className="relative flex min-h-[calc(100vh-1.5rem)] flex-col overflow-hidden rounded-3xl md:min-h-[calc(100vh-2rem)]">
+        <img src={hero} alt="Stone farmhouse on an Italian hillside at golden hour" width={1600} height={1104}
+          className="absolute inset-0 h-full w-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/20 to-foreground/10" />
+        <header className="relative z-10 flex items-center justify-between p-5 text-background md:p-8">
+          <Wordmark className="text-background" />
+          <Button asChild variant="secondary" size="sm"><Link to="/login">Sign in</Link></Button>
+        </header>
+        <div className="relative z-10 mt-auto max-w-4xl p-6 text-background md:p-12">
+          <p className="mb-5 text-sm font-medium uppercase tracking-[0.2em] text-background/75">Public notices, decoded</p>
+          <h1 className="text-5xl leading-[1.02] md:text-7xl">The Italian homes that never reach the portals.</h1>
+          <p className="mt-6 max-w-xl text-lg text-background/80">
+            Town halls, notaries and courts publish them in Italian PDFs. We find them, translate every line and help you buy.
+          </p>
+          <div className="mt-10">
+            <Button asChild size="lg" variant="secondary"><Link to="/login">Start exploring <ArrowRight /></Link></Button>
+          </div>
+        </div>
+      </section>
+      <footer className="mx-auto max-w-4xl px-4 py-8 text-center text-xs text-muted-foreground">{LEGAL_LINE}</footer>
     </div>
   );
 }
