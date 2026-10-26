@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from .supa import Supa, eq
+from .supa import Supa
 
 RESIDENTIAL = {"house", "apartment", "rural_house", "building", "mixed"}
 
@@ -19,7 +19,7 @@ def score_listing(l: dict, red_flags: int | dict[str, int], today: date | None =
     """red_flags: count by severity, e.g. {"high": 1, "medium": 2}. A bare int counts as medium."""
     today = today or date.today()
     reasons: list[str] = []
-    s = 30.0
+    s = 15.0  # calibrated on ~16,000 court sales: roughly the top 10% score 70 or more
     price, sqm = l.get("price_eur"), l.get("surface_sqm")
 
     if price is not None:
@@ -108,11 +108,13 @@ def run(db: Supa, log=print) -> int:
     for f in db.select("listing_red_flags", {"select": "listing_id,severity"}):
         d = flags.setdefault(f["listing_id"], {})
         d[f.get("severity") or "medium"] = d.get(f.get("severity") or "medium", 0) + 1
-    n = 0
+    changed = []
     for l in listings:
         s, reasons, status = score_listing(l, flags.get(l["id"], {}))
         if (l.get("score"), l.get("score_reasons"), l.get("status")) != (s, reasons, status):
-            db.update("listings", {"id": eq(l["id"])}, {"score": s, "score_reasons": reasons, "status": status})
-            n += 1
+            changed.append({"id": l["id"], "score": s, "score_reasons": reasons, "status": status})
+    for i in range(0, len(changed), 500):  # one request per 500 rows instead of one per row
+        db.upsert("listings", changed[i : i + 500], on_conflict="id")
+    n = len(changed)
     log(f"Scored {len(listings)} listings ({n} changed)")
     return n
