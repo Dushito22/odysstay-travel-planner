@@ -1,6 +1,6 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bookmark, Compass, Handshake, Inbox, LogOut, Map, User } from "lucide-react";
+import { Bookmark, Compass, FolderLock, Handshake, Inbox, LogOut, Map, User } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { inboxCountQuery } from "@/lib/deal";
@@ -66,6 +66,13 @@ export function AppShell() {
             activeProps={{ className: "!bg-foreground !text-background font-medium" }}
           >
             <User className="h-4 w-4" /> Profile
+          </Link>
+          <Link
+            to="/vault"
+            className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+            activeProps={{ className: "!bg-foreground !text-background font-medium" }}
+          >
+            <FolderLock className="h-4 w-4" /> Documents
           </Link>
           <button
             onClick={signOut}

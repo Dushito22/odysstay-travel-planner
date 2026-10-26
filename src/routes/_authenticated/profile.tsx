@@ -1,5 +1,5 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
@@ -99,6 +99,12 @@ function ProfilePage() {
         <Section title="Where?"><RegionPicker value={regions} onChange={setRegions} /></Section>
         <Section title="What kind of property?"><TypePicker value={types} onChange={setTypes} /></Section>
         <Section title="Your paperwork"><PaperworkPicker value={paper} onChange={setPaper} /></Section>
+        <Section title="Documents and plan">
+          <div className="flex flex-wrap gap-3">
+            <Button asChild variant="outline"><Link to="/vault">Open your document vault</Link></Button>
+            <Button asChild variant="outline"><Link to="/pricing">{p?.plan === "pro" ? "Pro plan" : "Free plan · see Pro"}</Link></Button>
+          </div>
+        </Section>
         <div className="flex flex-wrap justify-between gap-3">
           <Button variant="outline" onClick={signOut}>Sign out</Button>
           <Button onClick={save} disabled={saving}>{saving ? "Saving" : "Save changes"}</Button>
