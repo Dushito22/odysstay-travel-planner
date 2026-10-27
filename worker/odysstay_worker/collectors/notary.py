@@ -22,7 +22,9 @@ BASE = "https://www.avvisinotarili.notariato.it"
 UA = "Mozilla/5.0 (compatible; OdysstayBot/0.1; +https://odysstay.com/bot)"
 HEADERS = {"User-Agent": UA, "Accept-Language": "it-IT,it;q=0.9"}
 DETAIL_RE = re.compile(r"/beni-immobili/dettaglio-avviso/(GAV|GAST|GAST_PUB)/(\d+)")
-ALL_TYPES = "GAV:(*);GAST:(*);GAST_PUB:(*)"
+# GAV: notary's own notices (private and company sellers). GAST_PUB: public bodies. GAST are court sales,
+# which we already read from the ministry portal, so they are left out.
+ALL_TYPES = "GAV:(*);GAST_PUB:(*)"
 
 
 def text_of(html: str) -> str:
@@ -84,9 +86,10 @@ def probe(log=print):
     ids = sorted(set(DETAIL_RE.findall(html)))
     pages = sorted({int(x) for x in re.findall(r"[?&]page=(\d+)", html)})
     log(f"search page 1: {len(html)//1024} KB, {len(ids)} notices, pages seen {pages[-5:]}, sample {ids[:3]}")
-    t = text_of(html)
-    i = t.find("Prezzo")
-    log("search text: " + re.sub(r"\s+", " ", t[max(0, i - 600): i + 600]))
+    for m in list(re.finditer(r"pagin|page=|Successiv|carica|load", html, re.I))[:6]:
+        log("pager: " + re.sub(r"\s+", " ", html[max(0, m.start() - 200): m.start() + 250]))
+    k = html.rfind("dettaglio-avviso")
+    log("after last: " + re.sub(r"\s+", " ", html[k: k + 1500]))
     if ids:
         d = text_of(p.detail(*ids[0]))
         j = d.find("Prezzo")
