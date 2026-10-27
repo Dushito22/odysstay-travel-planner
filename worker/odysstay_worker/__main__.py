@@ -77,6 +77,9 @@ def main(argv=None):
     sub.add_parser("pvp-probe")
     sub.add_parser("sources-probe")
     sub.add_parser("one-euro")
+    ag = sub.add_parser("aste")
+    ag.add_argument("--probe", action="store_true")
+    ag.add_argument("--limit", type=int, default=4000)
     nt = sub.add_parser("notary")
     nt.add_argument("--probe", action="store_true")
     nt.add_argument("--max-price", type=float, default=300_000)
@@ -132,6 +135,12 @@ def main(argv=None):
     elif a.cmd == "extract":
         from . import extract
         print(json.dumps(extract.run(db, a.limit, retry_errors=a.retry_errors), indent=2))
+    elif a.cmd == "aste":
+        from .collectors import aste
+        if a.probe:
+            aste.probe()
+        else:
+            print(json.dumps(aste.collect(db, a.limit), indent=2))
     elif a.cmd == "one-euro":
         from .collectors import one_euro
         print(json.dumps(one_euro.collect(db), indent=2))
@@ -169,9 +178,9 @@ def main(argv=None):
     elif a.cmd == "daily":
         # Court sales only: structured data from the portal, no AI calls. New and changed lots only.
         from . import costs, geocode, score
-        from .collectors import notary, one_euro, pvp
+        from .collectors import aste, notary, one_euro, pvp
         for name, step in (("court sales", lambda: pvp.collect(db)), ("notary sales", lambda: notary.collect(db)),
-                           ("one-euro towns", lambda: one_euro.collect(db))):
+                           ("one-euro towns", lambda: one_euro.collect(db)), ("private auctions", lambda: aste.collect(db, 1500))):
             try:
                 print(name, json.dumps(step(), indent=2))
             except Exception as e:  # noqa: BLE001  one source failing must not stop the others
