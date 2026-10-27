@@ -661,6 +661,13 @@ const STEPS: Record<string, string[]> = {
     "The public body announces the award.",
     "Sign the deed (rogito) at a notary.",
   ],
+  auction_notary: [
+    "Read the sale notice and its attachments. The notary has already checked the title and the documents.",
+    "Ask the notary or the seller for a viewing. Their contacts are on this page.",
+    "Before the deadline, deposit the guarantee (cauzione) and file your offer with the notary, or online on the notaries' auction network (RAN) if the notice says so.",
+    "On the sale date the notary opens the offers. If there are several, bidding starts from the highest.",
+    "If you win, pay the balance within the period in the notice and sign the deed with the notary.",
+  ],
   one_euro: [
     "Apply to the comune's call for applications.",
     "Sign the renovation commitment.",
@@ -673,7 +680,7 @@ const STEPS: Record<string, string[]> = {
 function HowBuying({ saleType }: { saleType: string | null }) {
   const t = saleType ?? "sale";
   const isUse = t === "concession" || t === "lease";
-  const steps = STEPS[t === "one_euro" || t === "auction_judicial" ? t : "sale"]!;
+  const steps = STEPS[t === "one_euro" || t === "auction_judicial" || t === "auction_notary" ? t : "sale"]!;
   return (
     <Section title="How buying works">
       {isUse ? (

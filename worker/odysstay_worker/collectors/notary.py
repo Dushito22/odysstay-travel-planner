@@ -56,6 +56,10 @@ class Portal:
         m = re.search(r'name="csrf-token"\s+content="([^"]+)"', r.text) or re.search(r'content="([^"]+)"\s+name="csrf-token"', r.text)
         self.token = m.group(1) if m else None
 
+    def page(self, n: int) -> str:
+        """Pages after the first: the portal keeps the filters in the session."""
+        return self._get(f"{BASE}/beni-immobili/?&page={n}").text
+
     def search(self, page: int, max_price: float, provincia: str = "") -> str:
         form = {"tipoBene": "I", "statoAvviso": "inCorso", "ordinamento": "prezzo:ASC", "tipologia": ALL_TYPES,
                 "provincia": provincia, "prezzoMassimo": str(int(max_price)), "coords": ""}
@@ -90,6 +94,11 @@ def probe(log=print):
         log("pager: " + re.sub(r"\s+", " ", html[max(0, m.start() - 200): m.start() + 250]))
     k = html.rfind("dettaglio-avviso")
     log("after last: " + re.sub(r"\s+", " ", html[k: k + 1500]))
+    for k in ids[:3]:
+        rec = parse(k[0], k[1], p.detail(*k), date.today())
+        log(f"parsed {k}: " + (str({x: rec['listing'][x] for x in ('comune', 'province', 'property_type', 'sale_type', 'price_eur', 'deadline_at', 'auction_at', 'surface_sqm', 'photo_urls', 'contacts')})[:900] if rec else "None (past)"))
+    p2 = p.page(1)
+    log(f"page 2: {len(set(DETAIL_RE.findall(p2)))} notices {sorted(set(DETAIL_RE.findall(p2)))[:3]}")
     if ids:
         d = text_of(p.detail(*ids[0]))
         j = d.find("Prezzo")
@@ -103,7 +112,7 @@ MONTHS = {m: i + 1 for i, m in enumerate(["gennaio", "febbraio", "marzo", "april
 
 
 def eur(s: str) -> float | None:
-    m = re.search(r"€\s*([\d.]+(?:,\d+)?)", s)
+    m = re.search(r"€\s*([\d.]+(?:,\d+)?)", s) or re.search(r"([\d.]+(?:,\d+)?)\s*€", s)
     if not m:
         return None
     try:
@@ -125,10 +134,31 @@ def it_dt(s: str) -> date | None:
     return None
 
 
+DAY = r"(?:lunedì|martedì|mercoledì|giovedì|venerdì|sabato|domenica)"
+
+
+def dated(flat: str, label: str) -> tuple[date | None, str | None]:
+    """Detail pages print 'giovedì 29 ottobre 2026, 10:40 Data e Ora vendita': the date comes before its label."""
+    m = re.search(DAY + r" (\d{1,2} \w+ \d{4})(?:, (\d{1,2}:\d{2}))? " + re.escape(label), flat, re.I)
+    if not m:
+        return None, None
+    return it_dt(m.group(1)), m.group(0)
+
+
+STOP = re.compile(r"\s(?:Dati relativi|Tipologia ente|Tipologia di procedura|Denominazione ente|Comune:|Notaio Banditore|Metodo Asta|"
+                  r"Luogo svolgimento|Luogo dove|Data e Ora|Cauzione:|Stato asta|Modalità|Note:|Tribunale:|Registro:|Rito:|"
+                  r"Numero Procedura|Anno Procedura|Delegato alla vendita:|Giudice:|Custode:|Vendita |Soggetto visita|Procede)")
+
+
 def field(t: str, label: str, n: int = 160) -> str | None:
-    """Text right after 'label:' on the detail page."""
-    m = re.search(re.escape(label) + r"\s*:?\s*(.{1,%d}?)(?:\n|  |$)" % n, t)
-    return m.group(1).strip() if m else None
+    """Text right after 'label:' up to the next known label."""
+    m = re.search(re.escape(label) + r"\s*:\s*(.{1,%d})" % (n + 60), t)
+    if not m:
+        return None
+    v = m.group(1)
+    stop = STOP.search(v)
+    v = (v[: stop.start()] if stop else v[:n]).strip(" .,;")
+    return v or None
 
 
 def before(t: str, label: str, n: int = 80) -> str | None:
@@ -156,15 +186,21 @@ def classify(text: str) -> str:
 def parse(kind: str, nid: str, html: str, today: date) -> dict | None:
     t = text_of(html)
     flat = re.sub(r"\s+", " ", t)
-    price_txt = before(flat, "Prezzo dell'avviso", 40) or ""
+    pm = re.search(r"(€\s*[\d.]+(?:,\d+)?|[\d.]+(?:,\d+)?\s*€)\s*Prezzo dell'avviso", flat)
+    price_txt = pm.group(1) if pm else ""
     price = eur(price_txt)
-    m = re.search(r"Dettaglio avviso:\s*\d+\s*(.*?)\s*(?:Stato |€)", flat)
-    head = (m.group(1) if m else "")[:900]
-    place = re.search(r"\b([A-ZÀ-Ý][\w'’ .-]{1,40}) \(([A-Z]{2})\)", head) or re.search(r"\b([A-ZÀ-Ý][\w'’ .-]{1,40}) \(([A-Z]{2})\)", flat)
-    comune, prov = (place.group(1).strip(), place.group(2)) if place else (None, None)
-    prov = province_code(prov) if prov else None
-    auction_d = it_dt(field(flat, "Data e Ora svolgimento Asta") or before(flat, "Data e Ora vendita", 60) or "")
-    deadline_d = it_dt(field(flat, "Data e Ora fine presentazione offerte") or before(flat, "Data e Ora fine raccolta offerte", 60) or "")
+    m = re.search(r"Dettaglio avviso:\s*\d+\s*(.*?)\s*(?:€\s*[\d.,]+\s*Prezzo|[\d.,]+\s*€\s*Prezzo)", flat)
+    head = (m.group(1) if m else "")
+    head = re.sub(r"^.*?Delegato alla vendita\s*", "", head)[:1200]
+    loc = field(flat, "Comune", 80) or ""
+    place = re.match(r"([^()]{2,60}) \(([^()]{2,40})\)", loc) or re.search(r"\b([A-ZÀ-Ý][\w'’ .-]{1,40}) \(([A-Z]{2})\)", head)
+    comune = place.group(1).strip().title() if place else None
+    prov = province_code(place.group(2).strip()) if place else None
+    auction_d, auction_q = dated(flat, "Data e Ora vendita")
+    deadline_d, deadline_q = dated(flat, "Data e Ora fine raccolta offerte")
+    if not auction_d:
+        auction_d = it_dt(field(flat, "Data e Ora svolgimento Asta") or "")
+        auction_q = field(flat, "Data e Ora svolgimento Asta")
     if (auction_d and auction_d < today) or (deadline_d and deadline_d < today and not auction_d):
         return None
     deposit = eur(field(flat, "Cauzione") or "")
@@ -179,7 +215,8 @@ def parse(kind: str, nid: str, html: str, today: date) -> dict | None:
     ptype = classify(head)
     if sqm and (sqm < 15 or (ptype == "apartment" and sqm > 400) or sqm > 3000):
         sqm = None
-    photos = [BASE + u if u.startswith("/") else u for u in re.findall(r'<img[^>]+src="([^"]*/allegati/[^"]+\.(?:jpe?g|png|webp))"', html, re.I)
+    photos = [(BASE + u if u.startswith("/") else u).replace("http://", "https://")
+              for u in re.findall(r'<img[^>]+src="([^"]*/allegati/[^"]+\.(?:jpe?g|png|webp))"', html, re.I)
               if "logo" not in u.lower() and "thumb" not in u.lower()]
     photos = list(dict.fromkeys(photos))[:12]
     docs = [{"kind": "sale_notice" if re.search(r"avviso|bando", n, re.I) else "other", "name": unescape(n.strip())[:120] or "Document",
@@ -200,11 +237,11 @@ def parse(kind: str, nid: str, html: str, today: date) -> dict | None:
     if price:
         fact("price_eur", "Price", f"€{price:,.0f}", price, f"{price_txt} Prezzo dell'avviso", f"Price in the notice: €{price:,.0f}")
     if deposit:
-        fact("deposit_eur", "Deposit", f"€{deposit:,.0f}", deposit, f"Cauzione: {field(flat, 'Cauzione')}", f"Deposit: €{deposit:,.0f}")
+        fact("deposit_eur", "Deposit", f"€{deposit:,.0f}", deposit, f"Cauzione: {field(flat, 'Cauzione', 40)}", f"Deposit: €{deposit:,.0f}")
     if deadline_d:
-        fact("deadline", "Offer deadline", f"{deadline_d:%-d %b %Y}", None, field(flat, "Data e Ora fine presentazione offerte") or "", f"Offers by {deadline_d:%-d %b %Y}")
+        fact("deadline", "Offer deadline", f"{deadline_d:%-d %b %Y}", None, deadline_q or "", f"Offers by {deadline_d:%-d %b %Y}")
     if auction_d:
-        fact("auction_date", "Sale date", f"{auction_d:%-d %b %Y}", None, field(flat, "Data e Ora svolgimento Asta") or "", f"Auction on {auction_d:%-d %b %Y}")
+        fact("auction_date", "Sale date", f"{auction_d:%-d %b %Y}", None, auction_q or "", f"Sale on {auction_d:%-d %b %Y}")
     if seller:
         fact("seller", "Seller", seller, None, f"Denominazione ente: {seller}", f"Seller: {seller}")
     if method:
@@ -235,17 +272,22 @@ def parse(kind: str, nid: str, html: str, today: date) -> dict | None:
     }
 
 
-def collect(db: Supa, max_price: float = 300_000, max_pages: int = 60, workers: int = 3, log=print) -> dict:
+def collect(db: Supa, max_price: float = 300_000, max_pages: int = 1500, workers: int = 3, log=print) -> dict:
     today = date.today()
     p = Portal()
     p.start()
     found: list[tuple[str, str]] = []
-    for page in range(1, max_pages + 1):
-        html = p.search(page, max_price)
+    empty = 0
+    for page in range(0, max_pages):
+        html = p.search(1, max_price) if page == 0 else p.page(page)
         ids = DETAIL_RE.findall(html)
         new = [i for i in dict.fromkeys(ids) if i not in found]
         if not new:
-            break
+            empty += 1
+            if empty >= 2:
+                break
+            continue
+        empty = 0
         found += new
     log(f"Notary portal: {len(found)} open notices under €{max_price:,.0f}")
     known = {r["external_id"] for r in db.select("listings", {"select": "external_id", "external_id": "like.notary:*"})}

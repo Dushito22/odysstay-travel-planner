@@ -58,6 +58,9 @@ def score_listing(l: dict, red_flags: int | dict[str, int], today: date | None =
     elif st == "auction_judicial":
         s += 6
         reasons.append("+6 court sale: mortgages and liens are cancelled on transfer")
+    elif st == "auction_notary":
+        s += 6
+        reasons.append("+6 notary sale: the notary has checked the title and documents")
     elif st == "concession":
         s -= 30
         reasons.append("-30 concession: use, not ownership")

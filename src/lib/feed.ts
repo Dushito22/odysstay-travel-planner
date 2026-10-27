@@ -41,7 +41,7 @@ export const SORTS = [
 
 export const SALE_TYPE_LABELS: Record<string, string> = {
   sale: "Sale", concession: "Concession", lease: "Lease", one_euro: "One-euro scheme",
-  auction_judicial: "Court auction", other: "Other sale",
+  auction_judicial: "Court auction", auction_notary: "Notary auction", other: "Other sale",
 };
 
 export const TYPE_LABELS: Record<string, string> = {
@@ -61,7 +61,7 @@ export function prefsSearch(p: Profile | null): FeedSearch {
 }
 
 export function allowedSaleTypes(f: Pick<FeedFilters, "leases" | "oneEuro">) {
-  const t = ["sale", "auction_judicial", "other"];
+  const t = ["sale", "auction_judicial", "auction_notary", "other"];
   if (f.leases) t.push("concession", "lease");
   if (f.oneEuro) t.push("one_euro");
   return t;
