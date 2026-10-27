@@ -1,0 +1,32 @@
+name: Source samples
+
+# Fetches a few pages from candidate listing sources and stores them as a build artifact,
+# so parsers can be written against real HTML. Diagnostic only.
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: "Space-separated URLs"
+        required: true
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch
+        env:
+          URLS: ${{ github.event.inputs.urls }}
+        run: |
+          mkdir samples; i=0
+          for u in $URLS; do
+            i=$((i+1))
+            code=$(curl -sS -L --max-time 40 -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36" \
+              -H "Accept-Language: it-IT,it;q=0.9,en;q=0.8" -o "samples/$i.html" -w "%{http_code}" "$u" || echo ERR)
+            echo "$i $code $u" >> samples/index.txt
+          done
+          cat samples/index.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: samples
+          path: samples
+          retention-days: 3
