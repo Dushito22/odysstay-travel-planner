@@ -38,15 +38,17 @@ export const Route = createFileRoute("/")({
 
 const SOURCES = [
   "Court sales, Portale Vendite Pubbliche",
+  "Notary sales, Avvisi Notarili",
+  "€1 house schemes",
+  "Private online auctions",
   "Comune notice boards",
-  "Gazzetta Ufficiale",
 ];
 
 const STEPS = [
   {
     icon: FileSearch,
     title: "Found",
-    body: "We read official sources every day: every court-ordered sale in Italy, town hall notice boards and the national gazette. Most of it never reaches the property portals.",
+    body: "We read official sources every day: every court-ordered sale in Italy, notary and public-body sales, the €1 house towns, private online auctions and town hall notice boards. Most of it never reaches the big property portals.",
   },
   {
     icon: Languages,
