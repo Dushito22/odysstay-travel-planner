@@ -341,7 +341,7 @@ function Appraisal({ fact, discount, sourceUrl }: { fact: Fact | undefined; disc
 }
 
 type Attachment = { kind: string; name: string; url: string };
-type Contact = { role: string; name: string | null; email: string | null; phone: string | null; handles_visits?: boolean };
+type Contact = { role: string; name: string | null; email: string | null; phone: string | null; url?: string | null; handles_visits?: boolean };
 const asAttachments = (j: unknown): Attachment[] =>
   Array.isArray(j) ? (j as Attachment[]).filter((a) => a && typeof a.url === "string" && /^https:\/\//.test(a.url)) : [];
 const asContacts = (j: unknown): Contact[] => (Array.isArray(j) ? (j as Contact[]).filter((c) => c && typeof c.role === "string") : []);
@@ -397,13 +397,20 @@ function SaleContacts({ data }: { data: ListingBundle }) {
               <div className="mt-3 space-y-1.5 text-sm">
                 {c.email && <a href={`mailto:${c.email}`} className="flex items-center gap-2 text-brand hover:underline"><Mail className="h-4 w-4" />{c.email}</a>}
                 {c.phone && <a href={`tel:${c.phone}`} className="flex items-center gap-2 text-brand hover:underline"><Phone className="h-4 w-4" />{c.phone}</a>}
+                {c.url && /^https?:\/\//.test(c.url) && <a href={c.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 break-all text-brand hover:underline"><ExternalLink className="h-4 w-4 shrink-0" />{c.url.replace(/^https?:\/\//, "").slice(0, 60)}</a>}
               </div>
             </li>
           ))}
         </ul>
       )}
       <p className="mt-4 text-sm text-muted-foreground">
-        As published on the court portal. Viewings of court-sale properties are requested through the portal itself, using the "Prenota visita" button on the official page.
+        {l.sale_type === "auction_judicial"
+          ? 'As published on the court portal. Viewings of court-sale properties are requested through the portal itself, using the "Prenota visita" button on the official page.'
+          : l.sale_type === "auction_notary" || l.sale_type === "sale"
+            ? "As published on the notaries' portal. The notary handles offers and documents; ask them or the seller for a viewing."
+            : l.sale_type === "one_euro"
+              ? "The town's own page lists the houses still available and the call for applications. Check it first: schemes open and close during the year."
+              : "As published in the official notice."}
       </p>
     </Section>
   );

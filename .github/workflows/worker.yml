@@ -7,14 +7,14 @@ name: Worker
 
 on:
   schedule:
-    - cron: "17 5 * * *"   # daily 05:17 UTC: new and changed court sales, map, scores (no AI)
+    - cron: "17 5 * * *"   # daily 05:17 UTC: court sales, notary sales, €1 towns, map, scores (no AI)
     - cron: "23 6-22 * * *" # hourly: read the documents of listings someone starred (no AI); exits at once if none
   workflow_dispatch:
     inputs:
       task:
         description: "What to run"
         type: choice
-        options: [daily, deep, notary, notary-probe, sources-probe, pvp, perizia, rescore, retry-errors, check, pvp-probe, comuni-crawl, comuni-discover, status]
+        options: [daily, deep, notary, one-euro, notary-probe, sources-probe, pvp, perizia, rescore, retry-errors, check, pvp-probe, comuni-crawl, comuni-discover, status]
         default: daily
       limit:
         description: "pvp: max lots to read. perizia: max reports to read. deep: listings to read"
@@ -94,6 +94,7 @@ jobs:
             pvp)             { python -m odysstay_worker pvp --limit ${{ github.event.inputs.limit || '25000' }} && python -m odysstay_worker geocode && python -m odysstay_worker score && python -m odysstay_worker costs && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             perizia)         { python -m odysstay_worker perizia --limit ${{ github.event.inputs.limit || '40' }} && python -m odysstay_worker score && python -m odysstay_worker costs; } 2>&1 | tee run.log ;;
             rescore)         { python -m odysstay_worker score && python -m odysstay_worker costs && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
+            one-euro)        { python -m odysstay_worker one-euro && python -m odysstay_worker geocode && python -m odysstay_worker score && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             notary-probe)    python -m odysstay_worker notary --probe 2>&1 | tee run.log ;;
             notary)          { python -m odysstay_worker notary && python -m odysstay_worker geocode && python -m odysstay_worker score && python -m odysstay_worker costs && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             sources-probe)   python -m odysstay_worker sources-probe 2>&1 | tee run.log ;;
