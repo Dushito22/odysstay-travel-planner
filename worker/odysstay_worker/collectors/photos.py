@@ -28,7 +28,7 @@ ID_RE = re.compile(r"idAnnuncio=(\d+)")
 def page(client: httpx.Client, n: int) -> tuple[list[dict], int]:
     for attempt in range(4):
         try:
-            r = client.post(API, json={"Type": "Immobili", "Page": n, "PageSize": 50, "SortBy": "DataAstaAsc"}, headers=HEADERS)
+            r = client.post(API, json={"Type": "Immobili", "Page": n, "PageSize": 12, "SortBy": "DataAstaAsc"}, headers=HEADERS)
             r.raise_for_status()
             res = r.json().get("results") or {}
             return res.get("currentPage") or [], int(res.get("totalResults") or 0)
@@ -48,13 +48,16 @@ def collect(db: Supa, max_pages: int = 0, log=print) -> dict:
     found: dict[str, str] = {}
     with httpx.Client(timeout=40) as client:
         first, total = page(client, 1)
-        size = len(first) or 50
+        if not first:
+            r = client.post(API, json={"Type": "Immobili", "Page": 1, "PageSize": 12, "SortBy": "DataAstaAsc"}, headers=HEADERS)
+            log(f"Astalegale answered {r.status_code}: {r.text[:400]!r}")
+        size = len(first) or 12
         pages = -(-total // size) if total else 1
         if max_pages:
             pages = min(pages, max_pages)
         log(f"Astalegale: {total} lots, reading {pages} pages")
         items = list(first)
-        with ThreadPoolExecutor(max_workers=6) as ex:
+        with ThreadPoolExecutor(max_workers=8) as ex:
             for got, _ in ex.map(lambda n: page(client, n), range(2, pages + 1)):
                 items.extend(got)
     pvp_items = 0
