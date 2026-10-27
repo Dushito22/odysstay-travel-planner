@@ -45,6 +45,8 @@ TYPE_RULES = [  # first match wins, on the bene type code + description
     ("land", r"TERREN|AGRICOL|EDIFICABIL|FONDO"),
     ("commercial", r"NEGOZI|UFFICI|COMMERCIAL|LABORATORI|CAPANNON|MAGAZZIN|INDUSTRIAL|ALBERG|ARTIGIAN|DEPOSIT"),
 ]
+# Largest believable floor area per building type. Bigger figures are almost always land or the whole estate.
+MAX_FLOOR = {"apartment": 400, "house": 1200, "rural_house": 1500, "building": 3000, "mixed": 3000, "commercial": 3000}
 TYPE_RANK = ["house", "rural_house", "apartment", "building", "commercial", "land", "garage", "other"]
 TYPE_EN = {"house": "House", "rural_house": "Rural house", "apartment": "Apartment", "building": "Building",
            "garage": "Garage", "land": "Land", "commercial": "Commercial property", "other": "Property"}
@@ -207,7 +209,15 @@ def classify(det: dict, item: dict) -> str:
     return min(found, key=TYPE_RANK.index)
 
 
-def find_sqm(texts: list[str], land: bool) -> tuple[float, str] | None:
+def bene_type(b: dict) -> str | None:
+    text = " ".join(str(b.get(k) or "") for k in ("codTipologiaBene", "descTipologiaBene", "descrizione")).upper()
+    for t, rx in TYPE_RULES:
+        if re.search(rx, text):
+            return t
+    return None
+
+
+def find_sqm(texts: list[str], land: bool, hi_cap: float = 3000) -> tuple[float, str] | None:
     """First surface figure in the official text, with the snippet it came from. For buildings, figures
     that describe land, gardens or yards are skipped."""
     for text in texts:
@@ -218,7 +228,7 @@ def find_sqm(texts: list[str], land: bool) -> tuple[float, str] | None:
                 continue
             if not land and LAND_CONTEXT.search(before):
                 continue
-            lo, hi = (50, 5_000_000) if land else (15, 3000)
+            lo, hi = (50, 5_000_000) if land else (15, hi_cap)
             if lo <= v <= hi:
                 s, e = max(0, m.start() - 30), min(len(text), m.end() + 5)
                 return v, text[s:e].strip()
@@ -310,15 +320,16 @@ def build(item: dict, det: dict, today: date) -> dict:
             case = f"{case}, lotto {lot_no}"
 
     surface = land = None
+    cap = MAX_FLOOR.get(ptype, 3000)
     for b in beni:
-        if b.get("superficie") and ptype != "land":
+        if b.get("superficie") and ptype != "land" and bene_type(b) not in ("land", "garage"):
             v = parse_num(str(b["superficie"]))
-            if v and 15 <= v <= 3000:
+            if v and 15 <= v <= cap:
                 surface = v
                 fact("surface_sqm", "Surface", f"{v:,.0f} m²", v, f"Superficie: {b['superficie']} mq", f"Surface: {v:,.0f} m²")
                 break
     if surface is None:
-        hit = find_sqm(texts, land=ptype == "land")
+        hit = find_sqm(texts, land=ptype == "land", hi_cap=cap)
         if hit:
             v, snippet = hit
             if ptype == "land":

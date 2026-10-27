@@ -22,6 +22,8 @@ SCENARIOS = {
 STRUCTURAL_UPLIFT = 0.30
 OLD_STOCK = {"rural_house", "building"}
 ESTIMATE_TYPES = {"house", "apartment", "rural_house", "building", "mixed"}
+# Above these, the figure is land or a whole estate, not floor area: no estimate rather than a silly one.
+MAX_FLOOR = {"apartment": 400, "house": 1200, "rural_house": 1500, "building": 3000, "mixed": 3000}
 
 
 def estimate(sqm: float, property_type: str | None) -> list[dict]:
@@ -49,7 +51,8 @@ def estimate(sqm: float, property_type: str | None) -> list[dict]:
 def run(db: Supa, log=print) -> int:
     rows = db.select("listings", {"select": "id,surface_sqm,property_type", "surface_sqm": "gt.15",
                                   "is_demo": "eq.false", "status": "not.in.(closed,withdrawn)"})
-    rows = [r for r in rows if r.get("property_type") in ESTIMATE_TYPES]
+    rows = [r for r in rows if r.get("property_type") in ESTIMATE_TYPES
+            and float(r["surface_sqm"]) <= MAX_FLOOR.get(r["property_type"], 3000)]
     have = {r["listing_id"] for r in db.select("cost_estimates", {"select": "listing_id", "user_id": "is.null"})}
     todo = [r for r in rows if r["id"] not in have]
     out = []

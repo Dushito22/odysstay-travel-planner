@@ -274,7 +274,7 @@ function Bubble({ msg }: { msg: AgentMessage }) {
       <div
         className={cn(
           "max-w-[90%] rounded-2xl px-4 py-3 text-sm leading-relaxed",
-          mine ? "bg-foreground text-background" : "border bg-card",
+          mine ? "bg-sea text-white" : "border bg-card",
         )}
       >
         <p className="whitespace-pre-wrap">{mine ? msg.content : stripMarkers(msg.content)}</p>

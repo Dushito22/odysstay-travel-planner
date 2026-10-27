@@ -77,6 +77,9 @@ def score_listing(l: dict, red_flags: int | dict[str, int], today: date | None =
     elif l.get("occupancy") == "occupied":
         s -= 15
         reasons.append("-15 occupied")
+    if l.get("photo_urls"):
+        s += 6
+        reasons.append("+6 official photos published")
     sev = {"medium": red_flags} if isinstance(red_flags, int) else dict(red_flags)
     n_flags = sum(sev.values())
     if n_flags:
@@ -102,7 +105,7 @@ def score_listing(l: dict, red_flags: int | dict[str, int], today: date | None =
 
 def run(db: Supa, log=print) -> int:
     listings = db.select("listings", {"select": "id,price_eur,surface_sqm,property_type,sale_type,discount_pct,"
-                                      "previous_auction_failed,occupancy,deadline_at,auction_at,status,score,score_reasons",
+                                      "previous_auction_failed,occupancy,deadline_at,auction_at,status,score,score_reasons,photo_urls",
                                       "is_demo": "eq.false", "status": "neq.withdrawn"})
     flags: dict[str, dict[str, int]] = {}
     for f in db.select("listing_red_flags", {"select": "listing_id,severity"}):

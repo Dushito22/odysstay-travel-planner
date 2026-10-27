@@ -159,7 +159,7 @@ function DealRoom({ bundle }: { bundle: DealBundle }) {
                   }
                   className={cn(
                     "shrink-0 rounded-full border px-3.5 py-1.5 text-sm transition-colors",
-                    current && "border-foreground bg-foreground text-background",
+                    current && "border-transparent bg-sea text-white",
                     past && !current && "bg-muted text-foreground",
                     !current && !past && "text-muted-foreground hover:bg-muted",
                   )}

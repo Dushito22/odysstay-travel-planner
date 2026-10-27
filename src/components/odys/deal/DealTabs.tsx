@@ -621,7 +621,7 @@ function NewRequest({
                   onClick={() => setPurpose(p)}
                   className={cn(
                     "rounded-full border px-3 py-1.5 text-left text-sm",
-                    purpose === p && "border-foreground bg-foreground text-background",
+                    purpose === p && "border-transparent bg-sea text-white",
                   )}
                 >
                   {p === "custom" ? "Something else" : p}

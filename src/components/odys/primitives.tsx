@@ -66,7 +66,7 @@ export function ScoreBadge({
           className={cn(
             "inline-flex shrink-0 items-center justify-center rounded-full font-display font-semibold tnum transition-shadow hover:shadow-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             size === "sm" ? "h-9 w-9 text-sm" : "h-12 w-12 text-lg",
-            strong ? "bg-foreground text-background" : "bg-card text-foreground ring-1 ring-border",
+            strong ? "bg-sea text-white" : "bg-card text-foreground ring-1 ring-border",
           )}
         >
           {score}

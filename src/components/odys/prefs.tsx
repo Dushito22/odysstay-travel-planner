@@ -14,7 +14,7 @@ export function Chip({ active, onClick, children }: { active: boolean; onClick: 
       onClick={onClick}
       className={cn(
         "rounded-full border px-3.5 py-1.5 text-sm transition-all",
-        active ? "border-foreground bg-foreground text-background font-medium" : "bg-card hover:border-foreground/40",
+        active ? "border-transparent bg-sea text-white font-medium" : "bg-card hover:border-foreground/40",
       )}
     >
       {children}
