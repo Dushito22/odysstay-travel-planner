@@ -151,14 +151,20 @@ type QuoteProps = {
   quoteEn?: string | null | undefined;
   page?: number | null | undefined;
   sourceUrl?: string | null | undefined;
+  /** What the quote comes from, e.g. "Appraisal report". Defaults to "Official notice". */
+  docLabel?: string;
 };
 
+export function translateUrl(text: string) {
+  return `https://translate.google.com/?sl=it&tl=en&op=translate&text=${encodeURIComponent(text)}`;
+}
+
 /** The Italian quote, its English translation and a link to the original notice. */
-export function QuoteDetails({ quote, quoteEn, page, sourceUrl }: QuoteProps) {
+export function QuoteDetails({ quote, quoteEn, page, sourceUrl, docLabel = "Official notice" }: QuoteProps) {
   return (
     <>
       <p className="text-xs uppercase tracking-wide text-muted-foreground">
-        Official notice{page ? `, page ${page}` : ""}
+        {docLabel}{page ? `, page ${page}` : ""}
       </p>
       <blockquote
         lang="it"
@@ -167,16 +173,28 @@ export function QuoteDetails({ quote, quoteEn, page, sourceUrl }: QuoteProps) {
         {quote}
       </blockquote>
       {quoteEn && <p className="mt-2 text-sm text-muted-foreground">{quoteEn}</p>}
-      {sourceUrl && (
-        <a
-          href={sourceUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-3 inline-flex items-center gap-1 text-sm text-brand underline-offset-4 hover:underline"
-        >
-          Open original notice <ExternalLink className="h-3.5 w-3.5" />
-        </a>
-      )}
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+        {!quoteEn && quote && (
+          <a
+            href={translateUrl(quote)}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-sm text-brand underline-offset-4 hover:underline"
+          >
+            Translate <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        )}
+        {sourceUrl && (
+          <a
+            href={sourceUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-sm text-brand underline-offset-4 hover:underline"
+          >
+            Open the original <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        )}
+      </div>
     </>
   );
 }

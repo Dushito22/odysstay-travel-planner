@@ -18,7 +18,9 @@ export type ListingBundle = {
   facts: Fact[];
   flags: RedFlag[];
   grants: ListingGrant[];
+  deep: DeepDive | null;
 };
+export type DeepDive = T["deep_dives"]["Row"];
 
 export const FACT_ORDER = [
   "price_eur", "min_offer_eur", "appraisal_eur", "min_raise_eur", "deposit_eur", "deposit", "deadline", "auction_date",
@@ -76,11 +78,12 @@ export const listingQuery = (id: string) =>
       if (!/^[0-9a-f-]{36}$/i.test(id)) throw notFound();
       let q = supabase.from("listing_feed").select("*").eq("id", id);
       if (!showDemo) q = q.eq("is_demo", false);
-      const [l, f, r, g] = await Promise.all([
+      const [l, f, r, g, d] = await Promise.all([
         q.maybeSingle(),
         supabase.from("listing_facts").select("*").eq("listing_id", id),
         supabase.from("listing_red_flags").select("*").eq("listing_id", id),
         supabase.from("listing_grants").select("*, grants(*)").eq("listing_id", id),
+        supabase.from("deep_dives").select("*").eq("listing_id", id).maybeSingle(),
       ]);
       if (l.error) throw l.error;
       if (!l.data) throw notFound();
@@ -89,6 +92,7 @@ export const listingQuery = (id: string) =>
         facts: orderFacts(f.data ?? []),
         flags: orderFlags(r.data ?? []),
         grants: (g.data ?? []) as ListingGrant[],
+        deep: d.data ?? null,
       };
     },
   });

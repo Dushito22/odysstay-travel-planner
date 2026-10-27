@@ -102,6 +102,69 @@ function FactValue({ fact, sourceUrl }: { fact: Fact | undefined; sourceUrl: str
   );
 }
 
+function RedFlags({ data }: { data: ListingBundle }) {
+  const { listing: l, flags, deep } = data;
+  const court = l.sale_type === "auction_judicial";
+  const status = deep?.status ?? null;
+  const fromReport = flags.some((f) => f.origin === "rules");
+  return (
+    <Section title="Red flags" {...(fromReport ? { kicker: "Found in the court appraisal report" } : {})}>
+      {flags.length > 0 && (
+        <ul className="space-y-3">
+          {flags.map((f) => (
+            <li key={f.id} className="flex gap-4 rounded-2xl border bg-card p-5">
+              <AlertTriangle className={cn("mt-0.5 h-5 w-5 shrink-0", f.severity === "low" ? "text-caution" : "text-warning")} />
+              <div className="min-w-0">
+                <span className={cn("mb-2 inline-block rounded-full px-2.5 py-0.5 text-xs font-medium capitalize",
+                  f.severity === "high" ? "bg-warning text-background" : f.severity === "medium" ? "bg-warning-soft text-warning" : "bg-caution-soft text-caution")}>
+                  {f.severity}
+                </span>
+                <div className="font-medium">
+                  <SourceQuote quote={f.quote} quoteEn={f.quote_en} page={f.page} sourceUrl={f.doc_url ?? l.source_url}
+                    docLabel={f.doc_url ? "Appraisal report" : "Official notice"}>
+                    {f.flag_en}
+                  </SourceQuote>
+                </div>
+                {f.origin === "rules" && (
+                  <p className="mt-2 text-sm text-muted-foreground" lang="it">
+                    {f.page ? `Page ${f.page}: ` : ""}"{f.quote.length > 220 ? f.quote.slice(0, 220) + "..." : f.quote}"
+                  </p>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <DeepDiveNote court={court} status={status} pages={deep?.pages ?? null} hasFlags={flags.length > 0} />
+    </Section>
+  );
+}
+
+function DeepDiveNote({ court, status, pages, hasFlags }: { court: boolean; status: string | null; pages: number | null; hasFlags: boolean }) {
+  let text: string | null = null;
+  if (!court) {
+    text = hasFlags ? null : "No red flags were found in the notice. That does not mean there are none: a site visit with a surveyor is still essential.";
+  } else if (status === "pending" || status === "running") {
+    text = "We are reading the court appraisal report for building irregularities, unpaid fees, occupancy and damage. This is usually ready within the hour.";
+  } else if (status === "done") {
+    text = hasFlags
+      ? `Found by reading ${pages ? `all ${pages} pages of ` : ""}the appraisal report. Each point quotes the report word for word: tap Source, then Translate. Check every one with a surveyor before bidding.`
+      : `We read ${pages ? `all ${pages} pages of ` : ""}the appraisal report and found none of the usual warning signs. Read it yourself under Official documents before bidding.`;
+  } else if (status === "no_text") {
+    text = "The appraisal report is a scanned image, so it could not be read automatically. Open it under Official documents.";
+  } else if (status === "no_document") {
+    text = "The court has not published an appraisal report for this sale.";
+  } else if (status === "error") {
+    text = "We could not open the appraisal report. Try the link under Official documents.";
+  } else if (!hasFlags) {
+    text = "Save this listing with the heart and we will read the court appraisal report for you: building irregularities, unpaid fees, occupancy and damage, each quoted from the report.";
+  }
+  if (!text) return null;
+  return (
+    <p className={cn("max-w-2xl rounded-2xl border bg-card p-5 text-muted-foreground", hasFlags && "mt-4")}>{text}</p>
+  );
+}
+
 function useUserId() {
   return useQuery({
     queryKey: ["me"],
@@ -165,32 +228,7 @@ function ListingPage() {
             </p>
           </Section>
 
-          <Section title="Red flags">
-            {flags.length ? (
-              <ul className="space-y-3">
-                {flags.map((f) => (
-                  <li key={f.id} className="flex gap-4 rounded-2xl border bg-card p-5">
-                    <AlertTriangle className={cn("mt-0.5 h-5 w-5 shrink-0", f.severity === "low" ? "text-caution" : "text-warning")} />
-                    <div className="min-w-0">
-                      <span className={cn("mb-2 inline-block rounded-full px-2.5 py-0.5 text-xs font-medium capitalize",
-                        f.severity === "high" ? "bg-warning text-background" : f.severity === "medium" ? "bg-warning-soft text-warning" : "bg-caution-soft text-caution")}>
-                        {f.severity}
-                      </span>
-                      <div className="font-medium">
-                        <SourceQuote quote={f.quote} quoteEn={f.quote_en} sourceUrl={src}>{f.flag_en}</SourceQuote>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="max-w-2xl rounded-2xl border bg-card p-5 text-muted-foreground">
-                {l.sale_type === "auction_judicial"
-                  ? "No red flags recorded yet. For court sales the problems are listed in the appraisal report under Official documents: read it before bidding, and visit with a surveyor."
-                  : "No red flags were found in the notice. That does not mean there are none: a site visit with a surveyor is still essential."}
-              </p>
-            )}
-          </Section>
+          <RedFlags data={data} />
 
           <CostSection data={data} userId={userId} />
           <OfficialDocuments data={data} />
