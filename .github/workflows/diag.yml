@@ -24,3 +24,9 @@ jobs:
             --data-urlencode "sql=$SQL" --data-urlencode "iso_timestamp_start=$START" --data-urlencode "iso_timestamp_end=$END" > out.json
           i=0; jq -c '.result[]?' out.json | while read -r l; do i=$((i+1)); echo "::notice title=Log $i::$(echo "$l" | cut -c1-900)"; done
           echo "::notice title=Raw::$(head -c 1500 out.json)"
+      - name: Function secrets and functions (names only)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          echo "::notice title=Secret names::$(curl -sS https://api.supabase.com/v1/projects/nryhvtxprjiylajolcef/secrets -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" | jq -r '[.[].name] | join(", ")')"
+          echo "::notice title=Functions::$(curl -sS https://api.supabase.com/v1/projects/nryhvtxprjiylajolcef/functions -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" | jq -r '[.[] | "\(.slug) v\(.version) \(.status)"] | join(", ")')"
