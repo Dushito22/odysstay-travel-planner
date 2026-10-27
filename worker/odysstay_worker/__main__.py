@@ -80,8 +80,6 @@ def main(argv=None):
     dp = sub.add_parser("deep")
     dp.add_argument("--limit", type=int, default=30)
     dp.add_argument("--sample", type=int, default=0, help="first queue this many top listings (for testing)")
-    ph = sub.add_parser("photos")
-    ph.add_argument("--pages", type=int, default=0, help="0 reads everything")
     sub.add_parser("daily")
 
     a = p.parse_args(argv)
@@ -143,9 +141,6 @@ def main(argv=None):
         extract.link_grants(db)
     elif a.cmd == "status":
         status(db)
-    elif a.cmd == "photos":
-        from .collectors import photos
-        print(json.dumps(photos.collect(db, a.pages), indent=2))
     elif a.cmd == "deep":
         from . import deep, score
         if a.sample:
