@@ -75,6 +75,7 @@ def main(argv=None):
     e.add_argument("--limit", type=int, default=50)
     e.add_argument("--retry-errors", action="store_true", help="also retry notices that failed before")
     sub.add_parser("pvp-probe")
+    sub.add_parser("sources-probe")
     for name in ("geocode", "score", "grants", "status", "costs"):
         sub.add_parser(name)
     dp = sub.add_parser("deep")
@@ -127,6 +128,9 @@ def main(argv=None):
     elif a.cmd == "extract":
         from . import extract
         print(json.dumps(extract.run(db, a.limit, retry_errors=a.retry_errors), indent=2))
+    elif a.cmd == "sources-probe":
+        from . import sources_probe
+        sources_probe.run()
     elif a.cmd == "pvp-probe":
         from .collectors import pvp_probe
         pvp_probe.run()

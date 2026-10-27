@@ -14,7 +14,7 @@ on:
       task:
         description: "What to run"
         type: choice
-        options: [daily, deep, pvp, perizia, rescore, retry-errors, check, pvp-probe, comuni-crawl, comuni-discover, status]
+        options: [daily, deep, sources-probe, pvp, perizia, rescore, retry-errors, check, pvp-probe, comuni-crawl, comuni-discover, status]
         default: daily
       limit:
         description: "pvp: max lots to read. perizia: max reports to read. deep: listings to read"
@@ -23,7 +23,7 @@ on:
 
 concurrency:
   # Quick tasks and the court-sales load run alongside a long comuni crawl; the rest queues.
-  group: ${{ contains(fromJSON('["pvp-probe","check","status","pvp"]'), github.event.inputs.task) && format('quick-{0}', github.run_id) || 'worker' }}
+  group: ${{ contains(fromJSON('["pvp-probe","sources-probe","check","status","pvp"]'), github.event.inputs.task) && format('quick-{0}', github.run_id) || 'worker' }}
   cancel-in-progress: false
 
 jobs:
@@ -94,6 +94,7 @@ jobs:
             pvp)             { python -m odysstay_worker pvp --limit ${{ github.event.inputs.limit || '25000' }} && python -m odysstay_worker geocode && python -m odysstay_worker score && python -m odysstay_worker costs && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             perizia)         { python -m odysstay_worker perizia --limit ${{ github.event.inputs.limit || '40' }} && python -m odysstay_worker score && python -m odysstay_worker costs; } 2>&1 | tee run.log ;;
             rescore)         { python -m odysstay_worker score && python -m odysstay_worker costs && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
+            sources-probe)   python -m odysstay_worker sources-probe 2>&1 | tee run.log ;;
             pvp-probe)       python -m odysstay_worker pvp-probe 2>&1 | tee run.log ;;
             check)           python -m odysstay_worker check 2>&1 | tee run.log ;;
             retry-errors)    { python -m odysstay_worker check && python -m odysstay_worker extract --retry-errors --limit 150 && python -m odysstay_worker geocode && python -m odysstay_worker grants && python -m odysstay_worker score && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
@@ -105,6 +106,6 @@ jobs:
           { echo '```'; tail -n 60 run.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           # One-line annotation so the result is visible from the run page and the API.
           if grep -qi "error" run.log; then echo "::warning title=Worker errors::$(grep -i "error" run.log | grep -v '"errors": 0' | head -n 6 | tr '\n' ' ' | cut -c1-1500)"; fi
-          if [ "${{ github.event.inputs.task }}" = "pvp-probe" ]; then i=0; while IFS= read -r line; do i=$((i+1)); [ $i -le 9 ] && echo "::notice title=Probe $i::$(echo "$line" | cut -c1-3500)"; done < run.log; fi
+          if [ "${{ github.event.inputs.task }}" = "pvp-probe" ] || [ "${{ github.event.inputs.task }}" = "sources-probe" ]; then i=0; while IFS= read -r line; do i=$((i+1)); [ $i -le 20 ] && echo "::notice title=Probe $i::$(echo "$line" | cut -c1-3500)"; done < run.log; fi
           echo "::notice title=Worker start::$(head -n 12 run.log | tr '\n' ' ' | cut -c1-900)"
           echo "::notice title=Worker ${{ github.event.inputs.task || 'scheduled' }}::$(tail -n 8 run.log | tr '\n' ' ' | cut -c1-900)"
