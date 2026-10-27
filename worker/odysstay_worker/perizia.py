@@ -165,7 +165,11 @@ def run(db: Supa, limit: int = 40, min_score: float = 60, log=print) -> dict:
         "status": "in.(active,closing_soon)", "score": f"gte.{min_score}", "order": "score.desc", "limit": str(limit * 4),
     })
     rows = [r for r in rows if appraisal_url(r) and r.get("document_id")]
-    docs = {d["id"]: d for d in db.select("documents", {"select": "id,meta", "id": in_([r["document_id"] for r in rows])})} if rows else {}
+    docs = {}
+    ids = [r["document_id"] for r in rows]
+    for i in range(0, len(ids), 30):  # keep the request URL short
+        for d in db.select("documents", {"select": "id,meta", "id": in_(ids[i:i + 30])}):
+            docs[d["id"]] = d
     todo = [r for r in rows if not (docs.get(r["document_id"], {}).get("meta") or {}).get("perizia")][:limit]
     log(f"Reading {len(todo)} appraisal reports with {config.MODEL}")
     for r in todo:
