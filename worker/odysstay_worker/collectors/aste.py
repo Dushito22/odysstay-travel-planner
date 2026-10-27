@@ -190,7 +190,7 @@ def probe(log=print, n: int = 12):
                               if r else "no data / closed"))
 
 
-def collect(db: Supa, limit: int = 4000, workers: int = 2, log=print) -> dict:
+def collect(db: Supa, limit: int = 4000, workers: int = 2, max_minutes: int = 200, log=print) -> dict:
     today = date.today()
     c = _client()
     urls = [u for u in sitemap_urls(c) if KEEP.search(u)]
@@ -220,9 +220,14 @@ def collect(db: Supa, limit: int = 4000, workers: int = 2, log=print) -> dict:
             pause["until"] = time.time() + 60 * (attempt + 1)  # the site is throttling us: slow right down
         return u, None, err
 
-    private, court, seen_docs = [], [], []
+    started = time.monotonic()
     with ThreadPoolExecutor(max_workers=workers) as ex:
-        for u, rec, err in ex.map(get, todo):
+      for c0 in range(0, len(todo), 200):
+        if time.monotonic() - started > max_minutes * 60:
+            log(f"  stopping after {max_minutes} minutes; the rest is read next run")
+            break
+        private, court, seen_docs = [], [], []
+        for u, rec, err in ex.map(get, todo[c0:c0 + 200]):
             stats["read"] += 1
             if stats["read"] % 1000 == 0:
                 log(f"  {stats['read']}/{len(todo)} pages read")
@@ -236,29 +241,29 @@ def collect(db: Supa, limit: int = 4000, workers: int = 2, log=print) -> dict:
                 seen_docs.append({"source_id": "aste", "url": u, "part": "", "status": "irrelevant", "language": "it", "title": None, "meta": {}})
                 continue
             (court if rec["court"] else private).append(rec)
-    # Court lots: photos onto our matching court-portal listing (same town, same base price), only where it has none.
-    for rec in court:
-        if not (rec["images"] and rec["comune"] and rec["price"]):
-            continue
-        rows = db.select("listings", {"select": "id,photo_urls", "external_id": "like.pvp:*", "comune": f"ilike.{rec['comune']}",
-                                      "price_eur": eq(str(rec["price"]))})
-        if len(rows) == 1 and not rows[0].get("photo_urls"):
-            db.update("listings", {"id": eq(rows[0]["id"])}, {"photo_urls": rec["images"], "hero_image_path": rec["images"][0]})
-            stats["court_photos"] += 1
-        elif not rows:
-            stats["court_unmatched"] += 1
-        seen_docs.append({"source_id": "aste", "url": rec["document"]["url"], "part": "", "status": "irrelevant", "language": "it",
-                          "title": rec["document"]["title"], "meta": {**rec["document"]["meta"], "court": rec["court"]}})
-    for i in range(0, len(private), 50):
-        batch = private[i:i + 50]
-        docs = db.upsert("documents", [b["document"] for b in batch], on_conflict="url,part")
-        doc_id = {d["url"]: d["id"] for d in docs}
-        saved = db.upsert("listings", [{**b["listing"], "document_id": doc_id.get(b["document"]["url"])} for b in batch], on_conflict="external_id")
-        lid = {r["external_id"]: r["id"] for r in saved}
-        db.delete("listing_facts", {"listing_id": in_(list(lid.values()))})
-        db.insert("listing_facts", [{"listing_id": lid[b["listing"]["external_id"]], **f} for b in batch for f in b["facts"]
-                                    if b["listing"]["external_id"] in lid], returning=False)
-        stats["private"] += len(saved)
-    for i in range(0, len(seen_docs), 200):
-        db.upsert("documents", seen_docs[i:i + 200], on_conflict="url,part", ignore_duplicates=True)
+        # Court lots: photos onto our matching court-portal listing (same town, same base price), only where it has none.
+        for rec in court:
+            if not (rec["images"] and rec["comune"] and rec["price"]):
+                continue
+            rows = db.select("listings", {"select": "id,photo_urls", "external_id": "like.pvp:*", "comune": f"ilike.{rec['comune']}",
+                                          "price_eur": eq(str(rec["price"]))})
+            if len(rows) == 1 and not rows[0].get("photo_urls"):
+                db.update("listings", {"id": eq(rows[0]["id"])}, {"photo_urls": rec["images"], "hero_image_path": rec["images"][0]})
+                stats["court_photos"] += 1
+            elif not rows:
+                stats["court_unmatched"] += 1
+            seen_docs.append({"source_id": "aste", "url": rec["document"]["url"], "part": "", "status": "irrelevant", "language": "it",
+                              "title": rec["document"]["title"], "meta": {**rec["document"]["meta"], "court": rec["court"]}})
+        for i in range(0, len(private), 50):
+            batch = private[i:i + 50]
+            docs = db.upsert("documents", [b["document"] for b in batch], on_conflict="url,part")
+            doc_id = {d["url"]: d["id"] for d in docs}
+            saved = db.upsert("listings", [{**b["listing"], "document_id": doc_id.get(b["document"]["url"])} for b in batch], on_conflict="external_id")
+            lid = {r["external_id"]: r["id"] for r in saved}
+            db.delete("listing_facts", {"listing_id": in_(list(lid.values()))})
+            db.insert("listing_facts", [{"listing_id": lid[b["listing"]["external_id"]], **f} for b in batch for f in b["facts"]
+                                        if b["listing"]["external_id"] in lid], returning=False)
+            stats["private"] += len(saved)
+        for i in range(0, len(seen_docs), 200):
+            db.upsert("documents", seen_docs[i:i + 200], on_conflict="url,part", ignore_duplicates=True)
     return stats
