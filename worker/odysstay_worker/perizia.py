@@ -65,7 +65,7 @@ def call_model(text: str) -> dict:
 
     client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
     msg = client.messages.create(
-        model=config.MODEL, max_tokens=6000, system=SYSTEM,
+        model=config.MODEL, max_tokens=16000, system=SYSTEM,
         messages=[{"role": "user", "content": f"Return JSON shaped like:\n{json.dumps(SHAPE, ensure_ascii=False)}\n\n<report>\n{text[:MAX_CHARS]}\n</report>"}],
     )
     raw = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
@@ -170,7 +170,7 @@ def run(db: Supa, limit: int = 40, min_score: float = 60, log=print) -> dict:
     for i in range(0, len(ids), 30):  # keep the request URL short
         for d in db.select("documents", {"select": "id,meta", "id": in_(ids[i:i + 30])}):
             docs[d["id"]] = d
-    todo = [r for r in rows if not (docs.get(r["document_id"], {}).get("meta") or {}).get("perizia")][:limit]
+    todo = [r for r in rows if (docs.get(r["document_id"], {}).get("meta") or {}).get("perizia") not in ("read", "no_text")][:limit]
     log(f"Reading {len(todo)} appraisal reports with {config.MODEL}")
     for r in todo:
         doc = docs[r["document_id"]]
