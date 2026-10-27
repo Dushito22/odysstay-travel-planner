@@ -190,7 +190,7 @@ def probe(log=print, n: int = 12):
                               if r else "no data / closed"))
 
 
-def collect(db: Supa, limit: int = 4000, workers: int = 4, log=print) -> dict:
+def collect(db: Supa, limit: int = 4000, workers: int = 2, log=print) -> dict:
     today = date.today()
     c = _client()
     urls = [u for u in sitemap_urls(c) if KEEP.search(u)]
@@ -199,19 +199,37 @@ def collect(db: Supa, limit: int = 4000, workers: int = 4, log=print) -> dict:
     log(f"Astegiudiziarie: {len(urls)} residential or land pages, {len(todo)} new to read")
     stats = {"pages": len(urls), "read": 0, "private": 0, "court_photos": 0, "court_unmatched": 0, "closed_or_empty": 0, "errors": 0}
 
+    pause = {"until": 0.0}
+
     def get(u):
-        time.sleep(0.4)
-        try:
-            return u, parse(u, c.get(u).text, today), None
-        except Exception as e:  # noqa: BLE001
-            return u, None, e
+        for attempt in range(3):
+            wait = pause["until"] - time.time()
+            if wait > 0:
+                time.sleep(wait)
+            time.sleep(1.0)
+            try:
+                r = c.get(u)
+            except Exception as e:  # noqa: BLE001
+                err = e
+                continue
+            if r.status_code == 200 and ("ld+json" in r.text or "Tribunale" in r.text):
+                return u, parse(u, r.text, today), None
+            if r.status_code == 404:
+                return u, None, None
+            err = RuntimeError(f"HTTP {r.status_code}")
+            pause["until"] = time.time() + 60 * (attempt + 1)  # the site is throttling us: slow right down
+        return u, None, err
 
     private, court, seen_docs = [], [], []
     with ThreadPoolExecutor(max_workers=workers) as ex:
         for u, rec, err in ex.map(get, todo):
             stats["read"] += 1
+            if stats["read"] % 1000 == 0:
+                log(f"  {stats['read']}/{len(todo)} pages read")
             if err:
                 stats["errors"] += 1
+                if stats["errors"] <= 3:
+                    log(f"  {u}: {err}")
                 continue
             if not rec:
                 stats["closed_or_empty"] += 1
