@@ -157,7 +157,7 @@ def appraisal_url(listing: dict) -> str | None:
 
 def run(db: Supa, limit: int = 40, min_score: float = 60, log=print) -> dict:
     stats = {"read": 0, "flags": 0, "no_text": 0, "errors": 0, "rejected": 0}
-    if not config.ANTHROPIC_API_KEY.startswith("sk-ant-api"):
+    if not config.ANTHROPIC_API_KEY.startswith("sk-ant-"):
         log("Skipping appraisal reports: no valid ANTHROPIC_API_KEY")
         return stats
     rows = db.select("listings", {
