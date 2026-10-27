@@ -9,6 +9,9 @@ on:
         description: "Space-separated URLs"
         required: true
 
+permissions:
+  contents: write
+
 jobs:
   fetch:
     runs-on: ubuntu-latest
@@ -25,8 +28,10 @@ jobs:
             echo "$i $code $u" >> samples/index.txt
           done
           cat samples/index.txt
-      - uses: actions/upload-artifact@v4
-        with:
-          name: samples
-          path: samples
-          retention-days: 3
+      - name: Push samples to the samples-data branch
+        run: |
+          cd samples
+          git init -q && git checkout -q -b samples-data
+          git -c user.name=bot -c user.email=bot@users.noreply.github.com add -A
+          git -c user.name=bot -c user.email=bot@users.noreply.github.com commit -qm "samples $(date -u +%FT%TZ)"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" samples-data
