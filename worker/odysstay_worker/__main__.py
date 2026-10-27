@@ -76,6 +76,9 @@ def main(argv=None):
     e.add_argument("--retry-errors", action="store_true", help="also retry notices that failed before")
     sub.add_parser("pvp-probe")
     sub.add_parser("sources-probe")
+    nt = sub.add_parser("notary")
+    nt.add_argument("--probe", action="store_true")
+    nt.add_argument("--max-price", type=float, default=300_000)
     for name in ("geocode", "score", "grants", "status", "costs"):
         sub.add_parser(name)
     dp = sub.add_parser("deep")
@@ -128,6 +131,12 @@ def main(argv=None):
     elif a.cmd == "extract":
         from . import extract
         print(json.dumps(extract.run(db, a.limit, retry_errors=a.retry_errors), indent=2))
+    elif a.cmd == "notary":
+        from .collectors import notary
+        if a.probe:
+            notary.probe()
+        else:
+            print(json.dumps(notary.collect(db, a.max_price), indent=2))
     elif a.cmd == "sources-probe":
         from . import sources_probe
         sources_probe.run()
