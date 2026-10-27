@@ -651,6 +651,30 @@ export type Database = {
         }
         Relationships: []
       }
+      listing_translations: {
+        Row: {
+          advice: Json
+          created_at: string
+          lang: string
+          listing_id: string
+          translation: string
+        }
+        Insert: {
+          advice?: Json
+          created_at?: string
+          lang: string
+          listing_id: string
+          translation: string
+        }
+        Update: {
+          advice?: Json
+          created_at?: string
+          lang?: string
+          listing_id?: string
+          translation?: string
+        }
+        Relationships: []
+      }
       listing_red_flags: {
         Row: {
           doc_url: string | null

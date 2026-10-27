@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.generate-render]
 verify_jwt = false
+
+[functions.translate-listing]
+verify_jwt = false

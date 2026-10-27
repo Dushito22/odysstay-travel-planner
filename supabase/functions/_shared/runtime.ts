@@ -112,14 +112,17 @@ export async function callClaude(
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      model: Deno.env.get("ANTHROPIC_MODEL") || "claude-sonnet-5-5",
+      // The small model: answers are grounded in the listing's verified facts, so it does not need the big one.
+      model: Deno.env.get("ANTHROPIC_MODEL") || "claude-haiku-5-5",
       max_tokens: maxTokens,
       system,
       messages,
     }),
   });
   if (!res.ok) {
-    console.error("anthropic", res.status, await res.text());
+    const text = await res.text();
+    console.error("anthropic", res.status, text);
+    if (/credit balance/i.test(text)) throw new HttpError(503, "The agent is paused: the Anthropic account has no credit.");
     throw new HttpError(502, "The agent is unavailable right now. Please try again in a minute.");
   }
   const data = await res.json();

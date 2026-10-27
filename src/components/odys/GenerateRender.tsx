@@ -33,6 +33,7 @@ export function GenerateRender({
   const [open, setOpen] = useState(false);
   const [style, setStyle] = useState<string>(RENDER_STYLES[0].value);
   const [busy, setBusy] = useState(false);
+  const [wish, setWish] = useState("");
   const [limit, setLimit] = useState<string | null>(null);
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -41,7 +42,7 @@ export function GenerateRender({
     setBusy(true);
     setLimit(null);
     try {
-      const { image } = await generateRender(listingId, style, photo);
+      const { image } = await generateRender(listingId, style, photo, wish);
       await qc.invalidateQueries({ queryKey: ["listing-images", listingId] });
       await qc.invalidateQueries({ queryKey: ["feed"] });
       toast.success("Illustration ready");
@@ -80,19 +81,31 @@ export function GenerateRender({
               Every image is labelled as an illustration.
             </SheetDescription>
           </SheetHeader>
-          <div className="mt-6 space-y-2 px-4">
+          <div className="mt-6 px-4">
+            <label htmlFor="render-wish" className="text-sm font-medium">Describe what you want (optional)</label>
+            <textarea
+              id="render-wish"
+              value={wish}
+              onChange={(e) => setWish(e.target.value)}
+              maxLength={500}
+              rows={3}
+              placeholder="For example: open-plan kitchen, big windows to the garden, pool, light stone floors, olive trees"
+              className="glass mt-2 w-full resize-none rounded-2xl p-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2 px-4">
             {RENDER_STYLES.map((s) => (
               <button
                 key={s.value}
                 type="button"
                 onClick={() => setStyle(s.value)}
                 className={cn(
-                  "w-full rounded-2xl border p-4 text-left transition-colors",
-                  style === s.value ? "border-foreground bg-muted" : "hover:bg-muted/60",
+                  "w-full rounded-2xl border p-3 text-left transition-colors",
+                  style === s.value ? "border-transparent bg-sea text-white" : "glass hover:border-brand/40",
                 )}
               >
                 <p className="font-medium">{s.value}</p>
-                <p className="mt-0.5 text-sm text-muted-foreground">{s.hint}</p>
+                <p className={cn("mt-0.5 text-xs", style === s.value ? "text-white/85" : "text-muted-foreground")}>{s.hint}</p>
               </button>
             ))}
           </div>
@@ -105,8 +118,8 @@ export function GenerateRender({
                 </Link>
               </div>
             )}
-            <Button className="w-full" onClick={go} disabled={busy}>
-              {busy ? "Creating, this takes about 30 seconds" : "Create illustration"}
+            <Button className="w-full" onClick={go} disabled={busy || (style === "Custom" && !wish.trim())}>
+              {busy ? "Creating, this takes up to a minute" : "Create illustration"}
             </Button>
           </div>
         </SheetContent>

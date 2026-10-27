@@ -4,6 +4,19 @@ import { adminClient, HttpError, json, requireUser, serve, str, uuid } from "../
 
 const FREE_DAILY = 3;
 
+/** Turns an OpenAI failure into a message the user can act on. */
+async function openAiReason(res: Response, kind: string) {
+  const text = await res.text();
+  console.error("openai", kind, res.status, text);
+  let msg = "";
+  try { msg = JSON.parse(text)?.error?.message ?? ""; } catch { /* not JSON */ }
+  if (res.status === 401) return "The image service key is not valid (OPENAI_API_KEY in Supabase).";
+  if (/billing|quota|credit|insufficient/i.test(msg) || res.status === 429) return "The image service has no credit left. Add credit at platform.openai.com.";
+  if (/verif/i.test(msg)) return "OpenAI requires organisation verification before it allows image generation (platform.openai.com > Settings > Organization).";
+  if (/safety|moderation|rejected/i.test(msg)) return "The image service refused this request. Try a different description.";
+  return `The image service failed (${res.status}${msg ? `: ${msg.slice(0, 160)}` : ""}).`;
+}
+
 serve(async (req, body) => {
   const admin = adminClient();
   const user = await requireUser(req, admin);
@@ -11,6 +24,8 @@ serve(async (req, body) => {
   const style = str(body["style"], "style", { max: 60 });
   if (!(RENDER_STYLES as readonly string[]).includes(style))
     throw new HttpError(400, "Unknown style");
+  const wish = typeof body["wish"] === "string" ? body["wish"].slice(0, 500) : null;
+  if (style === "Custom" && !wish?.trim()) throw new HttpError(400, "Describe what you would like to see");
 
   const apiKey = Deno.env.get("OPENAI_API_KEY");
   if (!apiKey) throw new HttpError(500, "Server is missing OPENAI_API_KEY");
@@ -78,11 +93,12 @@ serve(async (req, body) => {
   let b64: string | undefined;
   let prompt: string;
   if (file) {
-    prompt = renderPrompt(listing, style, true);
+    prompt = renderPrompt(listing, style, true, wish);
     const form = new FormData();
     form.append("model", model);
     form.append("prompt", prompt);
     form.append("size", "1536x1024");
+    form.append("input_fidelity", "high");
     const ext = file.type === "image/jpeg" ? "jpg" : "png";
     form.append("image", new File([file], `original.${ext}`, { type: file.type || "image/png" }));
     const res = await fetch("https://api.openai.com/v1/images/edits", {
@@ -91,20 +107,18 @@ serve(async (req, body) => {
       body: form,
     });
     if (!res.ok) {
-      console.error("openai edit", res.status, await res.text());
-      throw new HttpError(502, "The illustration service is unavailable. Please try again.");
+      throw new HttpError(502, await openAiReason(res, "edit"));
     }
     b64 = (await res.json()).data?.[0]?.b64_json;
   } else {
-    prompt = renderPrompt(listing, style, false);
+    prompt = renderPrompt(listing, style, false, wish);
     const res = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({ model, prompt, size: "1536x1024", n: 1 }),
     });
     if (!res.ok) {
-      console.error("openai gen", res.status, await res.text());
-      throw new HttpError(502, "The illustration service is unavailable. Please try again.");
+      throw new HttpError(502, await openAiReason(res, "gen"));
     }
     b64 = (await res.json()).data?.[0]?.b64_json;
   }
