@@ -79,7 +79,7 @@ def parse(url: str, html: str, today: date) -> dict | None:
     event = next((x for x in g if x.get("@type") == "SaleEvent"), None)
     listing = next((x for x in g if x.get("@type") == "RealEstateListing"), None)
     if not (offer and (bene or listing)):
-        return None
+        return parse_court(url, html)
     t = text_of(html)
     name = (bene or listing).get("name") or ""
     place = re.search(r"in vendita a (.+?) \(([A-Z]{2})\)", name) or re.search(r" a ([A-ZÀ-Ý][^()]+?) \(([A-Z]{2})\)", name)
@@ -156,6 +156,24 @@ def parse(url: str, html: str, today: date) -> dict | None:
     return rec
 
 
+def parse_court(url: str, html: str) -> dict | None:
+    """Court lot pages have no schema.org data: town, base price and photos are read from the page header."""
+    t = text_of(html)
+    m = re.search(r",\s*([A-ZÀ-Ý][^,()]{1,50}?) \(([A-Z]{2})\) € ([\d.]+(?:,\d+)?) Offerta minima", t)
+    if not m or "Tribunale" not in t:
+        return None
+    price = float(m.group(3).replace(".", "").replace(",", "."))
+    seen, images = set(), []
+    for u in re.findall(r'"(/Allegato/Foto-[^"]+)"', html):
+        if u.lower() not in seen:
+            seen.add(u.lower())
+            images.append("https://www.astegiudiziarie.it" + u)
+    court = re.search(r"Tribunale ([A-ZÀ-Ý][\w' -]{2,40}?) Tipo di procedura", t)
+    return {"court": court.group(1) if court else "unknown", "comune": m.group(1).strip(), "price": price, "images": images[:16],
+            "document": {"source_id": "aste", "url": url, "part": "", "status": "irrelevant", "language": "it", "title": None, "meta": {}},
+            "listing": None, "facts": []}
+
+
 def _client() -> httpx.Client:
     return httpx.Client(headers=HEADERS, timeout=40, follow_redirects=True)
 
@@ -168,7 +186,8 @@ def probe(log=print, n: int = 12):
         time.sleep(0.5)
         r = parse(u, c.get(u).text, date.today())
         log(f"{u[-60:]}: " + (f"court={r['court']} comune={r['comune']} price={r['price']} photos={len(r['images'])} "
-                              f"type={r['listing']['property_type']} sqm={r['listing']['surface_sqm']} end={r['listing']['deadline_at']}" if r else "no data / closed"))
+                              + (f"type={r['listing']['property_type']} sqm={r['listing']['surface_sqm']} end={r['listing']['deadline_at']}" if r["listing"] else "")
+                              if r else "no data / closed"))
 
 
 def collect(db: Supa, limit: int = 4000, workers: int = 4, log=print) -> dict:
