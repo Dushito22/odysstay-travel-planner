@@ -10,6 +10,7 @@ import { toast } from "sonner";
 
 import { AgentChatButton } from "@/components/odys/AgentChat";
 import { GenerateRender } from "@/components/odys/GenerateRender";
+import { Nearby } from "@/components/odys/Nearby";
 import { CardImage, SaveButton } from "@/components/odys/ListingCard";
 import {
   DeadlinePill, formatEur, IllustrationLabel, LEGAL_LINE, Money, NotStated, ScoreBadge, SourceQuote, Wordmark,
@@ -241,6 +242,27 @@ function ListingPage() {
             </dl>
           </Section>
 
+          <Section title="Location and what is nearby">
+            <p className="mb-4 flex items-center gap-2 text-muted-foreground">
+              <MapPin className="h-4 w-4" />
+              {l.address ?? <NotStated />}
+            </p>
+            {l.lat != null && l.lng != null ? (
+              <div className="h-80 overflow-hidden rounded-2xl border">
+                <ClientOnly fallback={<div className="h-full animate-pulse bg-muted" />}>
+                  <Suspense fallback={<div className="h-full animate-pulse bg-muted" />}>
+                    <ListingMap lat={l.lat} lng={l.lng} />
+                  </Suspense>
+                </ClientOnly>
+              </div>
+            ) : <p className="text-sm text-muted-foreground">No coordinates in the notice.</p>}
+            {l.lat != null && l.lng != null && (
+              <ClientOnly fallback={null}>
+                <Nearby lat={l.lat} lng={l.lng} comune={l.comune} />
+              </ClientOnly>
+            )}
+          </Section>
+
           <Section title="In plain English">
             {l.summary_en ? <p className="max-w-2xl text-lg leading-relaxed">{l.summary_en}</p> : <NotStated />}
           </Section>
@@ -268,21 +290,6 @@ function ListingPage() {
           <SaleContacts data={data} />
           <HowBuying saleType={l.sale_type} />
 
-          <Section title="Location">
-            <p className="mb-4 flex items-center gap-2 text-muted-foreground">
-              <MapPin className="h-4 w-4" />
-              {l.address ?? <NotStated />}
-            </p>
-            {l.lat != null && l.lng != null ? (
-              <div className="h-80 overflow-hidden rounded-2xl border">
-                <ClientOnly fallback={<div className="h-full animate-pulse bg-muted" />}>
-                  <Suspense fallback={<div className="h-full animate-pulse bg-muted" />}>
-                    <ListingMap lat={l.lat} lng={l.lng} />
-                  </Suspense>
-                </ClientOnly>
-              </div>
-            ) : <p className="text-sm text-muted-foreground">No coordinates in the notice.</p>}
-          </Section>
 
           <Section title="Original notice">
             {src ? (
