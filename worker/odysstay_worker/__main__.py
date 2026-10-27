@@ -76,6 +76,7 @@ def main(argv=None):
     e.add_argument("--retry-errors", action="store_true", help="also retry notices that failed before")
     sub.add_parser("pvp-probe")
     sub.add_parser("sources-probe")
+    sub.add_parser("one-euro")
     nt = sub.add_parser("notary")
     nt.add_argument("--probe", action="store_true")
     nt.add_argument("--max-price", type=float, default=300_000)
@@ -131,6 +132,9 @@ def main(argv=None):
     elif a.cmd == "extract":
         from . import extract
         print(json.dumps(extract.run(db, a.limit, retry_errors=a.retry_errors), indent=2))
+    elif a.cmd == "one-euro":
+        from .collectors import one_euro
+        print(json.dumps(one_euro.collect(db), indent=2))
     elif a.cmd == "notary":
         from .collectors import notary
         if a.probe:
@@ -165,8 +169,13 @@ def main(argv=None):
     elif a.cmd == "daily":
         # Court sales only: structured data from the portal, no AI calls. New and changed lots only.
         from . import costs, geocode, score
-        from .collectors import pvp
-        print(json.dumps(pvp.collect(db), indent=2))
+        from .collectors import notary, one_euro, pvp
+        for name, step in (("court sales", lambda: pvp.collect(db)), ("notary sales", lambda: notary.collect(db)),
+                           ("one-euro towns", lambda: one_euro.collect(db))):
+            try:
+                print(name, json.dumps(step(), indent=2))
+            except Exception as e:  # noqa: BLE001  one source failing must not stop the others
+                print(f"{name}: error {e}")
         geocode.run(db)
         score.run(db)
         costs.run(db)
