@@ -3,6 +3,13 @@ import { RENDER_STYLES, renderPrompt } from "../_shared/agent-core.ts";
 import { adminClient, HttpError, json, requireUser, serve, str, uuid } from "../_shared/runtime.ts";
 
 const FREE_DAILY = 3;
+/** Official photo hosts of our sources. Only URLs stored on the listing and on these hosts are fetched. */
+const PHOTO_HOSTS = [
+  "https://resource-pvp.giustizia.it/",
+  "https://www.astegiudiziarie.it/",
+  "https://www.astetraprivati.it/",
+  "https://www.avvisinotarili.notariato.it/",
+];
 
 /** Turns an OpenAI failure into a message the user can act on. */
 async function openAiReason(res: Response, kind: string) {
@@ -72,7 +79,7 @@ serve(async (req, body) => {
   // Official photos are hotlinked from the court portal. Only URLs stored on this listing are used,
   // never a URL from the request, and only from the portal's file host.
   const photos = (Array.isArray(listing.photo_urls) ? listing.photo_urls : [])
-    .filter((u): u is string => typeof u === "string" && u.startsWith("https://resource-pvp.giustizia.it/"));
+    .filter((u): u is string => typeof u === "string" && PHOTO_HOSTS.some((h) => u.startsWith(h)));
   const wanted = typeof body["photo"] === "string" ? body["photo"] : null;
   const officialUrl = wanted && photos.includes(wanted) ? wanted : photos[0] ?? null;
 
