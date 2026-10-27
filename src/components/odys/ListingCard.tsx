@@ -9,13 +9,12 @@ import type { Profile } from "@/lib/profile";
 import { cn } from "@/lib/utils";
 import { DeadlinePill, formatEur, IllustrationLabel, Money, ScoreBadge } from "./primitives";
 
-/** Single OSM tile around a point, used as a warm designed placeholder. */
-function osmTile(lat: number, lng: number, z = 11) {
-  const n = 2 ** z;
-  const x = Math.floor(((lng + 180) / 360) * n);
-  const r = (lat * Math.PI) / 180;
-  const y = Math.floor(((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * n);
-  return `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
+/** Satellite photo of the exact spot (Esri World Imagery), used when the court published no photos. */
+export function satelliteUrl(lat: number, lng: number, w = 800, h = 600, halfKm = 0.18) {
+  const dLat = halfKm / 111;
+  const dLng = (halfKm / (111 * Math.cos((lat * Math.PI) / 180))) * (w / h);
+  const bbox = [lng - dLng, lat - dLat, lng + dLng, lat + dLat].map((v) => v.toFixed(6)).join(",");
+  return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${bbox}&bboxSR=4326&imageSR=3857&size=${w},${h}&format=jpg&f=image`;
 }
 
 export function CardImage({ row, compact }: { row: FeedRow; compact?: boolean }) {
@@ -28,14 +27,15 @@ export function CardImage({ row, compact }: { row: FeedRow; compact?: boolean })
       ) : (
         <>
           {row.lat != null && row.lng != null ? (
-            <img src={osmTile(row.lat, row.lng)} alt="" aria-hidden className="map-tone h-full w-full scale-125 object-cover transition-transform duration-700 group-hover:scale-[1.32]" loading="lazy" />
+            <img src={satelliteUrl(row.lat, row.lng)} alt={`Satellite view of ${row.comune ?? "the location"}`} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]" loading="lazy" />
           ) : (
             <div className="texture-muted h-full w-full" />
           )}
-          <div className="absolute inset-0 flex items-end bg-gradient-to-t from-foreground/55 via-foreground/5 to-transparent p-4">
-            <span className={cn("font-display font-semibold text-background", compact ? "text-lg" : "text-2xl")}>
+          <div className="absolute inset-0 flex items-end justify-between gap-2 bg-gradient-to-t from-black/60 via-black/5 to-transparent p-4">
+            <span className={cn("font-display font-semibold text-white", compact ? "text-lg" : "text-2xl")}>
               {row.comune ?? "Unknown comune"}
             </span>
+            {row.lat != null && <span className="rounded-full bg-black/40 px-2 py-0.5 text-[11px] text-white/90 backdrop-blur">Satellite view, no photos published</span>}
           </div>
         </>
       )}

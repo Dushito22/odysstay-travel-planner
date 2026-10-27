@@ -228,7 +228,7 @@ function HowItWorks() {
           {STEPS.map(({ icon: Icon, title, body }, i) => (
             <div key={title}>
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-foreground text-background">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-sea text-white">
                   <Icon className="h-4 w-4" />
                 </span>
                 <span className="text-sm text-muted-foreground tnum">0{i + 1}</span>
@@ -371,7 +371,7 @@ function SignUp() {
 
   return (
     <section className="px-3 pb-16 md:px-4">
-      <div className="mx-auto max-w-6xl rounded-3xl bg-foreground px-6 py-16 text-center text-background md:px-12">
+      <div className="mx-auto max-w-6xl rounded-3xl bg-sea px-6 py-16 text-center text-white md:px-12">
         <h2 className="text-3xl md:text-5xl">Find your house in Italy.</h2>
         <p className="mx-auto mt-4 max-w-xl text-background/75">
           Free to explore. Sign in with your email, no password needed.

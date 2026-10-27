@@ -1,4 +1,4 @@
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import {
   ClientOnly, createFileRoute, Link, useNavigate, useRouter, type ErrorComponentProps,
 } from "@tanstack/react-router";
@@ -135,33 +135,66 @@ function RedFlags({ data }: { data: ListingBundle }) {
           ))}
         </ul>
       )}
-      <DeepDiveNote court={court} status={status} pages={deep?.pages ?? null} hasFlags={flags.length > 0} />
+      <DeepDiveNote court={court} status={status} pages={deep?.pages ?? null} hasFlags={flags.length > 0} listingId={l.id!} />
     </Section>
   );
 }
 
-function DeepDiveNote({ court, status, pages, hasFlags }: { court: boolean; status: string | null; pages: number | null; hasFlags: boolean }) {
+function DeepDiveNote({ court, status, pages, hasFlags, listingId }: {
+  court: boolean; status: string | null; pages: number | null; hasFlags: boolean; listingId: string;
+}) {
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+  const request = useMutation({
+    mutationFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("signin");
+      const { error } = await supabase.from("deep_dives").insert({ listing_id: listingId });
+      if (error && error.code !== "23505") throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["listing", listingId] });
+      toast("We are reading the court report. Usually ready within the hour.");
+    },
+    onError: (e) => {
+      if (e instanceof Error && e.message === "signin") navigate({ to: "/login", search: { redirect: window.location.pathname } });
+      else toast.error("Could not start the check. Please try again.");
+    },
+  });
+  const pagesText = pages ? `${pages} pages` : "all pages";
+  let title: string | null = null;
   let text: string | null = null;
+  let action = false;
   if (!court) {
-    text = hasFlags ? null : "No red flags were found in the notice. That does not mean there are none: a site visit with a surveyor is still essential.";
+    if (!hasFlags) { title = "No red flags found in the notice"; text = "A site visit with a surveyor is still essential before you commit."; }
   } else if (status === "pending" || status === "running") {
-    text = "We are reading the court appraisal report for building irregularities, unpaid fees, occupancy and damage. This is usually ready within the hour.";
+    title = "Reading the court appraisal report";
+    text = "We check every page for unpermitted building work, land registry mismatches, unpaid fees, occupancy, damage and missing certificates. Usually ready within the hour.";
   } else if (status === "done") {
-    text = hasFlags
-      ? `Found by reading ${pages ? `all ${pages} pages of ` : ""}the appraisal report. Each point quotes the report word for word: tap Source, then Translate. Check every one with a surveyor before bidding.`
-      : `We read ${pages ? `all ${pages} pages of ` : ""}the appraisal report and found none of the usual warning signs. Read it yourself under Official documents before bidding.`;
+    if (hasFlags) text = `Found by reading ${pagesText} of the appraisal report. Each point quotes the report word for word. Tap Source, then Translate, and check every one with a surveyor before bidding.`;
+    else { title = "No red flags found"; text = `We read ${pagesText} of the appraisal report and found none of the usual warning signs. Still worth a surveyor's visit before bidding.`; }
   } else if (status === "no_text") {
-    text = "The appraisal report is a scanned image, so it could not be read automatically. Open it under Official documents.";
+    title = "The report could not be read"; text = "The appraisal report is a poor scan. Open it under Official documents.";
   } else if (status === "no_document") {
-    text = "The court has not published an appraisal report for this sale.";
+    title = "No appraisal report published"; text = "The court has not published an appraisal report for this sale yet. Ask the sale delegate for it.";
   } else if (status === "error") {
-    text = "We could not open the appraisal report. Try the link under Official documents.";
-  } else if (!hasFlags) {
-    text = "Save this listing with the heart and we will read the court appraisal report for you: building irregularities, unpaid fees, occupancy and damage, each quoted from the report.";
+    title = "We could not open the report"; text = "Try the link under Official documents."; action = true;
+  } else {
+    title = hasFlags ? null : "No red flags in the listing data";
+    text = "The real problems are in the court's appraisal report. We can read all of it for you: unpermitted building work, unpaid fees, occupancy, damage and missing certificates, each quoted from the report. Free, usually within the hour.";
+    action = true;
   }
-  if (!text) return null;
+  if (!text && !title) return null;
   return (
-    <p className={cn("max-w-2xl rounded-2xl border bg-card p-5 text-muted-foreground", hasFlags && "mt-4")}>{text}</p>
+    <div className={cn("glass max-w-2xl rounded-2xl p-5", hasFlags && "mt-4")}>
+      {title && <p className="font-semibold">{title}</p>}
+      {text && <p className={cn("text-muted-foreground", title && "mt-1")}>{text}</p>}
+      {action && court && (
+        <Button className="mt-4" onClick={() => request.mutate()} disabled={request.isPending}>
+          {request.isPending ? "Starting..." : "Read the court report"}
+        </Button>
+      )}
+    </div>
   );
 }
 
@@ -381,7 +414,7 @@ function Identity({ data }: { data: ListingBundle }) {
     <div className="flex flex-wrap items-end justify-between gap-6 pb-8 pt-10">
       <div className="min-w-0">
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          {l.is_demo && <span className="rounded-full bg-foreground px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-background">Demo</span>}
+          {l.is_demo && <span className="rounded-full bg-sea px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white">Demo</span>}
           <DeadlinePill deadline={l.deadline_at ?? l.auction_at} />
           {l.property_type && <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">{TYPE_LABELS[l.property_type] ?? l.property_type}</span>}
           {l.sale_type && <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-medium text-brand">{SALE_TYPE_LABELS[l.sale_type] ?? l.sale_type}</span>}
@@ -495,7 +528,7 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
               {estimates.map((e) => (
                 <button key={e.id} onClick={() => setScenario(e.scenario)}
                   className={cn("rounded-full px-4 py-1.5 text-sm font-medium capitalize transition-colors",
-                    sel?.id === e.id ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}>
+                    sel?.id === e.id ? "bg-sea text-white" : "text-muted-foreground hover:text-foreground")}>
                   {e.scenario}
                 </button>
               ))}
@@ -638,7 +671,7 @@ function HowBuying({ saleType }: { saleType: string | null }) {
         <ol className="space-y-3">
           {steps.map((s, i) => (
             <li key={s} className="flex gap-4">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background">{i + 1}</span>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sea text-xs font-semibold text-white">{i + 1}</span>
               <span className="pt-0.5">{s}</span>
             </li>
           ))}

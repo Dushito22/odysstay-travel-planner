@@ -51,7 +51,7 @@ export function AppShell() {
               key={to}
               to={to}
               className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              activeProps={{ className: "!bg-foreground !text-background font-medium" }}
+              activeProps={{ className: "!bg-sea !text-white font-medium" }}
             >
               <Icon className="h-4 w-4" />
               {label}
@@ -63,14 +63,14 @@ export function AppShell() {
           <Link
             to="/profile"
             className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-            activeProps={{ className: "!bg-foreground !text-background font-medium" }}
+            activeProps={{ className: "!bg-sea !text-white font-medium" }}
           >
             <User className="h-4 w-4" /> Profile
           </Link>
           <Link
             to="/vault"
             className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-            activeProps={{ className: "!bg-foreground !text-background font-medium" }}
+            activeProps={{ className: "!bg-sea !text-white font-medium" }}
           >
             <FolderLock className="h-4 w-4" /> Documents
           </Link>

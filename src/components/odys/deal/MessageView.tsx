@@ -28,14 +28,14 @@ export function Bilingual({ msg }: { msg: DealMessage }) {
           <button
             type="button"
             onClick={() => setOrig(false)}
-            className={cn("rounded-full px-2.5 py-0.5", !orig && "bg-foreground text-background")}
+            className={cn("rounded-full px-2.5 py-0.5", !orig && "bg-sea text-white")}
           >
             English
           </button>
           <button
             type="button"
             onClick={() => setOrig(true)}
-            className={cn("rounded-full px-2.5 py-0.5", orig && "bg-foreground text-background")}
+            className={cn("rounded-full px-2.5 py-0.5", orig && "bg-sea text-white")}
           >
             Original
             {msg.language && msg.language !== "en" ? ` (${msg.language.toUpperCase()})` : ""}
