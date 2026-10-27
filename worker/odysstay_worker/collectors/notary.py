@@ -224,9 +224,10 @@ def parse(kind: str, nid: str, html: str, today: date) -> dict | None:
             for u, n in re.findall(r'<a[^>]+href="([^"]*/allegati/[^"]+\.pdf)"[^>]*>(.*?)</a>', html, re.I | re.S)][:10]
     contacts = []
     if notary:
-        email = re.search(r"[\w.+-]+@[\w-]+\.[\w.]+", flat)
-        phone = re.search(r"tel[.:]?\s*([\d/ .+-]{6,20})", flat, re.I)
-        contacts.append({"role": "Notary running the sale", "name": notary, "email": email.group(0) if email else None,
+        after = flat[flat.find("Notaio Banditore"):]
+        email = re.search(r"[\w.+-]+@[\w-]+\.[\w.]+", after)
+        phone = re.search(r"tel[.:]?\s*([\d/ .+-]{6,20})", after, re.I)
+        contacts.append({"role": "Notary running the sale", "name": notary.title(), "email": email.group(0) if email else None,
                          "phone": phone.group(1).strip() if phone else None})
     url = f"{BASE}/beni-immobili/dettaglio-avviso/{kind}/{nid}"
     facts: list[dict] = []
@@ -289,7 +290,7 @@ def collect(db: Supa, max_price: float = 300_000, max_pages: int = 1500, workers
             continue
         empty = 0
         found += new
-    log(f"Notary portal: {len(found)} open notices under €{max_price:,.0f}")
+    log(f"Notary portal: {len(found)} open notices under €{max_price:,.0f} ({page + 1} pages)")
     known = {r["external_id"] for r in db.select("listings", {"select": "external_id", "external_id": "like.notary:*"})}
     stats = {"open": len(found), "saved": 0, "skipped": 0, "errors": 0}
 
