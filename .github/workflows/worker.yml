@@ -1,13 +1,13 @@
 name: Worker
 
 # Collects new public notices, reads them with AI and updates listings in Supabase.
+# The comune website crawl is manual only (Run workflow > comuni-crawl): it is slow and low-yield next to court sales.
 # Needs repository secrets SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and ANTHROPIC_API_KEY.
 # Without them every job skips itself.
 
 on:
   schedule:
     - cron: "17 5 * * *"   # daily 05:17 UTC: Gazzetta, extraction, map, scores
-    - cron: "43 1 * * 0"   # Sundays 01:43 UTC: crawl comune websites
   workflow_dispatch:
     inputs:
       task:
