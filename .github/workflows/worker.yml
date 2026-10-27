@@ -14,7 +14,7 @@ on:
       task:
         description: "What to run"
         type: choice
-        options: [daily, deep, pvp, perizia, rescore, retry-errors, check, pvp-probe, comuni-crawl, comuni-discover, status]
+        options: [daily, deep, photos, pvp, perizia, rescore, retry-errors, check, pvp-probe, comuni-crawl, comuni-discover, status]
         default: daily
       limit:
         description: "pvp: max lots to read. perizia: max reports to read. deep: listings to read"
@@ -87,6 +87,7 @@ jobs:
           set -o pipefail
           case "$TASK" in
             daily)           python -m odysstay_worker daily 2>&1 | tee run.log ;;
+            photos)          { python -m odysstay_worker photos --pages ${{ github.event.inputs.limit != '25000' && github.event.inputs.limit || '0' }} && python -m odysstay_worker score && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             deep)            python -m odysstay_worker deep --limit 30 ${{ github.event.inputs.limit && github.event.inputs.limit != '25000' && format('--sample {0}', github.event.inputs.limit) || '' }} 2>&1 | tee run.log ;;
             comuni-crawl)    { python -m odysstay_worker comuni crawl --limit 2500 --workers 12 && python -m odysstay_worker extract --limit 150 && python -m odysstay_worker geocode && python -m odysstay_worker score && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             comuni-discover) { python -m odysstay_worker comuni discover && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
