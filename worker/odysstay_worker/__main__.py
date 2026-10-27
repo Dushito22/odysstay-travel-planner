@@ -180,7 +180,7 @@ def main(argv=None):
         from . import costs, geocode, score
         from .collectors import aste, notary, one_euro, pvp
         for name, step in (("court sales", lambda: pvp.collect(db)), ("notary sales", lambda: notary.collect(db)),
-                           ("one-euro towns", lambda: one_euro.collect(db)), ("private auctions", lambda: aste.collect(db, 1500))):
+                           ("one-euro towns", lambda: one_euro.collect(db)), ("private auctions", lambda: aste.collect(db, 600, max_minutes=40))):
             try:
                 print(name, json.dumps(step(), indent=2))
             except Exception as e:  # noqa: BLE001  one source failing must not stop the others
