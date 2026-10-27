@@ -14,7 +14,8 @@
   python -m odysstay_worker perizia [--limit 40]       read court appraisal reports of the best listings with AI
   python -m odysstay_worker grants                     link regional grants to listings as possible fits
   python -m odysstay_worker status                     counts at a glance
-  python -m odysstay_worker daily [--limit 200]        everything above, in order
+  python -m odysstay_worker deep [--limit 30]          read the appraisal report of starred listings (rules, no AI)
+  python -m odysstay_worker daily                      refresh court sales, map, scores and estimates (no AI)
 """
 from __future__ import annotations
 
@@ -76,9 +77,10 @@ def main(argv=None):
     sub.add_parser("pvp-probe")
     for name in ("geocode", "score", "grants", "status", "costs"):
         sub.add_parser(name)
-    d = sub.add_parser("daily")
-    d.add_argument("--limit", type=int, default=200, help="max notices to read with AI per run")
-    d.add_argument("--comuni", type=int, default=1000, help="comuni to crawl per run (0 to skip)")
+    dp = sub.add_parser("deep")
+    dp.add_argument("--limit", type=int, default=30)
+    dp.add_argument("--sample", type=int, default=0, help="first queue this many top listings (for testing)")
+    sub.add_parser("daily")
 
     a = p.parse_args(argv)
     from . import config
@@ -139,26 +141,21 @@ def main(argv=None):
         extract.link_grants(db)
     elif a.cmd == "status":
         status(db)
+    elif a.cmd == "deep":
+        from . import deep, score
+        if a.sample:
+            deep.enqueue_top(db, a.sample)
+        r = deep.run(db, a.limit)
+        print(json.dumps(r, indent=2))
+        if r["done"]:
+            score.run(db)
     elif a.cmd == "daily":
-        from . import costs, extract, geocode, score
-        from .collectors import comuni, gazzetta, pvp
-        for name, step in (("gazzetta", lambda: gazzetta.collect(db, 7)), ("court sales", lambda: pvp.collect(db))):
-            try:
-                print(json.dumps(step(), indent=2))
-            except Exception as e:  # noqa: BLE001  one source failing must not stop the others
-                print(f"{name}: error {e}")
-        if a.comuni > 0:
-            print(json.dumps(comuni.crawl(db, limit=a.comuni), indent=2))
-        if config.ANTHROPIC_API_KEY.startswith("sk-ant-"):
-            print(json.dumps(extract.run(db, a.limit), indent=2))
-        else:
-            print("Skipping AI reading: no valid ANTHROPIC_API_KEY")
+        # Court sales only: structured data from the portal, no AI calls. New and changed lots only.
+        from . import costs, geocode, score
+        from .collectors import pvp
+        print(json.dumps(pvp.collect(db), indent=2))
         geocode.run(db)
-        extract.link_grants(db)
         score.run(db)
-        from . import perizia
-        print(json.dumps(perizia.run(db), indent=2))
-        score.run(db)  # again: report red flags change scores
         costs.run(db)
         status(db)
 

@@ -80,7 +80,11 @@ export function SaveButton({ id }: { id: string }) {
         : await supabase.from("saved_listings").insert({ listing_id: id, user_id: u.user.id });
       if (r.error) throw r.error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: savedQuery.queryKey }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: savedQuery.queryKey });
+      qc.invalidateQueries({ queryKey: ["listing", id] });
+      if (!isSaved) toast("Saved. We are reading the court documents for you, usually within the hour.");
+    },
     onError: (e) => {
       if (e instanceof Error && e.message === "signin") {
         toast("Sign in to save listings", { action: { label: "Sign in", onClick: () => navigate({ to: "/login", search: { redirect: window.location.pathname + window.location.search } }) } });

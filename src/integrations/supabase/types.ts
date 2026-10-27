@@ -621,19 +621,55 @@ export type Database = {
           },
         ]
       }
+      deep_dives: {
+        Row: {
+          done_at: string | null
+          flags: number | null
+          listing_id: string
+          note: string | null
+          pages: number | null
+          requested_at: string
+          status: string
+        }
+        Insert: {
+          done_at?: string | null
+          flags?: number | null
+          listing_id: string
+          note?: string | null
+          pages?: number | null
+          requested_at?: string
+          status?: string
+        }
+        Update: {
+          done_at?: string | null
+          flags?: number | null
+          listing_id?: string
+          note?: string | null
+          pages?: number | null
+          requested_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
       listing_red_flags: {
         Row: {
+          doc_url: string | null
           flag_en: string
           id: string
           listing_id: string
+          origin: string
+          page: number | null
           quote: string
           quote_en: string | null
           severity: string
         }
         Insert: {
+          doc_url?: string | null
           flag_en: string
           id?: string
           listing_id: string
+          origin?: string
+          page?: number | null
           quote: string
           quote_en?: string | null
           severity?: string

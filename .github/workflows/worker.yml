@@ -7,16 +7,17 @@ name: Worker
 
 on:
   schedule:
-    - cron: "17 5 * * *"   # daily 05:17 UTC: Gazzetta, extraction, map, scores
+    - cron: "17 5 * * *"   # daily 05:17 UTC: new and changed court sales, map, scores (no AI)
+    - cron: "23 6-22 * * *" # hourly: read the documents of listings someone starred (no AI); exits at once if none
   workflow_dispatch:
     inputs:
       task:
         description: "What to run"
         type: choice
-        options: [daily, pvp, perizia, rescore, retry-errors, check, pvp-probe, comuni-crawl, comuni-discover, status]
+        options: [daily, deep, pvp, perizia, rescore, retry-errors, check, pvp-probe, comuni-crawl, comuni-discover, status]
         default: daily
       limit:
-        description: "pvp: max lots to read. perizia: max reports to read"
+        description: "pvp: max lots to read. perizia: max reports to read. deep: listings to read"
         required: false
         default: "25000"
 
@@ -47,34 +48,43 @@ jobs:
           else
             echo "ok=true" >> "$GITHUB_OUTPUT"
           fi
+      - name: Anything starred to read?
+        id: queue
+        if: steps.secrets.outputs.ok == 'true' && github.event.schedule == '23 6-22 * * *'
+        working-directory: .
+        run: |
+          N=$(curl -s "$SUPABASE_URL/rest/v1/deep_dives?status=eq.pending&select=listing_id&limit=1" -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" | grep -c listing_id || true)
+          echo "Pending deep dives: $N"
+          echo "skip=$([ "$N" = "0" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
-        if: steps.secrets.outputs.ok == 'true'
+        if: steps.secrets.outputs.ok == 'true' && steps.queue.outputs.skip != 'true'
       - uses: actions/setup-python@v5
-        if: steps.secrets.outputs.ok == 'true'
+        if: steps.secrets.outputs.ok == 'true' && steps.queue.outputs.skip != 'true'
         with:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: worker/requirements.txt
       - name: Restore crawl cache
-        if: steps.secrets.outputs.ok == 'true'
+        if: steps.secrets.outputs.ok == 'true' && steps.queue.outputs.skip != 'true'
         uses: actions/cache@v4
         with:
           path: worker/data
           key: worker-data-${{ github.run_id }}
           restore-keys: worker-data-
       - name: Install
-        if: steps.secrets.outputs.ok == 'true'
+        if: steps.secrets.outputs.ok == 'true' && steps.queue.outputs.skip != 'true'
         run: pip install -r requirements.txt
       - name: Run
-        if: steps.secrets.outputs.ok == 'true'
+        if: steps.secrets.outputs.ok == 'true' && steps.queue.outputs.skip != 'true'
         run: |
           TASK="${{ github.event.inputs.task }}"
           if [ -z "$TASK" ]; then
-            if [ "${{ github.event.schedule }}" = "43 1 * * 0" ]; then TASK=comuni-crawl; else TASK=daily; fi
+            if [ "${{ github.event.schedule }}" = "23 6-22 * * *" ]; then TASK=deep; else TASK=daily; fi
           fi
           set -o pipefail
           case "$TASK" in
-            daily)           python -m odysstay_worker daily --comuni 0 --limit 0 2>&1 | tee run.log ;;
+            daily)           python -m odysstay_worker daily 2>&1 | tee run.log ;;
+            deep)            python -m odysstay_worker deep --limit 30 ${{ github.event.inputs.limit && github.event.inputs.limit != '25000' && format('--sample {0}', github.event.inputs.limit) || '' }} 2>&1 | tee run.log ;;
             comuni-crawl)    { python -m odysstay_worker comuni crawl --limit 2500 --workers 12 && python -m odysstay_worker extract --limit 150 && python -m odysstay_worker geocode && python -m odysstay_worker score && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             comuni-discover) { python -m odysstay_worker comuni discover && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             status)          python -m odysstay_worker status 2>&1 | tee run.log ;;
@@ -86,7 +96,7 @@ jobs:
             retry-errors)    { python -m odysstay_worker check && python -m odysstay_worker extract --retry-errors --limit 150 && python -m odysstay_worker geocode && python -m odysstay_worker grants && python -m odysstay_worker score && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
           esac
       - name: Summary
-        if: always() && steps.secrets.outputs.ok == 'true'
+        if: always() && steps.secrets.outputs.ok == 'true' && steps.queue.outputs.skip != 'true'
         run: |
           [ -f run.log ] || exit 0
           { echo '```'; tail -n 60 run.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
