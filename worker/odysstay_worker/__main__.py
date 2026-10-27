@@ -90,8 +90,8 @@ def main(argv=None):
         from . import config
         k = config.ANTHROPIC_API_KEY
         print(f"Anthropic key: {config.key_shape(k)}")
-        if k and not k.startswith("sk-ant-api"):
-            print("  error: this does not look like an Anthropic API key. It should start with sk-ant-api, from console.anthropic.com > API keys.")
+        if k and not k.startswith("sk-ant-"):
+            print("  error: this does not look like an Anthropic API key. It should start with sk-ant-, copied in full from console.anthropic.com > API keys.")
         elif k:
             import anthropic
             try:
@@ -149,7 +149,7 @@ def main(argv=None):
                 print(f"{name}: error {e}")
         if a.comuni > 0:
             print(json.dumps(comuni.crawl(db, limit=a.comuni), indent=2))
-        if config.ANTHROPIC_API_KEY.startswith("sk-ant-api"):
+        if config.ANTHROPIC_API_KEY.startswith("sk-ant-"):
             print(json.dumps(extract.run(db, a.limit), indent=2))
         else:
             print("Skipping AI reading: no valid ANTHROPIC_API_KEY")
