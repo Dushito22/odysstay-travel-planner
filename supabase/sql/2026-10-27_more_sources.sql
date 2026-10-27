@@ -7,5 +7,7 @@ insert into public.sources (id, name, country, kind, homepage, description_en) v
   ('notary', 'Avvisi Notarili', 'IT', 'notary', 'https://www.avvisinotarili.notariato.it',
    'The national notaries'' portal: sales and auctions by private sellers, companies and public bodies, each checked by a notary.'),
   ('one_euro', 'Case a 1 euro', 'IT', 'municipal', 'https://casea1euro.it',
-   'Towns selling abandoned houses for a symbolic €1 in exchange for renovating them. We link each town''s official scheme page.')
+   'Towns selling abandoned houses for a symbolic €1 in exchange for renovating them. We link each town''s official scheme page.'),
+  ('aste', 'Astegiudiziarie / Astetraprivati', 'IT', 'private', 'https://www.astegiudiziarie.it',
+   'Private owners selling through timed online auctions, with photos and English descriptions. Also the source of photos for court lots.')
 on conflict (id) do update set name = excluded.name, homepage = excluded.homepage, description_en = excluded.description_en;
