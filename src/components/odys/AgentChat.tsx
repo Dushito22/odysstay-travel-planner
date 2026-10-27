@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { ListPlus, MessageCircle, Send, Sparkles } from "lucide-react";
+import { ListPlus, MessageCircle, Mic, Send, Sparkles, Square, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
@@ -26,6 +26,7 @@ import {
 } from "@/lib/agent";
 import { appendTask } from "@/lib/deal";
 import { cn } from "@/lib/utils";
+import { canListen, canSpeak, listen, speak, stopSpeaking, VOICE_LANGS } from "@/lib/voice";
 
 const KIND_LABEL: Record<string, string> = {
   comune_office: "the comune office",
@@ -100,6 +101,31 @@ export function AgentChat({
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const bottom = useRef<HTMLDivElement>(null);
+  const [lang, setLang] = useState<string>(() => {
+    try { return localStorage.getItem("odys-voice-lang") ?? "en-GB"; } catch { return "en-GB"; }
+  });
+  const [readAloud, setReadAloud] = useState(false);
+  const [listening, setListening] = useState(false);
+  const stopRef = useRef<(() => void) | null>(null);
+  const [voiceOk, setVoiceOk] = useState({ listen: false, speak: false });
+  useEffect(() => setVoiceOk({ listen: canListen(), speak: canSpeak() }), []);
+  useEffect(() => () => { stopRef.current?.(); stopSpeaking(); }, []);
+
+  function pickLang(code: string) {
+    setLang(code);
+    try { localStorage.setItem("odys-voice-lang", code); } catch { /* private mode */ }
+  }
+
+  function talk() {
+    if (listening) { stopRef.current?.(); return; }
+    stopSpeaking();
+    setListening(true);
+    setReadAloud(true);
+    stopRef.current = listen(lang, setText, (final) => {
+      setListening(false);
+      if (final.trim()) void send(final);
+    }, (err) => { setListening(false); toast.error(err); });
+  }
 
   useEffect(() => {
     if (conv.data) {
@@ -132,6 +158,7 @@ export function AgentChat({
       });
       setConvId(r.conversation_id);
       setMessages((m) => [...m, r.message]);
+      if (readAloud) speak(stripMarkers(r.message.content), lang);
       setActions(r.actions);
       void qc.invalidateQueries({ queryKey: ["agent-conversation", listingId, dealId] });
     } catch (e) {
@@ -241,7 +268,31 @@ export function AgentChat({
             void send(text);
           }}
         >
+          {(voiceOk.listen || voiceOk.speak) && (
+            <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
+              {VOICE_LANGS.map((v) => (
+                <button key={v.code} type="button" onClick={() => pickLang(v.code)}
+                  className={cn("rounded-full px-2.5 py-1", lang === v.code ? "bg-sea text-white" : "glass text-muted-foreground")}>
+                  {v.label}
+                </button>
+              ))}
+              {voiceOk.speak && (
+                <button type="button" onClick={() => { if (readAloud) stopSpeaking(); setReadAloud(!readAloud); }}
+                  className="ml-auto inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-muted-foreground hover:text-brand"
+                  aria-pressed={readAloud}>
+                  {readAloud ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+                  {readAloud ? "Reading replies aloud" : "Replies muted"}
+                </button>
+              )}
+            </div>
+          )}
           <div className="flex items-end gap-2">
+            {voiceOk.listen && (
+              <Button type="button" size="icon" variant={listening ? "default" : "outline"} onClick={talk}
+                aria-label={listening ? "Stop listening" : "Talk to the agent"} className={cn(listening && "animate-pulse")}>
+                {listening ? <Square /> : <Mic />}
+              </Button>
+            )}
             <Textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -253,7 +304,7 @@ export function AgentChat({
               }}
               rows={2}
               maxLength={2000}
-              placeholder="Ask about this property"
+              placeholder={listening ? "Listening..." : "Ask about this property, or tap the mic and talk"}
               aria-label="Your question"
               className="min-h-0 resize-none"
             />

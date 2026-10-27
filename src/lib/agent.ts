@@ -28,8 +28,14 @@ export const RENDER_STYLES = [
     hint: "Original stone, beams and tiles brought back to life",
   },
   { value: "Modern Mediterranean", hint: "Lime plaster, clean lines, warm light" },
+  { value: "Coastal white and blue", hint: "Whitewash, blue shutters, linen, sea light" },
+  { value: "Warm Tuscan", hint: "Ochre walls, terracotta floors, olive wood" },
+  { value: "Boutique hotel luxury", hint: "Stone, brass, deep colours, statement lighting" },
+  { value: "Japandi calm", hint: "Oak, paper lamps, low furniture, quiet tones" },
   { value: "Minimal Scandinavian", hint: "Pale wood, white walls, very little clutter" },
   { value: "Rustic farmhouse", hint: "Terracotta, timber, kitchen garden" },
+  { value: "Industrial loft", hint: "Exposed brick and steel, big open space" },
+  { value: "Custom", hint: "Describe exactly what you want" },
 ] as const;
 
 export const STARTER_QUESTIONS = [
@@ -125,14 +131,20 @@ export function draftMessage(input: {
   );
 }
 
-export function generateRender(listingId: string, style: string, photo?: string) {
-  return callFunction<{ image: Database["public"]["Tables"]["listing_images"]["Row"] }>(
-    "generate-render",
-    photo ? { listing_id: listingId, style, photo } : { listing_id: listingId, style },
-  );
+export function generateRender(listingId: string, style: string, photo?: string, wish?: string) {
+  return callFunction<{ image: Database["public"]["Tables"]["listing_images"]["Row"] }>("generate-render", {
+    listing_id: listingId, style, ...(photo ? { photo } : {}), ...(wish?.trim() ? { wish: wish.trim() } : {}),
+  });
 }
 
 /** Strips the inline citation markers for display; citations are shown as chips instead. */
 export function stripMarkers(text: string) {
   return text.replace(/\s?\[(fact|flag|grant):[^\]]+\]|\s?\[(notice|estimate)\]/g, "");
+}
+
+export type ListingTranslation = Database["public"]["Tables"]["listing_translations"]["Row"];
+
+/** Cached translation of the official description, made once per listing and language. */
+export function translateListing(listingId: string, lang: "en" | "ru") {
+  return callFunction<{ translation: ListingTranslation }>("translate-listing", { listing_id: listingId, lang });
 }

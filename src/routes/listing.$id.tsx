@@ -10,6 +10,7 @@ import { toast } from "sonner";
 
 import { AgentChatButton } from "@/components/odys/AgentChat";
 import { GenerateRender } from "@/components/odys/GenerateRender";
+import { Description } from "@/components/odys/Description";
 import { Nearby } from "@/components/odys/Nearby";
 import { CardImage, SaveButton } from "@/components/odys/ListingCard";
 import {
@@ -263,14 +264,19 @@ function ListingPage() {
             )}
           </Section>
 
-          <Section title="In plain English">
+          <Section title="In plain words">
             {l.summary_en ? <p className="max-w-2xl text-lg leading-relaxed">{l.summary_en}</p> : <NotStated />}
+            {byKey["description"] && (
+              <div className="mt-5">
+                <Description listingId={l.id!} italian={byKey["description"].quote ?? byKey["description"].value_text ?? ""} signedIn={!!userId} />
+              </div>
+            )}
           </Section>
 
           <Section title="Every fact in the notice" kicker="Quoted from the official notice">
             {facts.length ? (
               <dl className="divide-y rounded-2xl border bg-card">
-                {facts.map((f) => (
+                {facts.filter((f) => f.key !== "description").map((f) => (
                   <div key={f.id} className="grid gap-1 p-4 sm:grid-cols-[220px_1fr] sm:gap-6">
                     <dt className="text-sm text-muted-foreground">{f.label_en}</dt>
                     <dd className="font-medium"><FactValue fact={f} sourceUrl={src} /></dd>
