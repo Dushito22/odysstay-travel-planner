@@ -10,16 +10,6 @@ import httpx
 
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 CANDIDATES = {
-    "idealista": "https://www.idealista.it/vendita-case/sicilia/",
-    "immobiliare": "https://www.immobiliare.it/vendita-case/palermo/",
-    "casa.it": "https://www.casa.it/vendita/residenziale/palermo/",
-    "subito": "https://www.subito.it/annunci-sicilia/vendita/immobili/",
-    "gate-away": "https://www.gate-away.com/properties/italy/sicily/",
-    "kyero": "https://www.kyero.com/en/sicily-property-for-sale-0l55578",
-    "green-acres": "https://www.green-acres.it/en/properties/sicily",
-    "rightmove-overseas": "https://www.rightmove.co.uk/overseas-property/in-Sicily.html",
-    "casea1euro": "https://www.casea1euro.it/",
-    "avvisinotarili": "https://www.avvisinotarili.it/",
     "astegiudiziarie": "https://www.astegiudiziarie.it/",
     "asteannunci": "https://www.asteannunci.it/",
     "fallcoaste": "https://www.fallcoaste.it/",
@@ -27,6 +17,9 @@ CANDIDATES = {
     "ismea-terre": "https://www.ismea.it/banca-delle-terre",
     "tecnocasa": "https://www.tecnocasa.it/annunci/immobili/sicilia/palermo.html",
     "wikicasa": "https://www.wikicasa.it/vendita-case/palermo/",
+    "casea1euro": "https://casea1euro.it/",
+    "gate-away": "https://www.gate-away.com/",
+    "green-acres": "https://www.green-acres.it/",
 }
 BLOCK = re.compile(r"datadome|captcha|cf-chl|Just a moment|Access denied|blocked|px-captcha|perimeterx|incapsula", re.I)
 
