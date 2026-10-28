@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, Check, Info, MailCheck } from "lucide-react";
+import { ArrowRight, Check, MailCheck } from "lucide-react";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 
 import { ArgosComposer } from "@/components/odys/ArgosComposer";
 import { ListingCard, ListingCardSkeleton } from "@/components/odys/ListingCard";
 import { SourceQuote, Wordmark } from "@/components/odys/primitives";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { setLang, useLang, type Lang } from "@/lib/i18n";
 import { exampleFactQuery, sendMagicLink, sourceCountsQuery, topListingsQuery } from "@/lib/public";
 import { cn } from "@/lib/utils";
@@ -38,27 +39,44 @@ function Em({ children }: { children: ReactNode }) {
   return <em className="font-display italic">{children}</em>;
 }
 
+/** Azure accent words inside the hero help pop-up. */
+function Hi({ children }: { children: ReactNode }) {
+  return <span className="text-[oklch(0.8_0.1_238)]">{children}</span>;
+}
+
+/** Set to "/img/argos.webp" once the sketch arrives; until then a lettered card stands in. */
+const ARGOS_SKETCH: string | null = null;
+
 const COPY = {
   en: {
     nav: { how: "How it works", browse: "Browse", pricing: "Pricing", signIn: "Sign in" },
     eyebrow: "sprezzatura, on your behalf.",
     hero: "Describe your dream house.",
     placeholder: "A stone house in Puglia under €40k, near a bar, some work is fine…",
-    help: "Just talk, like you would to a friend: where, how much, sea or hills, how much work you'll take on. I'll find it and do the Italian.",
-    howTalk: "Talk to me like this:",
+    helpTitle: "Talk to me like a friend.",
+    help: <>Tell me <Hi>where</Hi>, <Hi>how much</Hi>, <Hi>sea or hills</Hi> and <Hi>how much work</Hi> you'll take on. I'll find it and do the Italian.</>,
+    howTalk: "For example:",
     examples: ["Somewhere in Sicily under 30k. A house, not a flat. I can renovate.", "Show me the €1 towns in Sardinia.", "Something by the sea in the south, ready to live in, under 80k."],
-    howTalkEnd: "Tap the mic and speak, or type. Real houses appear while we talk.",
+    howTalkEnd: <>Tap the <Hi>mic</Hi> and speak any language, or type. Real houses appear while we talk.</>,
+    helpLabel: "How to talk to Argos",
     chips: ["A stone house under €50k, some work is fine", "Show me the €1 houses", "Court auctions in Sicily under €30k", "Surprise me"],
     browseAll: "Rather browse? See every listing",
     powered: "Argos, your AI agent in Italy · powered by Claude and GPT",
     statement: [<>Italy sells houses <Em>below the court's valuation</Em>.</>, " Nobody tells you where."],
+    argosLabel: "Your agent",
+    argosTitle: <>Meet <Em>Argos</Em>.</>,
+    argosStory: "Odysseus was gone for twenty years. When he finally came home in disguise, nobody knew him. Except Argos, his dog, who had waited the whole time.",
+    argosNow: "Ours doesn't wait around. Every morning he reads every court notice in Italy, writes to notaries in better Italian than yours, calls when it's quicker, and tells you only what matters. Loyal, tireless, always by your side. And yes, he talks.",
+    argosFacts: ["Reads every notice, every morning", "Writes and calls in Italian for you", "Speaks your language, whatever it is", "Never sleeps. Never sheds."],
+    argosCta: "Talk to Argos",
+    argosMeaning: "ἄργος · swift, bright",
     placesTitle: <>Where the houses are, <Em>if you know where to look</Em>.</>,
     placesLink: "Ask Argos",
     places: [
-      { img: "puglia", n: "01", title: "Puglia", body: "Trulli and masserie, many sold by the court below their valuation.", q: "A trullo or masseria in Puglia" },
-      { img: "ostuni", n: "02", title: "The white towns", body: "Whitewashed lanes in Puglia's hill towns. Small houses, small prices.", q: "A small house in a white town in Puglia" },
-      { img: "matera", n: "03", title: "Basilicata", body: "Stone houses around Matera, and quiet villages nobody has found yet.", q: "A stone house in Basilicata" },
-      { img: "tuscany", n: "04", title: "Tuscany", body: "Farmhouses at the end of cypress roads. Fewer bargains, better stories.", q: "A farmhouse in Tuscany" },
+      { img: "coast", n: "01", title: "Puglia", body: "Coves, whitewash and masserie, many sold by the court below their valuation.", q: "A house near the sea in Puglia" },
+      { img: "amalfi", n: "02", title: "The Amalfi Coast", body: "Rare and never cheap, but the courts sell here too. Argos watches every notice.", q: "Something on the Amalfi Coast" },
+      { img: "tuscany", n: "03", title: "Tuscany", body: "Farmhouses at the end of cypress roads. Fewer bargains, better stories.", q: "A farmhouse in Tuscany" },
+      { img: "alps", n: "04", title: "The Dolomites", body: "Wooden farmhouses under the peaks, for people who prefer snow to sea.", q: "A mountain house in Trentino" },
     ],
     notListedTitle: "Somewhere else?",
     notListedBody: "Argos reads every region, from the Alps to Lampedusa. Tell him where you'd like to wake up.",
@@ -69,7 +87,7 @@ const COPY = {
     howTitle: <>Ten phone calls. <Em>One shrug.</Em></>,
     howBody: "Behind the curtain: courts, town halls, a geometra, a notary, a deadline at noon on a Tuesday. In front of it: you, unbothered.",
     steps: [
-      { title: "Say it", body: "Budget, region, how much work you'll take on. Out loud, in English or Russian.", chip: "Answered in seconds" },
+      { title: "Say it", body: "Budget, region, how much work you'll take on. Out loud, in any language.", chip: "Answered in seconds" },
       { title: "Argos does Italy", body: "Every notice read, the Italian translated, emails and calls to delegates and notaries. You approve each one.", chip: "Approved by you" },
       { title: "You pick. You own.", body: "A shortlist, one deal room, one notary, your name on the deed.", chip: "Never brave on the phone" },
     ],
@@ -91,20 +109,20 @@ const COPY = {
       { img: "masseria", quote: "I said 'something in Puglia, under forty, walk to a bar'. Nine days later I was standing in it.", name: "Hannah & Tom", where: "Bristol → Ceglie Messapica" },
       { img: "cefalu", quote: "I don't speak a word of Italian. Argos called the notary, I drank coffee.", name: "Olga S.", where: "Moscow → Sciacca" },
       { img: "civita", quote: "The court papers were 84 pages. Argos told me the three lines that mattered.", name: "Marco & Lena", where: "Munich → Spoleto" },
-      { img: "trulli", quote: "Bought a house for 19 thousand. My friends think I searched for ages.", name: "Dmitri K.", where: "St Petersburg → Agrigento" },
+      { img: "oranges", quote: "Bought a house for 19 thousand. My friends think I searched for ages.", name: "Dmitri K.", where: "St Petersburg → Agrigento" },
     ],
     faqTitle: <>Fair <Em>questions</Em>.</>,
     faq: [
       { q: "So who actually buys the house?", a: "You do. Argos finds it, reads every document, writes and calls in Italian, and keeps every deadline. You approve each message and you sign with the notary. We are a technology service, not an estate agency, law firm or notary." },
-      { q: "Do I need to speak Italian?", a: "No. Talk to Argos in English or Russian. Everything Italian is translated, with the original one tap away, and every message Argos sends is shown to you in your language first." },
+      { q: "Do I need to speak Italian?", a: "No. Talk to Argos in any language you like, out loud or typed. Everything Italian is translated, with the original one tap away, and every message Argos sends is shown to you in your language first." },
       { q: "Why are these houses so cheap?", a: "Most are sold by courts, notaries and towns, not agents, so nobody markets them. Most need work and a little love. That's the whole discount." },
       { q: "What about the €1 houses?", a: "Real, with conditions: a renovation within a few years and a deposit of a few thousand euros. Argos shows each town's actual rules and the houses still on offer." },
       { q: "Can foreigners buy property in Italy?", a: "Most nationalities can. It depends on your citizenship and Italy's reciprocity rules. Argos checks it for you, and the notary confirms it before you commit." },
       { q: "What does it cost?", a: "Exploring and talking to Argos is free to start. Pro adds unlimited deals, outreach and calls. Fees to the court, the notary or a surveyor are paid by you, directly to them." },
     ],
-    finalTitle: <>Your house is in an Italian PDF <Em>somewhere</Em>.</>,
-    finalBody: "Argos is already reading it. Free to start, no password, no card.",
-    finalPoints: ["No obligation", "Real listings from day one", "Talk in English or Russian"],
+    finalTitle: <>Somewhere in Italy, a door is <Em>waiting for your key</Em>.</>,
+    finalBody: "Argos is already looking for it. Free to start, no password, no card.",
+    finalPoints: ["No obligation", "Real houses from day one", "Speak any language you like"],
     getStarted: "Get started",
     sending: "Sending",
     sent: "Check your inbox for the sign-in link.",
@@ -118,21 +136,30 @@ const COPY = {
     eyebrow: "sprezzatura, от вашего имени.",
     hero: "Опишите дом своей мечты.",
     placeholder: "Каменный дом в Апулии до 40 тысяч, рядом бар, можно с ремонтом…",
-    help: "Говорите как с другом: где, сколько, море или холмы, готовы ли к ремонту. Я найду и возьму итальянский на себя.",
-    howTalk: "Говорите со мной так:",
+    helpTitle: "Говорите со мной как с другом.",
+    help: <>Скажите <Hi>где</Hi>, <Hi>сколько</Hi>, <Hi>море или холмы</Hi> и <Hi>готовы ли к ремонту</Hi>. Я найду и возьму итальянский на себя.</>,
+    howTalk: "Например:",
     examples: ["Где-нибудь на Сицилии до 30 тысяч. Дом, не квартира. Ремонт не пугает.", "Покажи города с домами за 1 евро на Сардинии.", "Что-нибудь у моря на юге, сразу жить, до 80 тысяч."],
-    howTalkEnd: "Нажмите на микрофон и говорите или пишите. Настоящие дома появятся, пока мы разговариваем.",
+    howTalkEnd: <>Нажмите на <Hi>микрофон</Hi> и говорите на любом языке или пишите. Настоящие дома появятся, пока мы разговариваем.</>,
+    helpLabel: "Как говорить с Argos",
     chips: ["Каменный дом до €50 тыс., можно с ремонтом", "Покажи дома за €1", "Судебные торги на Сицилии до €30 тыс.", "Удиви меня"],
     browseAll: "Хотите просто посмотреть? Все объявления",
     powered: "Argos, ваш ИИ-агент в Италии · на Claude и GPT",
     statement: [<>Италия продаёт дома <Em>ниже судебной оценки</Em>.</>, " Только никто не говорит где."],
+    argosLabel: "Ваш агент",
+    argosTitle: <>Знакомьтесь, <Em>Argos</Em>.</>,
+    argosStory: "Одиссей отсутствовал двадцать лет. Когда он вернулся домой переодетым, его никто не узнал. Кроме Аргоса, его пса, который ждал всё это время.",
+    argosNow: "Наш не ждёт. Каждое утро он читает все судебные объявления Италии, пишет нотариусам на итальянском лучше вашего, звонит, когда так быстрее, и говорит вам только главное. Верный, неутомимый, всегда рядом. И да, он разговаривает.",
+    argosFacts: ["Читает каждое объявление, каждое утро", "Пишет и звонит по-итальянски за вас", "Говорит на вашем языке, каким бы он ни был", "Не спит. Не линяет."],
+    argosCta: "Поговорить с Argos",
+    argosMeaning: "ἄργος · быстрый, сияющий",
     placesTitle: <>Где эти дома, <Em>если знать, где искать</Em>.</>,
     placesLink: "Спросить Argos",
     places: [
-      { img: "puglia", n: "01", title: "Апулия", body: "Трулли и массерии, многие продаёт суд ниже оценки.", q: "Трулло или массерия в Апулии" },
-      { img: "ostuni", n: "02", title: "Белые города", body: "Выбеленные улочки горных городков Апулии. Маленькие дома, маленькие цены.", q: "Небольшой дом в белом городе Апулии" },
-      { img: "matera", n: "03", title: "Базиликата", body: "Каменные дома вокруг Матеры и тихие деревни, которые ещё никто не нашёл.", q: "Каменный дом в Базиликате" },
-      { img: "tuscany", n: "04", title: "Тоскана", body: "Фермерские дома в конце кипарисовых аллей. Меньше скидок, больше историй.", q: "Фермерский дом в Тоскане" },
+      { img: "coast", n: "01", title: "Апулия", body: "Бухты, белёные стены и массерии, многие продаёт суд ниже оценки.", q: "Дом у моря в Апулии" },
+      { img: "amalfi", n: "02", title: "Амальфитанское побережье", body: "Редко и недёшево, но суды продают и здесь. Argos следит за каждым объявлением.", q: "Что-нибудь на Амальфитанском побережье" },
+      { img: "tuscany", n: "03", title: "Тоскана", body: "Фермерские дома в конце кипарисовых аллей. Меньше скидок, больше историй.", q: "Фермерский дом в Тоскане" },
+      { img: "alps", n: "04", title: "Доломиты", body: "Деревянные дома под вершинами, для тех, кто любит снег больше моря.", q: "Горный дом в Трентино" },
     ],
     notListedTitle: "Где-то ещё?",
     notListedBody: "Argos читает все регионы, от Альп до Лампедузы. Скажите ему, где хотите просыпаться.",
@@ -143,7 +170,7 @@ const COPY = {
     howTitle: <>Десять звонков. <Em>Одно пожатие плеч.</Em></>,
     howBody: "За кулисами: суды, мэрии, геометр, нотариус, дедлайн во вторник в полдень. На сцене: вы, совершенно спокойный.",
     steps: [
-      { title: "Скажите", body: "Бюджет, регион, готовность к ремонту. Голосом, по-русски или по-английски.", chip: "Ответ за секунды" },
+      { title: "Скажите", body: "Бюджет, регион, готовность к ремонту. Голосом, на любом языке.", chip: "Ответ за секунды" },
       { title: "Argos берёт Италию на себя", body: "Каждое объявление прочитано, итальянский переведён, письма и звонки делегатам и нотариусам. Каждое вы одобряете.", chip: "Одобрено вами" },
       { title: "Вы выбираете. Вы владеете.", body: "Шорт-лист, одна сделка, один нотариус, ваше имя в договоре.", chip: "Никаких звонков на итальянском" },
     ],
@@ -165,20 +192,20 @@ const COPY = {
       { img: "masseria", quote: "Я сказала: «Апулия, до сорока, пешком до бара». Через девять дней я стояла внутри.", name: "Ханна и Том", where: "Бристоль → Челье-Мессапика" },
       { img: "cefalu", quote: "Я не говорю по-итальянски ни слова. Argos звонил нотариусу, я пила кофе.", name: "Ольга С.", where: "Москва → Шакка" },
       { img: "civita", quote: "Судебные документы были на 84 страницы. Argos показал три строки, которые имели значение.", name: "Марко и Лена", where: "Мюнхен → Сполето" },
-      { img: "trulli", quote: "Купил дом за 19 тысяч. Друзья думают, что я долго искал.", name: "Дмитрий К.", where: "Санкт-Петербург → Агридженто" },
+      { img: "oranges", quote: "Купил дом за 19 тысяч. Друзья думают, что я долго искал.", name: "Дмитрий К.", where: "Санкт-Петербург → Агридженто" },
     ],
     faqTitle: <>Честные <Em>вопросы</Em>.</>,
     faq: [
       { q: "Так кто в итоге покупает дом?", a: "Вы. Argos находит, читает все документы, пишет и звонит по-итальянски, следит за сроками. Каждое сообщение вы одобряете, а подписываете у нотариуса. Мы технологический сервис, не агентство, не юристы и не нотариус." },
-      { q: "Нужно ли знать итальянский?", a: "Нет. Говорите с Argos по-русски или по-английски. Всё итальянское переведено, оригинал в одно касание, и каждое сообщение Argos сначала показывает вам на вашем языке." },
+      { q: "Нужно ли знать итальянский?", a: "Нет. Говорите с Argos на любом языке, голосом или текстом. Всё итальянское переведено, оригинал в одно касание, и каждое сообщение Argos сначала показывает вам на вашем языке." },
       { q: "Почему эти дома такие дешёвые?", a: "Большинство продают суды, нотариусы и муниципалитеты, не агенты, поэтому их никто не рекламирует. Большинству нужен ремонт и немного любви. В этом вся скидка." },
       { q: "А дома за 1 евро?", a: "Настоящие, но с условиями: ремонт за несколько лет и залог в несколько тысяч евро. Argos показывает реальные правила каждого города и дома, которые ещё доступны." },
       { q: "Могут ли иностранцы покупать недвижимость в Италии?", a: "Граждане большинства стран могут. Это зависит от гражданства и принципа взаимности. Argos проверит, а нотариус подтвердит до сделки." },
       { q: "Сколько это стоит?", a: "Смотреть и говорить с Argos можно бесплатно. Pro добавляет неограниченные сделки, переписку и звонки. Пошлины суду, нотариусу или геометру вы платите им напрямую." },
     ],
-    finalTitle: <>Ваш дом где-то в <Em>итальянском PDF</Em>.</>,
-    finalBody: "Argos его уже читает. Бесплатно, без пароля и без карты.",
-    finalPoints: ["Без обязательств", "Настоящие объявления с первого дня", "По-русски или по-английски"],
+    finalTitle: <>Где-то в Италии дверь <Em>ждёт ваш ключ</Em>.</>,
+    finalBody: "Argos уже её ищет. Бесплатно, без пароля и без карты.",
+    finalPoints: ["Без обязательств", "Настоящие дома с первого дня", "Говорите на любом языке"],
     getStarted: "Начать",
     sending: "Отправляем",
     sent: "Проверьте почту: там ссылка для входа.",
@@ -204,6 +231,7 @@ function Index() {
     <div className="min-h-screen bg-background">
       <SiteHeader />
       <Hero />
+      <MeetArgos />
       <Statement />
       <Places />
       <HowItWorks />
@@ -315,30 +343,20 @@ function HeroVideo() {
 function Hero() {
   const [c, lang] = useCopy();
   const navigate = useNavigate();
-  const [hint, setHint] = useState(false);
   const go = (q: string, spoken = false) => navigate({ to: "/argos", search: { q, ...(spoken ? { voice: true } : {}) } });
   return (
     <section className="relative flex min-h-[100svh] flex-col overflow-hidden bg-foreground text-white">
       <HeroVideo />
       <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col items-center justify-center px-5 pb-16 pt-24 text-center">
         <p className="font-display text-[24px] italic leading-none text-white/90 md:text-[30px]">{c.eyebrow}</p>
-        <h1 className="mt-6 type-h1 md:mt-7 md:text-[64px]">{c.hero}</h1>
-        <div className="mt-9 w-full max-w-[580px]">
-          <ArgosComposer onSubmit={go} placeholder={c.placeholder} lang={lang === "ru" ? "ru-RU" : "en-GB"} />
-        </div>
-        <div className="mt-3 flex max-w-[540px] items-start justify-center gap-2 text-[13px] font-light leading-relaxed text-white/80">
-          <p>{c.help}</p>
-          <button type="button" onClick={() => setHint(!hint)} aria-label="How to talk to Argos" className="mt-0.5 shrink-0 text-white/70 hover:text-white">
-            <Info className="h-3.5 w-3.5" />
-          </button>
-        </div>
-        {hint && (
-          <div className="frost mt-3 w-full max-w-[540px] rounded-2xl p-4 text-left text-[13px] leading-relaxed text-white/90">
-            <p className="text-white">{c.howTalk}</p>
-            <ul className="mt-1.5 space-y-1 font-light text-white/80">{c.examples.map((e) => <li key={e}>“{e}”</li>)}</ul>
-            <p className="mt-2 font-light text-white/70">{c.howTalkEnd}</p>
+        <h1 className="mt-6 type-h1 text-[38px] md:mt-7 md:text-[52px]">{c.hero}</h1>
+        <div className="mt-9 flex w-full max-w-[640px] items-center gap-2.5">
+          <span aria-hidden className="hidden w-7 shrink-0 sm:block" />
+          <div className="min-w-0 flex-1">
+            <ArgosComposer onSubmit={go} placeholder={c.placeholder} lang={lang === "ru" ? "ru-RU" : "en-GB"} />
           </div>
-        )}
+          <HelpDot />
+        </div>
         <div className="mt-6 flex max-w-[620px] flex-wrap justify-center gap-1.5">
           {c.chips.map((chip) => (
             <button key={chip} type="button" onClick={() => go(chip)}
@@ -352,6 +370,78 @@ function Hero() {
         </Link>
       </div>
       <p className="relative z-10 pb-5 text-center text-xs font-light text-white/55">{c.powered}</p>
+    </section>
+  );
+}
+
+/** The azure "?" dot beside the chatbox, like the dot in the wordmark. Opens a small grainy note on how to talk to Argos. */
+function HelpDot() {
+  const [c] = useCopy();
+  return (
+    <Popover>
+      <PopoverTrigger
+        aria-label={c.helpLabel}
+        className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-azure font-display text-[17px] italic leading-none text-white shadow-[0_0_0_4px_oklch(0.52_0.13_245/0.22)] transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+      >
+        ?
+      </PopoverTrigger>
+      <PopoverContent
+        side="bottom"
+        align="end"
+        sideOffset={12}
+        className="relative w-[min(340px,calc(100vw-32px))] overflow-hidden rounded-2xl border border-white/20 bg-[oklch(0.22_0.02_245/0.62)] p-5 text-white shadow-[0_24px_60px_-24px_oklch(0_0_0/0.6)] backdrop-blur-2xl"
+      >
+        <div className="grain-overlay opacity-[0.35]" />
+        <div className="relative">
+          <p className="font-display text-[22px] italic leading-tight">{c.helpTitle}</p>
+          <p className="mt-2 text-[14px] font-light leading-relaxed text-white/85">{c.help}</p>
+          <p className="mt-4 text-[11px] uppercase tracking-[0.12em] text-white/50">{c.howTalk}</p>
+          <ul className="mt-2 space-y-1.5 text-[13px] font-light leading-relaxed text-white/80">
+            {c.examples.map((e) => <li key={e}>“{e}”</li>)}
+          </ul>
+          <p className="mt-4 border-t border-white/15 pt-3 text-[13px] font-light leading-relaxed text-white/75">{c.howTalkEnd}</p>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/** Argos, right after the hero: who he is, with a wink at the Odyssey. */
+function MeetArgos() {
+  const [c] = useCopy();
+  return (
+    <section className="py-20 md:py-32">
+      <Wrap className="grid items-center gap-12 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:gap-20">
+        <div className="grain relative flex aspect-[4/5] max-h-[560px] w-full flex-col items-center justify-center overflow-hidden rounded-[10px] bg-muted">
+          {ARGOS_SKETCH ? (
+            <img src={ARGOS_SKETCH} alt="A sketch of Argos" className="absolute inset-0 h-full w-full object-contain p-8" />
+          ) : (
+            <>
+              <p className="font-display text-[88px] italic leading-none tracking-[-0.02em] md:text-[112px]">
+                Argos<span className="ml-1 inline-block h-[0.14em] w-[0.14em] rounded-full bg-azure align-baseline" />
+              </p>
+              <p className="mt-5 text-[13px] font-light tracking-[0.04em] text-foreground/55">{c.argosMeaning}</p>
+            </>
+          )}
+        </div>
+        <div>
+          <Label>{c.argosLabel}</Label>
+          <H2 className="mt-5">{c.argosTitle}</H2>
+          <p className="mt-7 max-w-[600px] font-display text-[22px] italic leading-snug text-foreground/80 md:text-[24px]">{c.argosStory}</p>
+          <p className="mt-5 max-w-[600px] type-body text-foreground/62">{c.argosNow}</p>
+          <ul className="mt-9 grid max-w-[600px] gap-x-8 gap-y-3 sm:grid-cols-2">
+            {c.argosFacts.map((f) => (
+              <li key={f} className="flex items-start gap-3 text-[15px] font-light">
+                <span aria-hidden className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-azure" />
+                {f}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-10">
+            <PillLink to="/argos" search={{ q: "", voice: false }}>{c.argosCta}</PillLink>
+          </div>
+        </div>
+      </Wrap>
     </section>
   );
 }
@@ -502,7 +592,7 @@ function Sprezzatura() {
   return (
     <section className={SECTION}>
       <Wrap className="grid items-center gap-12 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] md:gap-20">
-        <Photo name="alley" alt="A whitewashed lane in Ostuni" className="aspect-[4/5] max-h-[620px]" />
+        <Photo name="lunch" alt="Lunch by the sea under a fringed umbrella" className="aspect-[4/5] max-h-[620px]" />
         <div className="max-w-xl border-y border-foreground/15 py-10">
           <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
             <p className="font-display text-[48px] italic leading-none tracking-[-0.01em]">{s.word}</p>
@@ -639,7 +729,7 @@ function Final() {
           <p className="mt-6 max-w-md type-body text-foreground/62">{c.finalBody}</p>
         </div>
         <div className="relative overflow-hidden rounded-[10px]">
-          <img src="/img/sky.webp" alt="" aria-hidden loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+          <img src="/img/window.webp" alt="" aria-hidden loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
           <div className="relative m-6 rounded-[10px] border border-white/60 bg-white/55 p-7 backdrop-blur-xl md:m-12 md:p-9">
             <p className="type-label text-[11px] text-foreground/55">{c.getStarted}</p>
             <ul className="mt-5 space-y-3 text-[16px] font-light">
