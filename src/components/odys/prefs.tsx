@@ -13,8 +13,8 @@ export function Chip({ active, onClick, children }: { active: boolean; onClick: 
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        "rounded-full border px-3.5 py-1.5 text-sm transition-all",
-        active ? "border-transparent bg-sea text-white font-medium" : "bg-card hover:border-foreground/40",
+        "h-8 rounded-full border px-3 text-[13px] font-light transition-colors",
+        active ? "border-foreground bg-foreground text-background" : "border-foreground/15 bg-card hover:border-foreground/40",
       )}
     >
       {children}

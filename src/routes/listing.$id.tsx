@@ -87,7 +87,7 @@ function Shell({ children }: { children: ReactNode }) {
 function Section({ title, kicker, children, id }: { title: string; kicker?: string; children: ReactNode; id?: string }) {
   return (
     <section id={id} className="border-t py-10">
-      {kicker && <p className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{kicker}</p>}
+      {kicker && <p className="mb-2 text-xs font-normal uppercase tracking-[0.18em] text-muted-foreground">{kicker}</p>}
       <h2 className="mb-6 text-2xl md:text-3xl">{title}</h2>
       {children}
     </section>
@@ -117,7 +117,7 @@ function RedFlags({ data }: { data: ListingBundle }) {
             <li key={f.id} className="flex gap-4 rounded-2xl border bg-card p-5">
               <AlertTriangle className={cn("mt-0.5 h-5 w-5 shrink-0", f.severity === "low" ? "text-caution" : "text-warning")} />
               <div className="min-w-0">
-                <span className={cn("mb-2 inline-block rounded-full px-2.5 py-0.5 text-xs font-medium capitalize",
+                <span className={cn("mb-2 inline-block rounded-full px-2.5 py-0.5 text-xs font-normal capitalize",
                   f.severity === "high" ? "bg-warning text-background" : f.severity === "medium" ? "bg-warning-soft text-warning" : "bg-caution-soft text-caution")}>
                   {f.severity}
                 </span>
@@ -236,8 +236,8 @@ function ListingPage() {
                 ["Offer deadline", <FactValue key="dl" fact={byKey["deadline"]} sourceUrl={src} />],
               ].filter(Boolean) as [string, ReactNode][]).map(([label, node], i, all) => (
                 <div key={label} className={cn("bg-card p-5", fillClass(i, all.length))}>
-                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt>
-                  <dd className="mt-2 text-lg font-semibold tnum">{node}</dd>
+                  <dt className="text-xs font-normal uppercase tracking-wide text-muted-foreground">{label}</dt>
+                  <dd className="mt-2 font-display text-[24px] tnum">{node}</dd>
                 </div>
               ))}
             </dl>
@@ -302,7 +302,7 @@ function ListingPage() {
               <a href={src} target="_blank" rel="noreferrer" className="flex items-center gap-4 rounded-2xl border bg-card p-5 transition-shadow hover:shadow-hover">
                 <FileText className="h-6 w-6 shrink-0 text-brand" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{l.source_title ?? "Official notice"}</p>
+                  <p className="truncate font-normal">{l.source_title ?? "Official notice"}</p>
                   <p className="text-sm text-muted-foreground">
                     {l.source_published_at ? `Published ${new Date(l.source_published_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}` : "Publication date not stated"}
                   </p>
@@ -334,7 +334,7 @@ function Appraisal({ fact, discount, sourceUrl }: { fact: Fact | undefined; disc
     <span>
       <FactValue fact={fact} sourceUrl={sourceUrl} />
       {discount != null && discount > 0 && (
-        <span className="mt-1 block text-xs font-medium text-success">Minimum offer is {discount}% below it</span>
+        <span className="mt-1 block text-xs font-normal text-success">Minimum offer is {discount}% below it</span>
       )}
     </span>
   );
@@ -392,8 +392,8 @@ function SaleContacts({ data }: { data: ListingBundle }) {
         <ul className="grid gap-3 sm:grid-cols-2">
           {people.map((c, i) => (
             <li key={i} className="rounded-2xl border bg-card p-5">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{c.role}</p>
-              {c.name && <p className="mt-1 font-semibold">{c.name}</p>}
+              <p className="text-xs font-normal uppercase tracking-wide text-muted-foreground">{c.role}</p>
+              {c.name && <p className="mt-1 font-normal">{c.name}</p>}
               <div className="mt-3 space-y-1.5 text-sm">
                 {c.email && <a href={`mailto:${c.email}`} className="flex items-center gap-2 text-brand hover:underline"><Mail className="h-4 w-4" />{c.email}</a>}
                 {c.phone && <a href={`tel:${c.phone}`} className="flex items-center gap-2 text-brand hover:underline"><Phone className="h-4 w-4" />{c.phone}</a>}
@@ -434,10 +434,10 @@ function Identity({ data }: { data: ListingBundle }) {
     <div className="flex flex-wrap items-end justify-between gap-6 pb-8 pt-10">
       <div className="min-w-0">
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          {l.is_demo && <span className="rounded-full bg-sea px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white">Demo</span>}
+          {l.is_demo && <span className="rounded-full bg-sea px-2.5 py-1 text-[11px] font-normal uppercase tracking-wide text-white">Demo</span>}
           <DeadlinePill deadline={l.deadline_at ?? l.auction_at} />
-          {l.property_type && <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">{TYPE_LABELS[l.property_type] ?? l.property_type}</span>}
-          {l.sale_type && <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-medium text-brand">{SALE_TYPE_LABELS[l.sale_type] ?? l.sale_type}</span>}
+          {l.property_type && <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-normal text-muted-foreground">{TYPE_LABELS[l.property_type] ?? l.property_type}</span>}
+          {l.sale_type && <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-normal text-brand">{SALE_TYPE_LABELS[l.sale_type] ?? l.sale_type}</span>}
         </div>
         <h1 className="text-5xl md:text-6xl">{l.comune ?? "Unknown comune"}</h1>
         <p className="mt-2 text-lg text-muted-foreground">
@@ -447,7 +447,7 @@ function Identity({ data }: { data: ListingBundle }) {
       </div>
       <div className="flex items-center gap-4">
         <div className="text-right">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Deal score</p>
+          <p className="text-xs font-normal uppercase tracking-wide text-muted-foreground">Deal score</p>
           <p className="text-sm text-muted-foreground">Tap for reasons</p>
         </div>
         <ScoreBadge score={l.score} reasons={l.score_reasons} />
@@ -547,7 +547,7 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
             <div className="mb-5 inline-flex rounded-full border bg-card p-1">
               {estimates.map((e) => (
                 <button key={e.id} onClick={() => setScenario(e.scenario)}
-                  className={cn("rounded-full px-4 py-1.5 text-sm font-medium capitalize transition-colors",
+                  className={cn("rounded-full px-4 py-1.5 text-sm font-normal capitalize transition-colors",
                     sel?.id === e.id ? "bg-sea text-white" : "text-muted-foreground hover:text-foreground")}>
                   {e.scenario}
                 </button>
@@ -555,7 +555,7 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
             </div>
             {sel && (
               <div className="rounded-2xl border bg-card p-6">
-                <p className="text-3xl font-semibold tnum">{range(sel.low_eur, sel.high_eur)}</p>
+                <p className="font-display text-[36px] leading-none tnum">{range(sel.low_eur, sel.high_eur)}</p>
                 {sel.user_id && <p className="mt-1 text-xs text-brand">Your own estimate</p>}
                 <ul className="mt-5 divide-y">
                   {asItems(sel.items).map((it) => (
@@ -567,7 +567,7 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
                 </ul>
                 {asStrings(sel.assumptions).length > 0 && (
                   <div className="mt-5">
-                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Assumptions</p>
+                    <p className="text-xs font-normal uppercase tracking-wide text-muted-foreground">Assumptions</p>
                     <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
                       {asStrings(sel.assumptions).map((a) => <li key={a}>{a}</li>)}
                     </ul>
@@ -607,7 +607,7 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
                 <div key={g.id} className="rounded-2xl border bg-card p-6">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <p className="font-semibold">{g.name}</p>
-                    <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", lg.fit === "likely" ? "bg-success-soft text-success" : "bg-caution-soft text-caution")}>
+                    <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-normal", lg.fit === "likely" ? "bg-success-soft text-success" : "bg-caution-soft text-caution")}>
                       {lg.fit === "likely" ? "Likely fit" : "Possible fit"}
                     </span>
                   </div>
@@ -622,7 +622,7 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
                   {price != null && sel && dLo != null && dHi != null && (
                     <div className="mt-4 rounded-xl bg-muted p-4 text-sm">
                       <p className="font-medium">Total after grant, if approved</p>
-                      <p className="mt-1 text-lg font-semibold tnum">{range(price + sel.low_eur - dLo, price + sel.high_eur - dHi)}</p>
+                      <p className="mt-1 font-display text-[24px] tnum">{range(price + sel.low_eur - dLo, price + sel.high_eur - dHi)}</p>
                       <p className="mt-1 text-xs text-muted-foreground">Conditional. Only applies if the grant is approved for you.</p>
                     </div>
                   )}
@@ -644,7 +644,7 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
 
 function Row({ label, children, strong }: { label: string; children: ReactNode; strong?: boolean }) {
   return (
-    <div className={cn("flex items-center justify-between gap-4 py-1.5", strong && "text-lg font-semibold")}>
+    <div className={cn("flex items-center justify-between gap-4 py-1.5", strong && "font-display text-[22px]")}>
       <span className={cn(!strong && "text-muted-foreground")}>{label}</span>
       <span>{children}</span>
     </div>
@@ -698,7 +698,7 @@ function HowBuying({ saleType }: { saleType: string | null }) {
         <ol className="space-y-3">
           {steps.map((s, i) => (
             <li key={s} className="flex gap-4">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sea text-xs font-semibold text-white">{i + 1}</span>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sea text-xs font-normal text-white">{i + 1}</span>
               <span className="pt-0.5">{s}</span>
             </li>
           ))}
@@ -747,9 +747,9 @@ function ActionCard({ data, userId }: { data: ListingBundle; userId: string | nu
 
   return (
     <div className="rounded-3xl border bg-card p-6 shadow-hover">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Base price</p>
+      <p className="text-xs font-normal uppercase tracking-wide text-muted-foreground">Base price</p>
       <div className="mt-1 flex items-center justify-between">
-        <Money value={l.price_eur} className="text-3xl font-semibold" />
+        <Money value={l.price_eur} className="text-[36px]" />
         {l.id && <SaveButton id={l.id} />}
       </div>
       {l.min_offer_eur != null && l.price_eur != null && l.min_offer_eur < l.price_eur && (

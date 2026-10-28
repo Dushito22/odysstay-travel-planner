@@ -20,5 +20,12 @@ export const PHOTO_CREDITS = [
     "author": "Esniom",
     "license": "CC BY-SA 4.0",
     "source": "https://commons.wikimedia.org/wiki/File:Civita_di_Bagnoregio_panoramic_view_from_belvedere,_Lazio,_Italy.jpg"
+  },
+  {
+    "image": "sky",
+    "title": "Civita (Bagnoregio) - Panorama.jpg",
+    "author": "User:New2022",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Civita_(Bagnoregio)_-_Panorama.jpg"
   }
 ] as const;
