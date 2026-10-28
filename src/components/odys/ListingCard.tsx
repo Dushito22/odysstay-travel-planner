@@ -32,7 +32,7 @@ export function CardImage({ row, compact }: { row: FeedRow; compact?: boolean })
             <div className="texture-muted h-full w-full" />
           )}
           <div className="absolute inset-0 flex items-end justify-between gap-2 bg-gradient-to-t from-black/60 via-black/5 to-transparent p-4">
-            <span className={cn("font-display font-semibold text-white", compact ? "text-lg" : "text-2xl")}>
+            <span className={cn("font-display text-white", compact ? "text-lg" : "text-2xl")}>
               {row.comune ?? "Unknown comune"}
             </span>
             {row.lat != null && <span className="rounded-full bg-black/40 px-2 py-0.5 text-[11px] text-white/90 backdrop-blur">Satellite view, no photos published</span>}
@@ -124,7 +124,7 @@ export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: 
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <Link to="/listing/$id" params={{ id: row.id }}>
-              <h3 className="truncate text-lg font-semibold">{row.comune ?? "Unknown comune"}</h3>
+              <h3 className="truncate text-2xl leading-tight">{row.comune ?? "Unknown comune"}</h3>
             </Link>
             <p className="truncate text-sm text-muted-foreground">
               {[row.province, row.region].filter(Boolean).join(" · ") || "Location not stated"}

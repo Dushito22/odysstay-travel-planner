@@ -79,7 +79,7 @@ function Pricing() {
               p.featured && "border-foreground shadow-hover",
             )}
           >
-            <h2 className="text-xl font-semibold">{p.name}</h2>
+            <h2 className="text-2xl">{p.name}</h2>
             <p className="mt-4">
               <span className="font-display text-5xl font-semibold tnum">{p.price}</span>
               <span className="text-muted-foreground">{p.period}</span>

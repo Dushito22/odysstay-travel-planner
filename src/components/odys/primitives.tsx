@@ -64,7 +64,7 @@ export function ScoreBadge({
           type="button"
           aria-label={`Score ${score} out of 100`}
           className={cn(
-            "inline-flex shrink-0 items-center justify-center rounded-full font-display font-semibold tnum transition-shadow hover:shadow-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "inline-flex shrink-0 items-center justify-center rounded-full font-display tnum transition-shadow hover:shadow-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             size === "sm" ? "h-9 w-9 text-sm" : "h-12 w-12 text-lg",
             strong ? "bg-sea text-white" : "bg-card text-foreground ring-1 ring-border",
           )}
@@ -262,11 +262,11 @@ export function SourceQuote({ children, ...q }: QuoteProps & { children: ReactNo
 export function Wordmark({ className }: { className?: string }) {
   return (
     <span
-      className={cn("inline-flex items-baseline font-display text-2xl font-semibold", className)}
+      className={cn("inline-flex items-baseline font-display text-[1.7rem] leading-none tracking-tight", className)}
     >
       Odysstay
       <span
-        className="ml-0.5 inline-block h-[0.28em] w-[0.28em] rounded-full bg-brand"
+        className="ml-0.5 inline-block h-[0.2em] w-[0.2em] rounded-full bg-terra"
         aria-hidden
       />
     </span>

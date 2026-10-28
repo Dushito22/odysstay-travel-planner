@@ -26,7 +26,7 @@ function DiscoverPage() {
 
   const [shown, setShown] = useState(PAGE);
   const sentinel = useRef<HTMLDivElement>(null);
-  useEffect(() => setShown(PAGE), [rows]);
+  useEffect(() => { setShown(PAGE); }, [rows]);
   useEffect(() => {
     const el = sentinel.current;
     if (!el) return;

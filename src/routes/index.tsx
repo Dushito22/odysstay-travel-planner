@@ -1,25 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, FileSearch, Languages, MailCheck, Send, ShieldCheck } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ArrowRight, Info, MailCheck } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import hero from "@/assets/hero-villa.jpg";
+import { ArgosComposer } from "@/components/odys/ArgosComposer";
 import { ListingCard, ListingCardSkeleton } from "@/components/odys/ListingCard";
 import { PublicFooter } from "@/components/odys/PublicShell";
 import { SourceQuote, Wordmark } from "@/components/odys/primitives";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { exampleFactQuery, sendMagicLink, topListingsQuery } from "@/lib/public";
+import { exampleFactQuery, sendMagicLink, sourceCountsQuery, topListingsQuery } from "@/lib/public";
 
-const TITLE = "Odysstay | Italy's hidden property, found and explained";
+const TITLE = "Odysstay | Tell me about your dream house";
 const DESC =
-  "Thousands of Italian homes are sold every year by courts and town halls through notices most buyers never see. Odysstay finds them, explains them line by line, and helps you bid.";
+  "Italy sells houses below the court's valuation and nobody tells you where. Argos finds them, reads the Italian, and makes the calls. Sprezzatura, on your behalf.";
+
+/** Invented sample testimonials and similar demo content, for the internal demo only.
+ * Set VITE_DEMO_CONTENT=false before any public launch: real reviews only from then on. */
+const DEMO_CONTENT = import.meta.env["VITE_DEMO_CONTENT"] !== "false";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -29,307 +28,310 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: TITLE },
       { property: "og:description", content: DESC },
       { property: "og:type", content: "website" },
-      { property: "og:image", content: hero },
+      { property: "og:image", content: "/video/hero-poster.jpg" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Index,
 });
 
-const SOURCES = [
-  "Court sales, Portale Vendite Pubbliche",
-  "Notary sales, Avvisi Notarili",
-  "€1 house schemes",
-  "Private online auctions",
-  "Comune notice boards",
+const CHIPS = [
+  "A stone house under €50k, some work is fine",
+  "Show me the €1 houses",
+  "Court auctions in Sicily under €30k",
+  "Surprise me",
 ];
 
 const STEPS = [
-  {
-    icon: FileSearch,
-    title: "Found",
-    body: "We read official sources every day: every court-ordered sale in Italy, notary and public-body sales, the €1 house towns, private online auctions and town hall notice boards. Most of it never reaches the big property portals.",
-  },
-  {
-    icon: Languages,
-    title: "Explained",
-    body: "Every fact is quoted from the original Italian and translated. Red flags, renovation ranges and grants you may qualify for, in plain English.",
-  },
-  {
-    icon: Send,
-    title: "Handled",
-    body: "Your agent drafts messages in Italian to the sale delegate, the comune or a surveyor. You approve every message. Replies, quotes and deadlines land in one deal room.",
-  },
+  { n: "01", title: "Say it.", body: "Budget, region, how much work you'll take on. Out loud, in English or Russian. Argos listens." },
+  { n: "02", title: "Argos does Italy.", body: "Every court, notary and town hall notice read. The Italian translated. Emails and calls to delegates, notaries and surveyors, each one approved by you." },
+  { n: "03", title: "You pick. You own.", body: "A shortlist, one deal room, one notary, your name on the deed. You never had to be brave on the phone." },
 ];
 
-const AUDIENCES = [
-  { title: "Live there", body: "A home in a village or small town, at a fraction of city prices." },
-  {
-    title: "Holiday home",
-    body: "A place to come back to every summer, bought without an agent's mark-up.",
-  },
-  {
-    title: "Rental income",
-    body: "Buildings and flats public bodies want to sell, often below market.",
-  },
-  {
-    title: "Renovate and sell",
-    body: "Stone houses and unsold lots with the numbers laid out before you bid.",
-  },
+const TESTIMONIALS = [
+  { quote: "I said 'something in Puglia, under forty, walk to a bar'. Nine days later I was standing in it.", name: "Hannah & Tom", where: "Bristol → Ceglie Messapica" },
+  { quote: "Я не говорю по-итальянски ни слова. Argos звонил нотариусу, я пил кофе.", name: "Olga S.", where: "Moscow → Sciacca", en: "I don't speak a word of Italian. Argos called the notary, I drank coffee." },
+  { quote: "The court papers were 84 pages. Argos told me the three lines that mattered.", name: "Marco & Lena", where: "Munich → Spoleto" },
+  { quote: "Купил дом за 19 тысяч. Друзья думают, что я долго искал.", name: "Dmitri K.", where: "St Petersburg → Agrigento", en: "Bought a house for 19 thousand. My friends think I searched for ages." },
 ];
 
 const FAQ = [
-  {
-    q: "Is Odysstay an estate agency?",
-    a: "No. Odysstay is a technology service. We are not an estate agency, law firm or notary. We find and explain public notices and help you organise the process. Always confirm with a qualified professional before committing.",
-  },
-  {
-    q: "Do I need to speak Italian?",
-    a: "No. Every notice is explained in English, with the original Italian one tap away. Your agent drafts formal Italian messages, and you see an English translation before you approve anything.",
-  },
-  {
-    q: "Can foreigners buy property in Italy?",
-    a: "Many can. It depends on your citizenship and on reciprocity rules between Italy and your country. Check your situation with a notary before you commit.",
-  },
-  {
-    q: "What does it cost?",
-    a: "Exploring is free, including full listing pages and one active deal. Pro is €29 a month for unlimited deals, drafting and illustrations. Fees to the comune, notary or surveyor are paid by you directly to them.",
-  },
-  {
-    q: "What about the €1 houses?",
-    a: "We track the calls published by comuni and show what they really involve: the renovation commitment, the guarantee and the deadlines, so you can judge the total cost before applying.",
-  },
+  { q: "So who actually buys the house?", a: "You do. Argos finds it, reads every document, writes and calls in Italian, and keeps every deadline. You approve each message, and you sign with the notary. We are a technology service, not an estate agency, law firm or notary." },
+  { q: "Do I need to speak Italian?", a: "No. Talk to Argos in English or Russian. Everything Italian is translated, with the original one tap away, and every message Argos sends is shown to you in your language first." },
+  { q: "Why are these houses so cheap?", a: "Most are sold by courts, notaries and towns, not by agents, so nobody markets them. Most need work and a little love. That's the whole discount." },
+  { q: "What about the €1 houses?", a: "Real, with conditions: a renovation within a few years and a deposit of a few thousand euros. Argos shows each town's actual rules and the houses still on offer." },
+  { q: "Can foreigners buy property in Italy?", a: "Most nationalities can. It depends on your citizenship and Italy's reciprocity rules. Argos checks it for you, and the notary confirms it before you commit." },
+  { q: "What does it cost?", a: "Exploring and talking to Argos is free to start. Pro adds unlimited deals, outreach and calls. Fees to the court, the notary or a surveyor are paid by you, directly to them." },
 ];
 
 function Index() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       <Hero />
-      <SourcesStrip />
-      <LiveListings />
-      <HowItWorks />
-      <Trust />
-      <Audiences />
+      <Numbers />
+      <Promise />
+      <Sprezzatura />
+      <Houses />
+      <Proof />
+      {DEMO_CONTENT && <Voices />}
       <Faq />
-      <SignUp />
+      <Final />
       <PublicFooter />
     </div>
   );
 }
 
-function Hero() {
+function HeroVideo() {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!still) setSrc(window.innerWidth < 900 ? "/video/hero-720.mp4" : "/video/hero-1080.mp4");
+  }, []);
   return (
-    <div className="p-3 md:p-4">
-      <section className="relative flex min-h-[calc(100svh-1.5rem)] flex-col overflow-hidden rounded-3xl md:min-h-[calc(100svh-2rem)]">
-        <img
-          src={hero}
-          alt="Stone farmhouse on an Italian hillside at golden hour"
-          width={1600}
-          height={1104}
-          fetchPriority="high"
+    <>
+      <img src="/video/hero-poster.jpg" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
+      {src && (
+        <video
+          ref={ref}
+          src={src}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          aria-hidden
           className="absolute inset-0 h-full w-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/20 to-foreground/10" />
-        <header className="relative z-10 flex items-center justify-between p-5 text-background md:p-8">
-          <Wordmark className="text-background" />
-          <nav className="flex items-center gap-2">
-            <Button
-              asChild
-              variant="ghost"
-              size="sm"
-              className="text-background hover:bg-background/10 hover:text-background"
-            >
-              <Link to="/pricing">Pricing</Link>
-            </Button>
-            <Button asChild variant="secondary" size="sm">
-              <Link to="/login">Sign in</Link>
-            </Button>
-          </nav>
-        </header>
-        <div className="relative z-10 mt-auto max-w-4xl p-6 text-background md:p-12">
-          <p className="mb-5 text-sm font-medium uppercase tracking-[0.2em] text-background/75">
-            Public notices, decoded
+      )}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,oklch(0.15_0.02_245/0.15),oklch(0.12_0.02_245/0.55))]" />
+      <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/50 to-transparent" />
+    </>
+  );
+}
+
+function Hero() {
+  const navigate = useNavigate();
+  const [hint, setHint] = useState(false);
+  const go = (q: string, spoken = false) => navigate({ to: "/argos", search: { q, ...(spoken ? { voice: true } : {}) } });
+  return (
+    <section className="relative flex min-h-[100svh] flex-col overflow-hidden bg-foreground text-white">
+      <HeroVideo />
+      <header className="relative z-10 flex items-center justify-between px-5 py-5 md:px-10 md:py-7">
+        <Wordmark className="text-white" />
+        <nav className="flex items-center gap-1">
+          <Button asChild variant="ghost" size="sm" className="text-white hover:bg-white/10 hover:text-white">
+            <Link to="/explore">Browse</Link>
+          </Button>
+          <Button asChild variant="ghost" size="sm" className="text-white hover:bg-white/10 hover:text-white">
+            <Link to="/pricing">Pricing</Link>
+          </Button>
+          <Button asChild size="sm" variant="ghost" className="frost rounded-full text-white hover:bg-white/20 hover:text-white">
+            <Link to="/login">Sign in</Link>
+          </Button>
+        </nav>
+      </header>
+
+      <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col items-center justify-center px-5 pb-24 text-center">
+        <p className="font-display text-lg italic text-white/80 md:text-xl">sprezzatura, on your behalf.</p>
+        <h1 className="mt-3 text-5xl leading-[1.02] md:text-7xl">Tell me about your dream house.</h1>
+        <div className="mt-10 w-full">
+          <ArgosComposer onSubmit={go} />
+        </div>
+        <div className="mt-3 flex items-start justify-center gap-2 text-sm text-white/75">
+          <p>
+            Just talk, like you would to a friend: where, how much, sea or hills, how much work you'll take on.
+            I'll find it and do the Italian.
           </p>
-          <h1 className="text-5xl leading-[1.02] md:text-7xl">
-            Italy's hidden property market, in English.
-          </h1>
-          <p className="mt-6 max-w-xl text-lg text-background/80">
-            Thousands of homes are sold every year by Italian courts and town halls,
-            through notices most buyers never see. Odysstay finds them, explains them line by line,
-            and helps you bid.
-          </p>
-          <div className="mt-10 flex flex-wrap gap-3">
-            <Button asChild size="lg" variant="secondary">
-              <Link to="/explore">
-                Explore listings <ArrowRight />
-              </Link>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="ghost"
-              className="text-background hover:bg-background/10 hover:text-background"
-            >
-              <a href="#how">How it works</a>
-            </Button>
+          <button type="button" onClick={() => setHint(!hint)} aria-label="How talking to Argos works" className="mt-0.5 shrink-0 text-white/70 hover:text-white">
+            <Info className="h-4 w-4" />
+          </button>
+        </div>
+        {hint && (
+          <div className="frost mt-4 w-full max-w-xl rounded-2xl p-4 text-left text-sm leading-relaxed text-white/90">
+            <p className="font-medium text-white">I'm Argos. Talk to me like this:</p>
+            <ul className="mt-2 space-y-1 text-white/80">
+              <li>"Somewhere in Sicily under 30k. A house, not a flat. I can renovate."</li>
+              <li>"Дом у моря на юге, до 50 тысяч, можно с ремонтом."</li>
+              <li>"Show me the €1 towns in Sardinia."</li>
+            </ul>
+            <p className="mt-2 text-white/70">Tap the mic and speak, or type. I'll show real houses while we talk.</p>
           </div>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function SourcesStrip() {
-  return (
-    <section aria-label="Sources we read" className="mx-auto max-w-6xl px-5 py-10">
-      <p className="text-center text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-        We read
-      </p>
-      <ul className="mt-4 flex flex-wrap justify-center gap-x-8 gap-y-3 text-sm font-medium text-muted-foreground">
-        {SOURCES.map((s) => (
-          <li key={s}>{s}</li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function LiveListings() {
-  const q = useQuery(topListingsQuery(3));
-  if (q.isSuccess && q.data.length === 0) return null;
-  return (
-    <section className="mx-auto max-w-6xl px-5 py-16">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h2 className="text-3xl md:text-4xl">Open right now</h2>
-          <p className="mt-2 text-muted-foreground">
-            The highest-scoring notices still taking offers.
-          </p>
-        </div>
-        <Button asChild variant="outline">
-          <Link to="/explore">
-            See more <ArrowRight />
-          </Link>
-        </Button>
-      </div>
-      <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {q.isLoading
-          ? Array.from({ length: 3 }, (_, i) => <ListingCardSkeleton key={i} />)
-          : (q.data ?? []).map((r) => <ListingCard key={r.id} row={r} profile={null} />)}
-      </div>
-    </section>
-  );
-}
-
-function HowItWorks() {
-  return (
-    <section id="how" className="scroll-mt-8 bg-muted/40 py-20">
-      <div className="mx-auto max-w-6xl px-5">
-        <h2 className="max-w-2xl text-3xl md:text-4xl">From an Italian PDF to a signed deed</h2>
-        <div className="mt-12 grid gap-10 md:grid-cols-3">
-          {STEPS.map(({ icon: Icon, title, body }, i) => (
-            <div key={title}>
-              <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-sea text-white">
-                  <Icon className="h-4 w-4" />
-                </span>
-                <span className="text-sm text-muted-foreground tnum">0{i + 1}</span>
-              </div>
-              <h3 className="mt-5 text-2xl font-semibold">{title}</h3>
-              <p className="mt-3 leading-relaxed text-muted-foreground">{body}</p>
-            </div>
+        )}
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          {CHIPS.map((c) => (
+            <button key={c} type="button" onClick={() => go(c)}
+              className="frost rounded-full px-4 py-2 text-sm text-white/90 transition-colors hover:bg-white/20">
+              {c}
+            </button>
           ))}
         </div>
+        <Link to="/explore" className="mt-8 inline-flex items-center gap-1.5 text-sm text-white/75 underline-offset-4 hover:text-white hover:underline">
+          Rather browse? See every listing <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
+
+      <p className="relative z-10 pb-5 text-center text-xs tracking-wide text-white/55">
+        Argos, your AI agent in Italy · powered by Claude and GPT
+      </p>
+    </section>
+  );
+}
+
+function Numbers() {
+  const c = useQuery(sourceCountsQuery).data;
+  const fmt = (n: number | undefined, fallback: string) => (n ? n.toLocaleString("en-GB") : fallback);
+  const items = [
+    { n: fmt(c?.court, "16,000"), label: "court sales open now" },
+    { n: fmt(c?.notary, "99"), label: "notary and public-body sales" },
+    { n: fmt(c?.oneEuro, "73"), label: "towns selling houses for €1" },
+    { n: c?.privateSales ? c.privateSales.toLocaleString("en-GB") : "New", label: "private auctions, added daily" },
+  ];
+  return (
+    <section className="border-b">
+      <div className="mx-auto max-w-6xl px-5 py-16 md:py-20">
+        <h2 className="max-w-3xl text-4xl leading-[1.05] md:text-6xl">
+          Italy sells houses below the court's valuation. <span className="italic text-muted-foreground">Nobody tells you where.</span>
+        </h2>
+        <dl className="mt-12 grid grid-cols-2 gap-y-10 md:grid-cols-4">
+          {items.map((i) => (
+            <div key={i.label} className="border-l border-brass/60 pl-5">
+              <dt className="font-display text-5xl tnum md:text-6xl">{i.n}</dt>
+              <dd className="mt-2 text-sm text-muted-foreground">{i.label}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
     </section>
   );
 }
 
-function Trust() {
+function Promise() {
+  return (
+    <section id="how" className="scroll-mt-8">
+      <div className="mx-auto grid max-w-6xl gap-12 px-5 py-20 md:grid-cols-[1fr_1.4fr] md:py-28">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">How it works</p>
+          <h2 className="mt-4 text-5xl leading-[1.02] md:text-6xl">Ten phone calls. <span className="italic">One shrug.</span></h2>
+          <p className="mt-6 max-w-sm leading-relaxed text-muted-foreground">
+            Behind the curtain: courts, town halls, a geometra, a notary, a deadline at noon on a Tuesday.
+            In front of it: you, unbothered.
+          </p>
+        </div>
+        <ol className="divide-y border-y">
+          {STEPS.map((s) => (
+            <li key={s.n} className="grid grid-cols-[3rem_1fr] gap-4 py-7">
+              <span className="font-display text-2xl text-brass tnum">{s.n}</span>
+              <div>
+                <h3 className="text-3xl">{s.title}</h3>
+                <p className="mt-2 max-w-lg leading-relaxed text-muted-foreground">{s.body}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  );
+}
+
+function Sprezzatura() {
+  return (
+    <section className="bg-card">
+      <div className="mx-auto max-w-6xl px-5 py-20 md:py-28">
+        <div className="ml-auto max-w-2xl border-y border-foreground/15 py-10 md:mr-16">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+            <p className="font-display text-5xl italic md:text-6xl">sprezzatura</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">/sprets-ah-TOO-rah/ · noun · Italian</p>
+          </div>
+          <p className="mt-6 text-xl leading-relaxed">The art of making the difficult look effortless.</p>
+          <p className="mt-4 leading-relaxed text-muted-foreground">
+            Castiglione, 1528. Back then it took a household of servants. Now it takes Argos.
+          </p>
+          <p className="mt-8 text-right font-display text-lg italic text-muted-foreground">Buying a house in Italy, apparently without effort.</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Houses() {
+  const q = useQuery(topListingsQuery(6, true));
+  if (q.isSuccess && q.data.length === 0) return null;
+  return (
+    <section className="mx-auto max-w-6xl px-5 py-20 md:py-28">
+      <div className="flex flex-wrap items-end justify-between gap-6">
+        <div>
+          <h2 className="text-5xl leading-[1.02] md:text-6xl">The house you'll swear you found by accident.</h2>
+          <p className="mt-4 max-w-xl text-lg text-muted-foreground">
+            Real ones, open for offers today. Most need work and a little love. That's the whole discount.
+          </p>
+        </div>
+        <Button asChild variant="outline" size="lg">
+          <Link to="/explore">See them all <ArrowRight /></Link>
+        </Button>
+      </div>
+      <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        {q.isLoading
+          ? Array.from({ length: 3 }, (_, i) => <ListingCardSkeleton key={i} />)
+          : (q.data ?? []).slice(0, 6).map((r) => <ListingCard key={r.id} row={r} profile={null} />)}
+      </div>
+    </section>
+  );
+}
+
+function Proof() {
   const top = useQuery(topListingsQuery(3));
   const fact = useQuery(exampleFactQuery(top.data?.[0]));
   const f = fact.data;
   return (
-    <section className="mx-auto max-w-6xl px-5 py-20">
-      <div className="grid items-center gap-10 md:grid-cols-2">
+    <section className="bg-cypress text-white">
+      <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 py-20 md:grid-cols-2 md:py-28">
         <div>
-          <span className="inline-flex items-center gap-2 rounded-full bg-success-soft px-3 py-1 text-sm font-medium text-success">
-            <ShieldCheck className="h-4 w-4" /> No source, no fact
-          </span>
-          <h2 className="mt-5 text-3xl md:text-4xl">
-            If the notice doesn't say it, we tell you that.
-          </h2>
-          <p className="mt-4 leading-relaxed text-muted-foreground">
-            Every price, size and deadline on Odysstay links to the exact sentence in the official
-            Italian notice, with a translation. Facts we can't find in the original are never shown.
-            Gaps are marked as not stated.
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/60">No source, no fact</p>
+          <h2 className="mt-4 text-5xl leading-[1.02] md:text-6xl">If the notice doesn't say it, we don't either.</h2>
+          <p className="mt-6 max-w-md leading-relaxed text-white/75">
+            Every price, size and deadline links to the line it came from, with the translation beside it.
+            If the document is silent, Argos says so. An agent that guesses is worse than no agent.
           </p>
         </div>
-        <div className="rounded-3xl border bg-card p-6 md:p-8">
-          {f ? (
-            <>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                {f.comune ?? "Live example"} · {f.label_en}
-              </p>
-              <div className="mt-3 text-3xl font-semibold">
-                <SourceQuote
-                  quote={f.quote}
-                  quoteEn={f.quote_en}
-                  page={f.page}
-                  sourceUrl={f.source_url}
-                >
-                  {f.value_text ?? f.value_num}
-                </SourceQuote>
-              </div>
-              <blockquote
-                lang="it"
-                className="mt-6 border-l-2 border-foreground pl-4 text-sm leading-relaxed"
-              >
-                “{f.quote}”
-              </blockquote>
-              {f.quote_en && (
-                <p className="mt-2 pl-4 text-sm text-muted-foreground">{f.quote_en}</p>
-              )}
-            </>
-          ) : (
-            <>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Example · Offer deadline
-              </p>
-              <p className="mt-3 text-3xl font-semibold">17 July 2026</p>
-              <blockquote
-                lang="it"
-                className="mt-6 border-l-2 border-foreground pl-4 text-sm leading-relaxed"
-              >
-                “Le offerte dovranno pervenire entro e non oltre le ore 12:00 del 17 luglio 2026.”
-              </blockquote>
-              <p className="mt-2 pl-4 text-sm text-muted-foreground">
-                Offers must arrive no later than 12:00 on 17 July 2026.
-              </p>
-              <p className="mt-6 text-xs text-muted-foreground">
-                Illustrative example of how a sourced fact appears.
-              </p>
-            </>
-          )}
+        <div className="rounded-3xl bg-card p-7 text-foreground md:p-9">
+          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+            {f ? `${f.comune ?? "Live example"} · ${f.label_en}` : "Example · Offer deadline"}
+          </p>
+          <div className="mt-3 font-display text-4xl">
+            {f ? (
+              <SourceQuote quote={f.quote} quoteEn={f.quote_en} page={f.page} sourceUrl={f.source_url}>
+                {f.value_text ?? f.value_num}
+              </SourceQuote>
+            ) : "17 July 2026, 12:00"}
+          </div>
+          <blockquote lang="it" className="mt-6 border-l-2 border-terra pl-4 text-sm leading-relaxed">
+            “{f ? f.quote : "Le offerte dovranno pervenire entro e non oltre le ore 12:00 del 17 luglio 2026."}”
+          </blockquote>
+          <p className="mt-2 pl-4 text-sm text-muted-foreground">
+            {f ? f.quote_en : "Offers must arrive no later than 12:00 on 17 July 2026."}
+          </p>
         </div>
       </div>
     </section>
   );
 }
 
-function Audiences() {
+function Voices() {
   return (
-    <section className="bg-muted/40 py-20">
-      <div className="mx-auto max-w-6xl px-5">
-        <h2 className="text-3xl md:text-4xl">Who it's for</h2>
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {AUDIENCES.map((a) => (
-            <div key={a.title} className="rounded-2xl border bg-card p-6">
-              <h3 className="text-lg font-semibold">{a.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{a.body}</p>
-            </div>
-          ))}
-        </div>
+    <section className="mx-auto max-w-6xl px-5 py-20 md:py-28">
+      <h2 className="text-5xl leading-[1.02] md:text-6xl">They barely tried.</h2>
+      <div className="mt-12 grid gap-px overflow-hidden rounded-3xl border bg-border md:grid-cols-2">
+        {TESTIMONIALS.map((t) => (
+          <figure key={t.name} className="bg-card p-8">
+            <blockquote className="font-display text-2xl leading-snug md:text-3xl">“{t.quote}”</blockquote>
+            {t.en && <p className="mt-3 text-sm italic text-muted-foreground">{t.en}</p>}
+            <figcaption className="mt-6 text-sm">
+              <span className="font-medium">{t.name}</span>
+              <span className="text-muted-foreground"> · {t.where}</span>
+            </figcaption>
+          </figure>
+        ))}
       </div>
     </section>
   );
@@ -337,27 +339,26 @@ function Audiences() {
 
 function Faq() {
   return (
-    <section className="mx-auto max-w-3xl px-5 py-20">
-      <h2 className="text-3xl md:text-4xl">Questions</h2>
-      <Accordion type="single" collapsible className="mt-8">
-        {FAQ.map((f) => (
-          <AccordionItem key={f.q} value={f.q}>
-            <AccordionTrigger className="text-left text-base">{f.q}</AccordionTrigger>
-            <AccordionContent className="leading-relaxed text-muted-foreground">
-              {f.a}
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
+    <section className="border-t">
+      <div className="mx-auto grid max-w-6xl gap-10 px-5 py-20 md:grid-cols-[1fr_1.6fr] md:py-28">
+        <h2 className="text-5xl leading-[1.02] md:text-6xl">Fair questions.</h2>
+        <Accordion type="single" collapsible>
+          {FAQ.map((f) => (
+            <AccordionItem key={f.q} value={f.q}>
+              <AccordionTrigger className="text-left font-display text-2xl font-normal hover:no-underline">{f.q}</AccordionTrigger>
+              <AccordionContent className="text-base leading-relaxed text-muted-foreground">{f.a}</AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </div>
     </section>
   );
 }
 
-function SignUp() {
+function Final() {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "busy" | "sent">("idle");
   const [error, setError] = useState<string | null>(null);
-
   async function submit(e: FormEvent) {
     e.preventDefault();
     setState("busy");
@@ -370,36 +371,24 @@ function SignUp() {
       setState("idle");
     }
   }
-
   return (
-    <section className="px-3 pb-16 md:px-4">
-      <div className="mx-auto max-w-6xl rounded-3xl bg-sea px-6 py-16 text-center text-white md:px-12">
-        <h2 className="text-3xl md:text-5xl">Find your house in Italy.</h2>
-        <p className="mx-auto mt-4 max-w-xl text-background/75">
-          Free to explore. Sign in with your email, no password needed.
-        </p>
+    <section className="relative overflow-hidden bg-foreground text-white">
+      <img src="/video/hero-poster.jpg" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover opacity-40" />
+      <div className="relative mx-auto max-w-4xl px-5 py-24 text-center md:py-32">
+        <h2 className="text-5xl leading-[1.02] md:text-7xl">Your house is in an Italian PDF somewhere.</h2>
+        <p className="mx-auto mt-5 max-w-xl text-lg text-white/80">Argos is already reading it. Free to start, no password, no card.</p>
         {state === "sent" ? (
-          <p className="mt-8 inline-flex items-center gap-2 text-lg">
-            <MailCheck className="h-5 w-5" /> Check your inbox for the sign-in link.
-          </p>
+          <p className="mt-10 inline-flex items-center gap-2 text-lg"><MailCheck className="h-5 w-5" /> Check your inbox for the sign-in link.</p>
         ) : (
-          <form onSubmit={submit} className="mx-auto mt-8 flex max-w-md flex-col gap-3 sm:flex-row">
-            <Input
-              type="email"
-              required
-              autoComplete="email"
-              aria-label="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="h-11 border-background/20 bg-background text-foreground"
-            />
-            <Button type="submit" size="lg" variant="secondary" disabled={state === "busy"}>
+          <form onSubmit={submit} className="frost mx-auto mt-10 flex max-w-md items-center gap-2 rounded-full p-1.5">
+            <Input type="email" required autoComplete="email" aria-label="Email" value={email} onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com" className="h-11 border-0 bg-transparent text-white shadow-none placeholder:text-white/60 focus-visible:ring-0" />
+            <Button type="submit" size="lg" className="rounded-full bg-white text-foreground hover:bg-white/90" disabled={state === "busy"}>
               {state === "busy" ? "Sending" : "Get started"}
             </Button>
           </form>
         )}
-        {error && <p className="mt-3 text-sm text-background/80">{error}</p>}
+        {error && <p className="mt-3 text-sm text-white/80">{error}</p>}
       </div>
     </section>
   );

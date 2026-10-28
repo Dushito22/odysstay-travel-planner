@@ -105,7 +105,7 @@ function KindCard({
     <section className="flex flex-col rounded-2xl border bg-card p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold">{kind.label}</h2>
+          <h2 className="text-xl">{kind.label}</h2>
           <p className="mt-1 text-sm text-muted-foreground">{kind.why}</p>
           {"link" in kind && (
             <a
