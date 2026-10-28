@@ -108,7 +108,7 @@ export function AgentChat({
   const [listening, setListening] = useState(false);
   const stopRef = useRef<(() => void) | null>(null);
   const [voiceOk, setVoiceOk] = useState({ listen: false, speak: false });
-  useEffect(() => setVoiceOk({ listen: canListen(), speak: canSpeak() }), []);
+  useEffect(() => { setVoiceOk({ listen: canListen(), speak: canSpeak() }); }, []);
   useEffect(() => () => { stopRef.current?.(); stopSpeaking(); }, []);
 
   function pickLang(code: string) {
@@ -133,7 +133,7 @@ export function AgentChat({
       setConvId(conv.data.id);
     }
   }, [conv.data]);
-  useEffect(() => bottom.current?.scrollIntoView({ behavior: "smooth" }), [messages.length, busy]);
+  useEffect(() => { bottom.current?.scrollIntoView({ behavior: "smooth" }); }, [messages.length, busy]);
 
   async function send(q: string) {
     const message = q.trim();

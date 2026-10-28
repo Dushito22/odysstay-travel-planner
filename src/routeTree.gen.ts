@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as ArgosRouteImport } from './routes/argos'
 import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PricingRouteImport } from './routes/pricing'
@@ -35,6 +36,11 @@ const IndexRoute = IndexRouteImport.update({
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ArgosRoute = ArgosRouteImport.update({
+  id: '/argos',
+  path: '/argos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExploreRoute = ExploreRouteImport.update({
@@ -120,6 +126,7 @@ const AuthenticatedDealsIdRoute = AuthenticatedDealsIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/argos': typeof ArgosRoute
   '/explore': typeof ExploreRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
@@ -139,6 +146,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/argos': typeof ArgosRoute
   '/explore': typeof ExploreRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
@@ -160,6 +168,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/argos': typeof ArgosRoute
   '/explore': typeof ExploreRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
@@ -181,6 +190,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/argos'
     | '/explore'
     | '/login'
     | '/pricing'
@@ -200,6 +210,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/argos'
     | '/explore'
     | '/login'
     | '/pricing'
@@ -220,6 +231,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/argos'
     | '/explore'
     | '/login'
     | '/pricing'
@@ -241,6 +253,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  ArgosRoute: typeof ArgosRoute
   ExploreRoute: typeof ExploreRoute
   LoginRoute: typeof LoginRoute
   PricingRoute: typeof PricingRoute
@@ -264,6 +277,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/argos': {
+      id: '/argos'
+      path: '/argos'
+      fullPath: '/argos'
+      preLoaderRoute: typeof ArgosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/explore': {
@@ -411,6 +431,7 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  ArgosRoute: ArgosRoute,
   ExploreRoute: ExploreRoute,
   LoginRoute: LoginRoute,
   PricingRoute: PricingRoute,
