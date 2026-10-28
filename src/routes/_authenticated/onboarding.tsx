@@ -58,7 +58,7 @@ function Onboarding() {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-2xl flex-col px-5 py-8">
-      <Wordmark className="text-xl" />
+      <Wordmark size="md" className="self-start" />
       <div className="mt-10 flex gap-2" aria-label={`Step ${step + 1} of 5`}>
         {TITLES.map((t, i) => (
           <span key={t} className={cn("h-1.5 rounded-full transition-all", i === step ? "w-8 bg-sea" : i < step ? "w-1.5 bg-sea" : "w-1.5 bg-border")} />

@@ -65,7 +65,7 @@ function Login() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-5">
-      <Link to="/" className="mb-8"><Wordmark /></Link>
+      <Link to="/" className="mb-8"><Wordmark size="lg" /></Link>
       <div className="w-full max-w-sm rounded-3xl border bg-card p-8 shadow-hover">
         {sent ? (
           <div className="text-center">

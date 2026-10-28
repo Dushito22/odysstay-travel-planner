@@ -113,7 +113,7 @@ function ArgosPage() {
       <aside className="flex flex-col border-b bg-card lg:h-[100svh] lg:border-b-0 lg:border-r">
         <header className="flex items-center justify-between px-5 py-4">
           <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" /> <Wordmark className="text-foreground" />
+            <ArrowLeft className="h-4 w-4" /> <Wordmark size="sm" />
           </Link>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1 text-xs uppercase tracking-wide text-muted-foreground">

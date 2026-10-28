@@ -250,7 +250,7 @@ function Hero() {
     <section className="relative flex min-h-[100svh] flex-col overflow-hidden bg-foreground text-white">
       <HeroVideo />
       <header className="relative z-10 mx-auto flex w-full max-w-[1440px] items-center justify-between px-5 py-5 md:px-14">
-        <Wordmark className="text-white" />
+        <Link to="/" aria-label="Odysstay home"><Wordmark size="lg" tone="dark" /></Link>
         <nav className="flex items-center gap-6">
           <a href="#how" className="hidden text-[15px] text-white/85 hover:text-white md:block">{c.nav.how}</a>
           <Link to="/explore" className="hidden text-[15px] text-white/85 hover:text-white md:block">{c.nav.browse}</Link>
@@ -553,7 +553,7 @@ function Footer() {
     <footer className="bg-[oklch(0.17_0.006_60)] text-white/85">
       <Wrap className="grid gap-12 py-16 md:grid-cols-[1.3fr_1fr_1fr]">
         <div>
-          <Wordmark className="text-[32px] text-white" />
+          <Wordmark size="lg" tone="dark" />
           <p className="mt-5 max-w-sm text-lg font-light leading-relaxed text-white/80">{c.footerTag}</p>
           <div className="mt-6"><PillLink to="/login" light>{c.getStarted}</PillLink></div>
         </div>
