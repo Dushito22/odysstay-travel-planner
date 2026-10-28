@@ -84,6 +84,27 @@ def parse(url: str, name: str, html: str) -> dict | None:
     }
 
 
+EN_LINK = re.compile(r'href="(https://1eurohouses\.com/[a-z-]+/[a-z0-9-]+/)"')
+
+
+def english_intro(html: str) -> str | None:
+    """The English sister site's introduction to the town (1eurohouses.com, same owner, same robots rules)."""
+    t = text_of(html)
+    k = t.find(" Regione ")
+    if k < 0:
+        return None
+    seg = t[max(0, k - 1000):k]
+    start = seg.find(". ")
+    seg = seg[start + 2:] if 0 <= start < 400 else seg
+    if "Click to access the latest news about" in seg:
+        seg = seg.rsplit("Click to access the latest news about", 1)[1]
+        seg = re.sub(r"^\s*[A-ZÀ-Ý][\w'’ ]{0,40}?\s+(?=(?:We|The|It|This|In|A|An|Located|Situated)\b)", "", seg)
+    seg = re.sub(r"Credits [^–-]*[–-]\s*https?://\S+", " ", seg)
+    seg = re.sub(r"https?://\S+", " ", seg)
+    seg = re.sub(r"\s+", " ", seg).strip()
+    return seg if len(seg) >= 80 else None
+
+
 def collect(db: Supa, log=print) -> dict:
     c = httpx.Client(headers=HEADERS, timeout=40, follow_redirects=True)
     home = c.get(BASE + "/").text
@@ -98,7 +119,16 @@ def collect(db: Supa, log=print) -> dict:
     for url, name in towns:
         time.sleep(1.0)
         try:
-            rec = parse(url, name, c.get(url).text)
+            html = c.get(url).text
+            rec = parse(url, name, html)
+            en = EN_LINK.search(html)
+            if rec and en:
+                time.sleep(1.0)
+                intro = english_intro(c.get(en.group(1)).text)
+                if intro:
+                    rec["listing"]["summary_en"] = f"{intro} {rec['listing']['summary_en']}"
+                    rec["facts"].append({"key": "about_town", "label_en": "About the town", "value_text": intro[:400], "value_num": None,
+                                         "quote": intro[:1000], "quote_en": None, "verified": True})
         except Exception as e:  # noqa: BLE001
             log(f"  {name}: error {e}")
             rec = None
