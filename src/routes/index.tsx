@@ -27,7 +27,7 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: TITLE },
       { property: "og:description", content: DESC },
       { property: "og:type", content: "website" },
-      { property: "og:image", content: "/video/hero-poster.jpg" },
+      { property: "og:image", content: "/video/atrani-poster.jpg" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
@@ -148,7 +148,7 @@ const COPY = {
   },
   ru: {
     nav: { how: "Как это работает", browse: "Все дома", pricing: "Цены", signIn: "Войти" },
-    eyebrow: "sprezzatura: вся сложность на нас.",
+    eyebrow: "sprezzatura: искусство жить.",
     hero: "Расскажите, о каком доме мечтаете.",
     placeholder: "Каменный дом в Апулии до €40 000, чтобы бар рядом, ремонт не страшен…",
     helpTitle: "Говорите со мной как с другом.",
@@ -346,13 +346,13 @@ function HeroVideo() {
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
     if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setSrc(window.innerWidth < 900 ? "/video/hero-720.mp4" : "/video/hero-1080.mp4");
+      setSrc(window.innerWidth < 900 ? "/video/atrani-720.mp4" : "/video/atrani-1080.mp4");
     }
   }, []);
   const look = "absolute inset-0 h-full w-full object-cover [filter:brightness(1.16)_contrast(1.02)_saturate(0.92)]";
   return (
     <>
-      <img src="/video/hero-poster.jpg" alt="" aria-hidden className={look} />
+      <img src="/video/atrani-poster.jpg" alt="" aria-hidden className={look} />
       {src && <video src={src} autoPlay muted loop playsInline preload="auto" aria-hidden className={look} />}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,oklch(0.18_0.02_250/0.34),oklch(0.15_0.02_250/0.1)_72%)]" />
       <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/30 to-transparent" />
@@ -370,7 +370,9 @@ function Hero() {
     <section className="relative flex min-h-[100svh] flex-col overflow-hidden bg-foreground text-white">
       <HeroVideo />
       <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col items-center justify-center px-5 pb-16 pt-24 text-center">
-        <p className="font-display text-[24px] italic leading-none text-[oklch(0.84_0.085_236)] md:text-[30px]">{c.eyebrow}</p>
+        <p className="font-display text-[24px] italic leading-none text-white/90 md:text-[30px]">
+          <span className="text-[oklch(0.84_0.085_236)]">{c.eyebrow.split(/[,:]/)[0]}</span>{c.eyebrow.slice(c.eyebrow.split(/[,:]/)[0]!.length)}
+        </p>
         <h1 className="mt-6 type-h1 text-[38px] md:mt-7 md:text-[52px]">{c.hero}</h1>
         <div className="mt-9 flex w-full max-w-[640px] items-center gap-2.5">
           <span aria-hidden className="hidden w-7 shrink-0 sm:block" />
@@ -421,7 +423,7 @@ function HelpDot() {
       >
         <div className="grain-overlay opacity-[0.35]" />
         <div className="relative">
-          <p className="font-display text-[22px] italic leading-tight text-[oklch(0.84_0.085_236)]">{c.helpTitle}</p>
+          <p className="font-display text-[22px] italic leading-tight">{c.helpTitle}</p>
           <p className="mt-2 text-[14px] font-light leading-relaxed text-white/85">{c.help}</p>
           <p className="mt-4 text-[11px] uppercase tracking-[0.12em] text-white/50">{c.howTalk}</p>
           <ul className="mt-2 space-y-1.5 text-[13px] font-light leading-relaxed text-white/80">
@@ -455,7 +457,7 @@ function MeetArgos() {
         <div>
           <Label>{c.argosLabel}</Label>
           <H2 className="mt-5">{c.argosTitle}</H2>
-          <p className="mt-7 max-w-[600px] font-display text-[22px] italic leading-snug text-azure md:text-[24px]">{c.argosStory}</p>
+          <p className="mt-7 max-w-[600px] font-display text-[22px] italic leading-snug text-foreground/80 md:text-[24px]">{c.argosStory}</p>
           <p className="mt-5 max-w-[600px] type-body text-foreground/62">{c.argosNow}</p>
           <ul className="mt-9 grid max-w-[600px] gap-x-8 gap-y-3 sm:grid-cols-2">
             {c.argosFacts.map((f) => (
@@ -618,7 +620,7 @@ function HowItWorks() {
                 {i === 1 && (
                   <div className="rounded-[8px] border border-foreground/10 bg-white p-4 text-left text-[13px] shadow-[0_1px_2px_oklch(0_0_0/0.04)]">
                     <p className="text-[11px] uppercase tracking-[0.12em] text-foreground/50">{c.mockMailTo}</p>
-                    <p className="mt-2 font-light italic text-azure/80" lang="it">{c.mockMail}</p>
+                    <p className="mt-2 font-light italic text-foreground/70" lang="it">{c.mockMail}</p>
                     <p className="mt-3 flex items-center gap-1.5"><span className="flex h-4 w-4 items-center justify-center rounded-full bg-foreground text-background"><Check className="h-2.5 w-2.5" /></span> {c.steps[1]!.chip}</p>
                   </div>
                 )}
@@ -656,7 +658,7 @@ function Sprezzatura() {
           </div>
           <p className="mt-7 type-lead">{s.def}</p>
           <p className="mt-4 type-body text-foreground/62">{s.note}</p>
-          <p className="mt-8 text-right font-display text-[20px] italic text-azure">{s.sign}</p>
+          <p className="mt-8 text-right font-display text-[20px] italic text-foreground/60">{s.sign}</p>
         </div>
         </div>
       </Wrap>
@@ -696,24 +698,24 @@ function Proof() {
   return (
     <section className={cn("relative overflow-hidden", SECTION)}>
       <img src="/img/cypress-wide.webp" alt="" aria-hidden loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
-      <div className="absolute inset-0 bg-gradient-to-r from-white/80 via-white/45 to-white/0 md:via-white/30" />
-      <div className="grain-overlay opacity-[0.14]" />
-      <Wrap className="relative grid items-center gap-14 md:grid-cols-2">
-        <div>
-          <Label className="text-foreground/60">{c.proofEyebrow}</Label>
-          <H2 className="mt-5">{c.proofTitle}</H2>
-          <p className="mt-6 max-w-md type-body text-foreground/70">{c.proofBody}</p>
+      <div className="absolute inset-0 bg-gradient-to-t from-[oklch(0.22_0.03_250/0.72)] via-[oklch(0.25_0.03_250/0.45)] to-[oklch(0.25_0.03_250/0.2)]" />
+      <div className="grain-overlay opacity-[0.3]" />
+      <Wrap className="relative grid items-center gap-14 text-white md:grid-cols-2">
+        <div className="[&_em]:text-[oklch(0.84_0.085_236)]">
+          <Label className="text-white/70">{c.proofEyebrow}</Label>
+          <H2 className="mt-5 [text-shadow:0_1px_18px_oklch(0.2_0.03_250/0.45)]">{c.proofTitle}</H2>
+          <p className="mt-6 max-w-md type-body text-white/85 [text-shadow:0_1px_12px_oklch(0.2_0.03_250/0.5)]">{c.proofBody}</p>
         </div>
-        <div className="relative overflow-hidden rounded-[10px] border border-white/70 bg-white/55 p-7 shadow-[0_24px_60px_-30px_oklch(0.2_0.02_160/0.45)] backdrop-blur-xl md:p-8">
-          <p className="type-label text-[11px] text-foreground/55">{f ? `${f.comune ?? ""} · ${f.label_en}` : c.exampleLabel}</p>
-          <div className="mt-4 font-display text-[36px] leading-tight">
+        <div className="relative overflow-hidden rounded-[10px] border border-white/25 bg-[oklch(0.22_0.03_250/0.35)] p-7 shadow-[0_24px_60px_-30px_oklch(0_0_0/0.6)] backdrop-blur-xl md:p-8">
+          <p className="type-label text-[11px] text-white/60">{f ? `${f.comune ?? ""} · ${f.label_en}` : c.exampleLabel}</p>
+          <div className="mt-4 font-display text-[36px] leading-tight [&_button]:border-white/30 [&_button]:text-white [&_button:hover]:bg-white/10">
             {f ? <SourceQuote quote={f.quote} quoteEn={f.quote_en} page={f.page} sourceUrl={f.source_url}>{f.value_text ?? f.value_num}</SourceQuote> : "17 July 2026, 12:00"}
           </div>
-          <div className="mt-6 h-px bg-foreground/12" />
-          <blockquote lang="it" className="mt-6 border-l border-azure pl-4 text-[15px] font-light leading-relaxed text-foreground/85">
+          <div className="mt-6 h-px bg-white/20" />
+          <blockquote lang="it" className="mt-6 border-l border-[oklch(0.84_0.085_236)] pl-4 text-[15px] font-light leading-relaxed text-white/90">
             “{f ? f.quote : "Le offerte dovranno pervenire entro e non oltre le ore 12:00 del 17 luglio 2026."}”
           </blockquote>
-          <p className="mt-2 pl-4 text-[15px] font-light text-foreground/60">{f ? f.quote_en : "Offers must arrive no later than 12:00 on 17 July 2026."}</p>
+          <p className="mt-2 pl-4 text-[15px] font-light text-white/65">{f ? f.quote_en : "Offers must arrive no later than 12:00 on 17 July 2026."}</p>
         </div>
       </Wrap>
     </section>
