@@ -11,7 +11,7 @@ import { setLang, useLang, type Lang } from "@/lib/i18n";
 import { exampleFactQuery, sendMagicLink, sourceCountsQuery, topListingsQuery } from "@/lib/public";
 import { cn } from "@/lib/utils";
 
-const TITLE = "Odysstay | Tell me about your dream house";
+const TITLE = "Odysstay | Describe your dream house";
 const DESC =
   "Italy sells houses below the court's valuation and nobody tells you where. Argos finds them, reads the Italian and makes the calls. Sprezzatura, on your behalf.";
 
@@ -42,7 +42,7 @@ const COPY = {
   en: {
     nav: { how: "How it works", browse: "Browse", pricing: "Pricing", signIn: "Sign in" },
     eyebrow: "sprezzatura, on your behalf.",
-    hero: "Tell me about your dream house.",
+    hero: "Describe your dream house.",
     placeholder: "A stone house in Puglia under €40k, near a bar, some work is fine…",
     help: "Just talk, like you would to a friend: where, how much, sea or hills, how much work you'll take on. I'll find it and do the Italian.",
     howTalk: "Talk to me like this:",
@@ -52,6 +52,17 @@ const COPY = {
     browseAll: "Rather browse? See every listing",
     powered: "Argos, your AI agent in Italy · powered by Claude and GPT",
     statement: [<>Italy sells houses <Em>below the court's valuation</Em>.</>, " Nobody tells you where."],
+    placesTitle: <>Where the houses are, <Em>if you know where to look</Em>.</>,
+    placesLink: "Ask Argos",
+    places: [
+      { img: "puglia", n: "01", title: "Puglia", body: "Trulli and masserie, many sold by the court below their valuation.", q: "A trullo or masseria in Puglia" },
+      { img: "ostuni", n: "02", title: "The white towns", body: "Whitewashed lanes in Puglia's hill towns. Small houses, small prices.", q: "A small house in a white town in Puglia" },
+      { img: "matera", n: "03", title: "Basilicata", body: "Stone houses around Matera, and quiet villages nobody has found yet.", q: "A stone house in Basilicata" },
+      { img: "tuscany", n: "04", title: "Tuscany", body: "Farmhouses at the end of cypress roads. Fewer bargains, better stories.", q: "A farmhouse in Tuscany" },
+    ],
+    notListedTitle: "Somewhere else?",
+    notListedBody: "Argos reads every region, from the Alps to Lampedusa. Tell him where you'd like to wake up.",
+    notListedCta: "Talk to Argos",
     statementBody: "Courts, notaries and town halls sell thousands of homes a year through notices nobody markets, in Italian, on websites from another century. We read every one of them, every day.",
     numbers: ["court sales open now", "notary and public-body sales", "towns selling houses for €1", "private auctions, added daily"],
     howEyebrow: "How it works",
@@ -77,10 +88,10 @@ const COPY = {
     exampleLabel: "Example · Offer deadline",
     voicesTitle: <>They <Em>barely tried</Em>.</>,
     voices: [
-      { quote: "I said 'something in Puglia, under forty, walk to a bar'. Nine days later I was standing in it.", name: "Hannah & Tom", where: "Bristol → Ceglie Messapica" },
-      { quote: "I don't speak a word of Italian. Argos called the notary, I drank coffee.", name: "Olga S.", where: "Moscow → Sciacca" },
-      { quote: "The court papers were 84 pages. Argos told me the three lines that mattered.", name: "Marco & Lena", where: "Munich → Spoleto" },
-      { quote: "Bought a house for 19 thousand. My friends think I searched for ages.", name: "Dmitri K.", where: "St Petersburg → Agrigento" },
+      { img: "masseria", quote: "I said 'something in Puglia, under forty, walk to a bar'. Nine days later I was standing in it.", name: "Hannah & Tom", where: "Bristol → Ceglie Messapica" },
+      { img: "cefalu", quote: "I don't speak a word of Italian. Argos called the notary, I drank coffee.", name: "Olga S.", where: "Moscow → Sciacca" },
+      { img: "civita", quote: "The court papers were 84 pages. Argos told me the three lines that mattered.", name: "Marco & Lena", where: "Munich → Spoleto" },
+      { img: "trulli", quote: "Bought a house for 19 thousand. My friends think I searched for ages.", name: "Dmitri K.", where: "St Petersburg → Agrigento" },
     ],
     faqTitle: <>Fair <Em>questions</Em>.</>,
     faq: [
@@ -99,12 +110,13 @@ const COPY = {
     sent: "Check your inbox for the sign-in link.",
     footerTag: "Your agent for buying a house in Italy. Found, read, handled.",
     footerCols: { explore: "Explore", company: "Company" },
+    credits: "Photo credits",
     legal: "Odysstay is a technology service, not an estate agency, law firm or notary. Always confirm with a qualified professional before committing.",
   },
   ru: {
     nav: { how: "Как это работает", browse: "Каталог", pricing: "Цены", signIn: "Войти" },
     eyebrow: "sprezzatura, от вашего имени.",
-    hero: "Расскажите о доме своей мечты.",
+    hero: "Опишите дом своей мечты.",
     placeholder: "Каменный дом в Апулии до 40 тысяч, рядом бар, можно с ремонтом…",
     help: "Говорите как с другом: где, сколько, море или холмы, готовы ли к ремонту. Я найду и возьму итальянский на себя.",
     howTalk: "Говорите со мной так:",
@@ -114,6 +126,17 @@ const COPY = {
     browseAll: "Хотите просто посмотреть? Все объявления",
     powered: "Argos, ваш ИИ-агент в Италии · на Claude и GPT",
     statement: [<>Италия продаёт дома <Em>ниже судебной оценки</Em>.</>, " Только никто не говорит где."],
+    placesTitle: <>Где эти дома, <Em>если знать, где искать</Em>.</>,
+    placesLink: "Спросить Argos",
+    places: [
+      { img: "puglia", n: "01", title: "Апулия", body: "Трулли и массерии, многие продаёт суд ниже оценки.", q: "Трулло или массерия в Апулии" },
+      { img: "ostuni", n: "02", title: "Белые города", body: "Выбеленные улочки горных городков Апулии. Маленькие дома, маленькие цены.", q: "Небольшой дом в белом городе Апулии" },
+      { img: "matera", n: "03", title: "Базиликата", body: "Каменные дома вокруг Матеры и тихие деревни, которые ещё никто не нашёл.", q: "Каменный дом в Базиликате" },
+      { img: "tuscany", n: "04", title: "Тоскана", body: "Фермерские дома в конце кипарисовых аллей. Меньше скидок, больше историй.", q: "Фермерский дом в Тоскане" },
+    ],
+    notListedTitle: "Где-то ещё?",
+    notListedBody: "Argos читает все регионы, от Альп до Лампедузы. Скажите ему, где хотите просыпаться.",
+    notListedCta: "Поговорить с Argos",
     statementBody: "Суды, нотариусы и муниципалитеты продают тысячи домов в год через объявления, которые никто не рекламирует: на итальянском, на сайтах из прошлого века. Мы читаем каждое, каждый день.",
     numbers: ["судебных продаж сейчас", "нотариальных и государственных продаж", "городов продают дома за €1", "частные аукционы, каждый день"],
     howEyebrow: "Как это работает",
@@ -139,10 +162,10 @@ const COPY = {
     exampleLabel: "Пример · Срок подачи",
     voicesTitle: <>Они <Em>почти не старались</Em>.</>,
     voices: [
-      { quote: "Я сказала: «Апулия, до сорока, пешком до бара». Через девять дней я стояла внутри.", name: "Ханна и Том", where: "Бристоль → Челье-Мессапика" },
-      { quote: "Я не говорю по-итальянски ни слова. Argos звонил нотариусу, я пила кофе.", name: "Ольга С.", where: "Москва → Шакка" },
-      { quote: "Судебные документы были на 84 страницы. Argos показал три строки, которые имели значение.", name: "Марко и Лена", where: "Мюнхен → Сполето" },
-      { quote: "Купил дом за 19 тысяч. Друзья думают, что я долго искал.", name: "Дмитрий К.", where: "Санкт-Петербург → Агридженто" },
+      { img: "masseria", quote: "Я сказала: «Апулия, до сорока, пешком до бара». Через девять дней я стояла внутри.", name: "Ханна и Том", where: "Бристоль → Челье-Мессапика" },
+      { img: "cefalu", quote: "Я не говорю по-итальянски ни слова. Argos звонил нотариусу, я пила кофе.", name: "Ольга С.", where: "Москва → Шакка" },
+      { img: "civita", quote: "Судебные документы были на 84 страницы. Argos показал три строки, которые имели значение.", name: "Марко и Лена", where: "Мюнхен → Сполето" },
+      { img: "trulli", quote: "Купил дом за 19 тысяч. Друзья думают, что я долго искал.", name: "Дмитрий К.", where: "Санкт-Петербург → Агридженто" },
     ],
     faqTitle: <>Честные <Em>вопросы</Em>.</>,
     faq: [
@@ -161,6 +184,7 @@ const COPY = {
     sent: "Проверьте почту: там ссылка для входа.",
     footerTag: "Ваш агент для покупки дома в Италии. Найдено, прочитано, сделано.",
     footerCols: { explore: "Сервис", company: "Компания" },
+    credits: "Авторы фото",
     legal: "Odysstay — технологический сервис, а не агентство недвижимости, юристы или нотариус. Перед решением всегда консультируйтесь со специалистом.",
   },
 } as const;
@@ -178,8 +202,10 @@ function Index() {
   }, [lang]);
   return (
     <div className="min-h-screen bg-background">
+      <SiteHeader />
       <Hero />
       <Statement />
+      <Places />
       <HowItWorks />
       <Sprezzatura />
       <Houses />
@@ -195,12 +221,13 @@ function Index() {
 export function LangToggle({ light = false }: { light?: boolean }) {
   const lang = useLang();
   return (
-    <div className={cn("flex items-center gap-1 text-sm", light ? "text-white/70" : "text-muted-foreground")}>
+    <div className="flex items-center gap-1.5 text-[13px]">
       {(["en", "ru"] as const).map((l, i) => (
-        <span key={l} className="flex items-center gap-1">
-          {i > 0 && <span aria-hidden>·</span>}
+        <span key={l} className="flex items-center gap-1.5">
+          {i > 0 && <span aria-hidden className={light ? "text-white/45" : "text-foreground/45"}>·</span>}
           <button type="button" onClick={() => setLang(l)} aria-pressed={lang === l}
-            className={cn("uppercase tracking-wide transition-colors", lang === l ? (light ? "text-white" : "text-foreground") : "hover:opacity-80")}>
+            className={cn("uppercase transition-colors",
+              lang === l ? (light ? "text-white" : "text-foreground") : light ? "font-light text-white/45 hover:text-white/80" : "font-light text-foreground/45 hover:text-foreground/80")}>
             {l}
           </button>
         </span>
@@ -209,16 +236,59 @@ export function LangToggle({ light = false }: { light?: boolean }) {
   );
 }
 
-function PillLink({ to, children, light = false }: { to: string; children: ReactNode; light?: boolean }) {
+/** Balance's button: a pill with the label and an arrow in a small circle. */
+function PillLink({ to, children, light = false, search }: { to: string; children: ReactNode; light?: boolean; search?: Record<string, unknown> }) {
   return (
-    <Link to={to}
-      className={cn("inline-flex h-9 items-center gap-2 rounded-full pl-4 pr-1 text-[15px] transition-colors",
-        light ? "bg-white text-foreground hover:bg-white/90" : "bg-foreground text-background hover:bg-foreground/90")}>
+    <Link to={to} search={search as never}
+      className={cn("group inline-flex h-10 items-center gap-2.5 rounded-full pl-[18px] pr-1 text-[15px] font-light transition-colors",
+        light ? "bg-white/90 text-foreground hover:bg-white" : "bg-foreground text-background hover:bg-foreground/90")}>
       {children}
-      <span className={cn("flex h-7 w-7 items-center justify-center rounded-full border", light ? "border-foreground/20" : "border-white/30")}>
+      <span className={cn("flex h-8 w-8 items-center justify-center rounded-full border transition-transform group-hover:translate-x-0.5",
+        light ? "border-foreground/25" : "border-white/30")}>
         <ArrowRight className="h-3.5 w-3.5" />
       </span>
     </Link>
+  );
+}
+
+/** Underlined text link with an arrow, as Balance's "Explore services". */
+function ArrowLink({ to, children, search, light = false }: { to: string; children: ReactNode; search?: Record<string, unknown>; light?: boolean }) {
+  return (
+    <Link to={to} search={search as never}
+      className={cn("group inline-flex items-center gap-2 border-b pb-1 text-[17px] font-light transition-colors",
+        light ? "border-white/30 hover:border-white" : "border-foreground/25 hover:border-foreground")}>
+      {children} <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+    </Link>
+  );
+}
+
+/** Fixed header: transparent over the video, frosted white once you scroll into the page. */
+function SiteHeader() {
+  const [c] = useCopy();
+  const [solid, setSolid] = useState(false);
+  useEffect(() => {
+    const on = () => setSolid(window.scrollY > window.innerHeight - 90);
+    on();
+    window.addEventListener("scroll", on, { passive: true });
+    return () => window.removeEventListener("scroll", on);
+  }, []);
+  const link = cn("hidden text-[15px] font-light transition-colors md:block", solid ? "text-foreground/75 hover:text-foreground" : "text-white/85 hover:text-white");
+  return (
+    <header className={cn("fixed inset-x-0 top-0 z-40 transition-[background-color,border-color] duration-300",
+      solid ? "border-b border-foreground/10 bg-white/70 backdrop-blur-[28px]" : "border-b border-transparent")}>
+      <div className="mx-auto grid h-16 w-full max-w-[1440px] grid-cols-[1fr_auto_1fr] items-center px-5 md:px-14">
+        <Link to="/" aria-label="Odysstay home" className="justify-self-start"><Wordmark size="md" tone={solid ? "light" : "dark"} /></Link>
+        <nav className="flex items-center gap-8">
+          <a href="#how" className={link}>{c.nav.how}</a>
+          <Link to="/explore" className={link}>{c.nav.browse}</Link>
+          <Link to="/pricing" className={link}>{c.nav.pricing}</Link>
+        </nav>
+        <div className="flex items-center gap-5 justify-self-end">
+          <LangToggle light={!solid} />
+          <PillLink to="/login" light={!solid}>{c.nav.signIn}</PillLink>
+        </div>
+      </div>
+    </header>
   );
 }
 
@@ -229,14 +299,15 @@ function HeroVideo() {
       setSrc(window.innerWidth < 900 ? "/video/hero-720.mp4" : "/video/hero-1080.mp4");
     }
   }, []);
-  const look = "absolute inset-0 h-full w-full object-cover [filter:brightness(1.18)_contrast(1.04)_saturate(1.08)]";
+  const look = "absolute inset-0 h-full w-full object-cover [filter:brightness(1.16)_contrast(1.02)_saturate(0.92)]";
   return (
     <>
       <img src="/video/hero-poster.jpg" alt="" aria-hidden className={look} />
       {src && <video src={src} autoPlay muted loop playsInline preload="auto" aria-hidden className={look} />}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,oklch(0.2_0.02_245/0.28),oklch(0.15_0.02_245/0.12)_70%)]" />
-      <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/30 to-transparent" />
-      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/35 to-transparent" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,oklch(0.18_0.02_250/0.34),oklch(0.15_0.02_250/0.1)_72%)]" />
+      <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/30 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/30 to-transparent" />
+      <div className="grain-overlay opacity-[0.3]" />
     </>
   );
 }
@@ -249,49 +320,38 @@ function Hero() {
   return (
     <section className="relative flex min-h-[100svh] flex-col overflow-hidden bg-foreground text-white">
       <HeroVideo />
-      <header className="relative z-10 mx-auto flex w-full max-w-[1440px] items-center justify-between px-5 py-5 md:px-14">
-        <Link to="/" aria-label="Odysstay home"><Wordmark size="lg" tone="dark" /></Link>
-        <nav className="flex items-center gap-6">
-          <a href="#how" className="hidden text-[15px] text-white/85 hover:text-white md:block">{c.nav.how}</a>
-          <Link to="/explore" className="hidden text-[15px] text-white/85 hover:text-white md:block">{c.nav.browse}</Link>
-          <Link to="/pricing" className="hidden text-[15px] text-white/85 hover:text-white md:block">{c.nav.pricing}</Link>
-          <LangToggle light />
-          <PillLink to="/login" light>{c.nav.signIn}</PillLink>
-        </nav>
-      </header>
-
-      <div className="relative z-10 mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center px-5 pb-20 text-center">
-        <p className="font-display text-2xl font-[200] italic text-white/90 md:text-[32px]">{c.eyebrow}</p>
-        <h1 className="mt-2 text-[40px] font-[200] leading-[1.02] md:text-[60px]">{c.hero}</h1>
-        <div className="mt-8 w-full max-w-[620px]">
+      <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col items-center justify-center px-5 pb-16 pt-24 text-center">
+        <p className="font-display text-[24px] italic leading-none text-white/90 md:text-[30px]">{c.eyebrow}</p>
+        <h1 className="mt-6 type-h1 md:mt-7 md:text-[64px]">{c.hero}</h1>
+        <div className="mt-9 w-full max-w-[580px]">
           <ArgosComposer onSubmit={go} placeholder={c.placeholder} lang={lang === "ru" ? "ru-RU" : "en-GB"} />
         </div>
-        <div className="mt-3 flex max-w-[560px] items-start justify-center gap-2 text-[13px] leading-relaxed text-white/80">
+        <div className="mt-3 flex max-w-[540px] items-start justify-center gap-2 text-[13px] font-light leading-relaxed text-white/80">
           <p>{c.help}</p>
           <button type="button" onClick={() => setHint(!hint)} aria-label="How to talk to Argos" className="mt-0.5 shrink-0 text-white/70 hover:text-white">
             <Info className="h-3.5 w-3.5" />
           </button>
         </div>
         {hint && (
-          <div className="frost mt-3 w-full max-w-[560px] rounded-2xl p-4 text-left text-[13px] leading-relaxed text-white/90">
+          <div className="frost mt-3 w-full max-w-[540px] rounded-2xl p-4 text-left text-[13px] leading-relaxed text-white/90">
             <p className="text-white">{c.howTalk}</p>
-            <ul className="mt-1.5 space-y-1 text-white/80">{c.examples.map((e) => <li key={e}>“{e}”</li>)}</ul>
-            <p className="mt-2 text-white/70">{c.howTalkEnd}</p>
+            <ul className="mt-1.5 space-y-1 font-light text-white/80">{c.examples.map((e) => <li key={e}>“{e}”</li>)}</ul>
+            <p className="mt-2 font-light text-white/70">{c.howTalkEnd}</p>
           </div>
         )}
-        <div className="mt-5 flex flex-wrap justify-center gap-1.5">
+        <div className="mt-6 flex max-w-[620px] flex-wrap justify-center gap-1.5">
           {c.chips.map((chip) => (
             <button key={chip} type="button" onClick={() => go(chip)}
-              className="frost h-8 rounded-full px-3.5 text-[13px] text-white/90 transition-colors hover:bg-white/20">
+              className="h-8 rounded-full border border-white/25 bg-white/10 px-3.5 text-[13px] font-light text-white/90 backdrop-blur-md transition-colors hover:bg-white/20">
               {chip}
             </button>
           ))}
         </div>
-        <Link to="/explore" className="mt-6 inline-flex items-center gap-1.5 text-[13px] text-white/80 underline-offset-4 hover:text-white hover:underline">
+        <Link to="/explore" className="mt-7 inline-flex items-center gap-1.5 text-[13px] font-light text-white/75 underline-offset-4 hover:text-white hover:underline">
           {c.browseAll} <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
-      <p className="relative z-10 pb-5 text-center text-xs text-white/60">{c.powered}</p>
+      <p className="relative z-10 pb-5 text-center text-xs font-light text-white/55">{c.powered}</p>
     </section>
   );
 }
@@ -299,12 +359,26 @@ function Hero() {
 const Wrap = ({ children, className }: { children: ReactNode; className?: string }) => (
   <div className={cn("mx-auto w-full max-w-[1440px] px-5 md:px-14", className)}>{children}</div>
 );
-const Eyebrow = ({ children, className }: { children: ReactNode; className?: string }) => (
-  <p className={cn("text-xs uppercase tracking-[0.18em] text-muted-foreground", className)}>{children}</p>
+const Label = ({ children, className }: { children: ReactNode; className?: string }) => (
+  <p className={cn("type-label text-foreground/60", className)}>{children}</p>
 );
 const H2 = ({ children, className }: { children: ReactNode; className?: string }) => (
-  <h2 className={cn("max-w-4xl text-[34px] font-[200] leading-[1.06] md:text-[52px]", className)}>{children}</h2>
+  <h2 className={cn("max-w-[920px] type-h2", className)}>{children}</h2>
 );
+const Lead = ({ children, className }: { children: ReactNode; className?: string }) => (
+  <p className={cn("max-w-[680px] type-lead text-foreground/65", className)}>{children}</p>
+);
+/** Section rhythm from Balance: 128px top and bottom on desktop. */
+const SECTION = "py-20 md:py-32";
+
+/** A grainy photograph, the Balance way: black and white, soft, film grain baked in. */
+function Photo({ name, alt, className }: { name: string; alt: string; className?: string }) {
+  return (
+    <div className={cn("relative overflow-hidden rounded-[10px] bg-muted", className)}>
+      <img src={`/img/${name}.webp`} alt={alt} loading="lazy" decoding="async" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.025]" />
+    </div>
+  );
+}
 
 function Statement() {
   const [c] = useCopy();
@@ -312,15 +386,15 @@ function Statement() {
   const fmt = (v: number | undefined, f: string) => (v ? v.toLocaleString("en-GB") : f);
   const nums = [fmt(n?.court, "16,000"), fmt(n?.notary, "99"), fmt(n?.oneEuro, "73"), n?.privateSales ? n.privateSales.toLocaleString("en-GB") : "+"];
   return (
-    <section className="py-20 md:py-28">
+    <section className={SECTION}>
       <Wrap>
         <H2>{c.statement[0]}{c.statement[1]}</H2>
-        <p className="mt-6 max-w-2xl text-lg font-light leading-relaxed text-muted-foreground">{c.statementBody}</p>
-        <dl className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Lead className="mt-7">{c.statementBody}</Lead>
+        <dl className="mt-12 grid grid-cols-2 gap-3 md:mt-14 lg:grid-cols-4 lg:gap-6">
           {nums.map((v, i) => (
-            <div key={i} className="rounded-xl border bg-card p-6">
-              <dt className="font-display text-[44px] font-[200] leading-none tnum">{v}</dt>
-              <dd className="mt-3 text-sm text-muted-foreground">{c.numbers[i]}</dd>
+            <div key={i} className="grain flex min-h-[132px] flex-col justify-between rounded-[10px] border border-foreground/[0.07] bg-muted p-5 md:min-h-[176px] md:p-7">
+              <dt className="font-display text-[38px] leading-none tracking-[-0.02em] tnum md:text-[52px]">{v}</dt>
+              <dd className="mt-5 text-[13px] font-light text-foreground/62 md:mt-6 md:text-[15px]">{c.numbers[i]}</dd>
             </div>
           ))}
         </dl>
@@ -329,11 +403,47 @@ function Statement() {
   );
 }
 
+function Places() {
+  const [c] = useCopy();
+  return (
+    <section className="pb-20 md:pb-32">
+      <Wrap>
+        <H2>{c.placesTitle}</H2>
+        <div className="mt-12 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+          {c.places.map((p) => (
+            <Link key={p.n} to="/argos" search={{ q: p.q, voice: false }} className="group block">
+              <Photo name={p.img} alt={p.title} className="aspect-[4/5]" />
+              <div className="mt-6 flex items-baseline gap-4">
+                <span className="font-display text-[28px] leading-none text-foreground/45">{p.n}</span>
+                <h3 className="font-sans text-[20px] font-light tracking-normal md:text-[22px]">{p.title}</h3>
+              </div>
+              <p className="mt-4 text-[15px] font-light leading-relaxed text-foreground/62">{p.body}</p>
+              <span className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-light text-foreground/55 transition-colors group-hover:text-azure">
+                {c.placesLink} <ArrowRight className="h-3 w-3" />
+              </span>
+            </Link>
+          ))}
+        </div>
+        <div className="mt-16 flex flex-wrap items-center justify-between gap-6 border-t border-foreground/10 pt-10">
+          <div>
+            <h3 className="type-h3">{c.notListedTitle}</h3>
+            <p className="mt-2 type-body text-foreground/62">{c.notListedBody}</p>
+          </div>
+          <Link to="/argos" search={{ q: "", voice: false }}
+            className="inline-flex h-11 items-center rounded-[10px] bg-foreground px-6 text-[15px] text-background transition-colors hover:bg-foreground/90">
+            {c.notListedCta}
+          </Link>
+        </div>
+      </Wrap>
+    </section>
+  );
+}
+
 function MockFrame({ children, chip }: { children: ReactNode; chip: string }) {
   return (
-    <div className="mt-6 flex min-h-[220px] flex-col items-center justify-between rounded-lg bg-gradient-to-b from-azure-soft to-[oklch(0.97_0.012_80)] p-5">
+    <div className="mt-8 flex min-h-[250px] flex-col items-center justify-between rounded-[8px] bg-gradient-to-b from-[oklch(0.93_0.02_240)] via-[oklch(0.955_0.012_240)] to-[oklch(0.97_0.008_230)] p-5">
       <div className="w-full flex-1 content-center">{children}</div>
-      <span className="mt-4 rounded-full bg-[oklch(0.95_0.02_80)] px-4 py-1.5 text-sm text-muted-foreground">{chip}</span>
+      <span className="mt-5 rounded-full bg-white/70 px-4 py-1.5 text-[13px] font-light text-foreground/70">{chip}</span>
     </div>
   );
 }
@@ -341,38 +451,39 @@ function MockFrame({ children, chip }: { children: ReactNode; chip: string }) {
 function HowItWorks() {
   const [c] = useCopy();
   return (
-    <section id="how" className="scroll-mt-4 bg-muted py-20 md:py-28">
+    <section id="how" className={cn("grain scroll-mt-16 bg-muted", SECTION)}>
       <Wrap>
-        <Eyebrow>{c.howEyebrow}</Eyebrow>
-        <H2 className="mt-4">{c.howTitle}</H2>
-        <p className="mt-5 max-w-xl text-lg font-light leading-relaxed text-muted-foreground">{c.howBody}</p>
-        <div className="mt-12 grid gap-6 lg:grid-cols-3">
+        <Label>{c.howEyebrow}</Label>
+        <H2 className="mt-5">{c.howTitle}</H2>
+        <Lead className="mt-6 max-w-[620px]">{c.howBody}</Lead>
+        <div className="mt-14 grid gap-5 lg:grid-cols-3 lg:gap-6">
           {c.steps.map((s, i) => (
-            <div key={s.title} className="rounded-xl border bg-background p-6">
-              <h3 className="text-[26px] font-normal">{s.title}</h3>
-              <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">{s.body}</p>
+            <div key={s.title} className="rounded-[10px] border border-white/70 bg-white/55 p-6 md:p-7">
+              <h3 className="type-h3">{s.title}</h3>
+              <p className="mt-3 type-body text-foreground/62">{s.body}</p>
               <MockFrame chip={s.chip}>
                 {i === 0 && (
-                  <div className="space-y-2 text-left text-sm">
-                    <p className="ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-md bg-foreground px-3 py-2 text-background">{c.mockYou}</p>
-                    <div className="w-fit max-w-[90%] rounded-2xl rounded-bl-md border bg-background px-3 py-2">
+                  <div className="space-y-2 text-left text-[13px]">
+                    <p className="ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-md bg-foreground px-3 py-2 font-light text-background">{c.mockYou}</p>
+                    <div className="w-fit max-w-[90%] rounded-2xl rounded-bl-md border border-foreground/10 bg-white px-3 py-2 shadow-[0_1px_2px_oklch(0_0_0/0.04)]">
                       <p className="font-display text-[15px] italic text-azure">Argos</p>
-                      <p>{c.mockArgos}</p>
+                      <p className="font-light">{c.mockArgos}</p>
                     </div>
                   </div>
                 )}
                 {i === 1 && (
-                  <div className="rounded-lg border bg-background p-4 text-left text-sm">
-                    <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{c.mockMailTo}</p>
-                    <p className="mt-2 italic text-muted-foreground" lang="it">{c.mockMail}</p>
-                    <p className="mt-3 flex items-center gap-1.5 text-success"><Check className="h-3.5 w-3.5" /> {c.steps[1]!.chip}</p>
+                  <div className="rounded-[8px] border border-foreground/10 bg-white p-4 text-left text-[13px] shadow-[0_1px_2px_oklch(0_0_0/0.04)]">
+                    <p className="text-[11px] uppercase tracking-[0.12em] text-foreground/50">{c.mockMailTo}</p>
+                    <p className="mt-2 font-light italic text-foreground/70" lang="it">{c.mockMail}</p>
+                    <p className="mt-3 flex items-center gap-1.5"><span className="flex h-4 w-4 items-center justify-center rounded-full bg-foreground text-background"><Check className="h-2.5 w-2.5" /></span> {c.steps[1]!.chip}</p>
                   </div>
                 )}
                 {i === 2 && (
-                  <div className="rounded-lg border bg-background p-4 text-left text-sm">
-                    <p className="font-display text-xl">{c.mockDeal[0]}</p>
+                  <div className="rounded-[8px] border border-foreground/10 bg-white p-4 text-left text-[13px] shadow-[0_1px_2px_oklch(0_0_0/0.04)]">
+                    <p className="text-[11px] uppercase tracking-[0.12em] text-foreground/50">Deal room</p>
+                    <p className="mt-1 font-display text-[22px]">{c.mockDeal[0]}</p>
                     {c.mockDeal.slice(1).map((d) => (
-                      <p key={d} className="mt-2 flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-success" /> {d}</p>
+                      <p key={d} className="mt-2 flex items-center gap-1.5"><span className="flex h-4 w-4 items-center justify-center rounded-full bg-foreground text-background"><Check className="h-2.5 w-2.5" /></span> {d}</p>
                     ))}
                   </div>
                 )}
@@ -389,16 +500,17 @@ function Sprezzatura() {
   const [c] = useCopy();
   const s = c.sprezz;
   return (
-    <section className="py-20 md:py-28">
-      <Wrap>
-        <div className="ml-auto max-w-xl border-y py-9 md:mr-[8%]">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-            <p className="font-display text-[44px] font-[200] italic leading-none">{s.word}</p>
-            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{s.pron}</p>
+    <section className={SECTION}>
+      <Wrap className="grid items-center gap-12 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] md:gap-20">
+        <Photo name="alley" alt="A whitewashed lane in Ostuni" className="aspect-[4/5] max-h-[620px]" />
+        <div className="max-w-xl border-y border-foreground/15 py-10">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+            <p className="font-display text-[48px] italic leading-none tracking-[-0.01em]">{s.word}</p>
+            <p className="type-label text-[11px] text-foreground/50">{s.pron}</p>
           </div>
-          <p className="mt-5 text-lg">{s.def}</p>
-          <p className="mt-3 font-light leading-relaxed text-muted-foreground">{s.note}</p>
-          <p className="mt-6 text-right font-display text-lg italic text-muted-foreground">{s.sign}</p>
+          <p className="mt-7 type-lead">{s.def}</p>
+          <p className="mt-4 type-body text-foreground/62">{s.note}</p>
+          <p className="mt-8 text-right font-display text-[20px] italic text-foreground/60">{s.sign}</p>
         </div>
       </Wrap>
     </section>
@@ -410,18 +522,16 @@ function Houses() {
   const q = useQuery(topListingsQuery(6, true));
   if (q.isSuccess && q.data.length === 0) return null;
   return (
-    <section className="pb-20 md:pb-28">
+    <section className="pb-20 md:pb-32">
       <Wrap>
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
             <H2>{c.housesTitle}</H2>
-            <p className="mt-4 max-w-xl text-lg font-light text-muted-foreground">{c.housesBody}</p>
+            <Lead className="mt-6">{c.housesBody}</Lead>
           </div>
-          <Link to="/explore" className="inline-flex items-center gap-2 border-b border-foreground/30 pb-1 text-[15px] hover:border-foreground">
-            {c.seeAll} <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
+          <ArrowLink to="/explore">{c.seeAll}</ArrowLink>
         </div>
-        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {q.isLoading
             ? Array.from({ length: 3 }, (_, i) => <ListingCardSkeleton key={i} />)
             : (q.data ?? []).slice(0, 6).map((r) => <ListingCard key={r.id} row={r} profile={null} />)}
@@ -431,27 +541,29 @@ function Houses() {
   );
 }
 
+/** Dark band, like Balance's "Your data stays yours." */
 function Proof() {
   const [c] = useCopy();
   const top = useQuery(topListingsQuery(3));
   const f = useQuery(exampleFactQuery(top.data?.[0])).data;
   return (
-    <section className="bg-muted py-20 md:py-28">
-      <Wrap className="grid items-center gap-12 md:grid-cols-2">
+    <section className={cn("grain grain-strong bg-[oklch(0.195_0.007_60)] text-[oklch(0.975_0.004_80)]", SECTION)}>
+      <Wrap className="grid items-center gap-14 md:grid-cols-2">
         <div>
-          <Eyebrow>{c.proofEyebrow}</Eyebrow>
-          <H2 className="mt-4">{c.proofTitle}</H2>
-          <p className="mt-5 max-w-md text-lg font-light leading-relaxed text-muted-foreground">{c.proofBody}</p>
+          <Label className="text-white/55">{c.proofEyebrow}</Label>
+          <H2 className="mt-5">{c.proofTitle}</H2>
+          <p className="mt-6 max-w-md type-body text-white/65">{c.proofBody}</p>
         </div>
-        <div className="rounded-xl border bg-background p-7">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{f ? `${f.comune ?? ""} · ${f.label_en}` : c.exampleLabel}</p>
-          <div className="mt-3 font-display text-[34px] font-[200]">
+        <div className="rounded-[10px] border border-white/12 bg-white/[0.04] p-7 md:p-8">
+          <p className="type-label text-[11px] text-white/50">{f ? `${f.comune ?? ""} · ${f.label_en}` : c.exampleLabel}</p>
+          <div className="mt-4 font-display text-[36px] leading-tight">
             {f ? <SourceQuote quote={f.quote} quoteEn={f.quote_en} page={f.page} sourceUrl={f.source_url}>{f.value_text ?? f.value_num}</SourceQuote> : "17 July 2026, 12:00"}
           </div>
-          <blockquote lang="it" className="mt-5 border-l-2 border-azure pl-4 text-sm leading-relaxed">
+          <div className="mt-6 h-px bg-white/12" />
+          <blockquote lang="it" className="mt-6 border-l border-azure pl-4 text-[15px] font-light leading-relaxed text-white/85">
             “{f ? f.quote : "Le offerte dovranno pervenire entro e non oltre le ore 12:00 del 17 luglio 2026."}”
           </blockquote>
-          <p className="mt-2 pl-4 text-sm text-muted-foreground">{f ? f.quote_en : "Offers must arrive no later than 12:00 on 17 July 2026."}</p>
+          <p className="mt-2 pl-4 text-[15px] font-light text-white/55">{f ? f.quote_en : "Offers must arrive no later than 12:00 on 17 July 2026."}</p>
         </div>
       </Wrap>
     </section>
@@ -461,16 +573,20 @@ function Proof() {
 function Voices() {
   const [c] = useCopy();
   return (
-    <section className="py-20 md:py-28">
+    <section className={SECTION}>
       <Wrap>
         <H2>{c.voicesTitle}</H2>
-        <div className="mt-10 grid gap-5 md:grid-cols-2">
+        <div className="mt-12 grid gap-5 lg:grid-cols-2 lg:gap-6">
           {c.voices.map((t) => (
-            <figure key={t.name} className="rounded-xl bg-[oklch(0.975_0.008_80)] p-7">
-              <blockquote className="text-lg font-light leading-relaxed">“{t.quote}”</blockquote>
-              <figcaption className="mt-5 text-sm">
-                <span>{t.name}</span><span className="text-muted-foreground"> · {t.where}</span>
-              </figcaption>
+            <figure key={t.name} className="grain grid gap-6 rounded-[10px] bg-muted p-6 sm:grid-cols-[180px_1fr] md:p-8">
+              <Photo name={t.img} alt="" className="aspect-square w-full max-w-[220px] rounded-[8px]" />
+              <div className="flex flex-col justify-between gap-6">
+                <blockquote className="text-[19px] font-light leading-relaxed">“{t.quote}”</blockquote>
+                <figcaption className="flex items-center gap-2 text-[15px] font-light">
+                  <span aria-hidden className="text-azure">✦</span>
+                  <span>{t.name}</span><span className="text-foreground/50">· {t.where}</span>
+                </figcaption>
+              </div>
             </figure>
           ))}
         </div>
@@ -482,14 +598,14 @@ function Voices() {
 function Faq() {
   const [c] = useCopy();
   return (
-    <section className="border-t py-20 md:py-28">
+    <section className={cn("border-t border-foreground/10", SECTION)}>
       <Wrap className="grid gap-10 md:grid-cols-[1fr_1.5fr]">
         <H2>{c.faqTitle}</H2>
         <Accordion type="single" collapsible>
           {c.faq.map((f) => (
-            <AccordionItem key={f.q} value={f.q}>
-              <AccordionTrigger className="text-left text-lg font-normal hover:no-underline">{f.q}</AccordionTrigger>
-              <AccordionContent className="text-[15px] font-light leading-relaxed text-muted-foreground">{f.a}</AccordionContent>
+            <AccordionItem key={f.q} value={f.q} className="border-foreground/12">
+              <AccordionTrigger className="py-5 text-left font-sans text-[19px] font-light tracking-normal hover:no-underline">{f.q}</AccordionTrigger>
+              <AccordionContent className="pb-6 type-body text-foreground/62">{f.a}</AccordionContent>
             </AccordionItem>
           ))}
         </Accordion>
@@ -516,25 +632,26 @@ function Final() {
     }
   }
   return (
-    <section className="py-20 md:py-28">
-      <Wrap className="grid items-stretch gap-10 md:grid-cols-[1fr_1.2fr]">
-        <div className="flex flex-col justify-center">
+    <section className={cn("bg-muted grain", SECTION)}>
+      <Wrap className="grid items-center gap-12 md:grid-cols-[1fr_1.35fr] md:gap-16">
+        <div>
           <H2>{c.finalTitle}</H2>
-          <p className="mt-5 max-w-md text-lg font-light text-muted-foreground">{c.finalBody}</p>
+          <p className="mt-6 max-w-md type-body text-foreground/62">{c.finalBody}</p>
         </div>
-        <div className="relative overflow-hidden rounded-xl">
-          <img src="/video/hero-poster.jpg" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover [filter:brightness(1.2)_saturate(1.05)]" />
-          <div className="relative m-6 rounded-lg bg-white/80 p-6 backdrop-blur-md md:m-10">
-            <ul className="space-y-2 text-[15px]">
-              {c.finalPoints.map((p) => <li key={p} className="flex items-center gap-2"><Check className="h-4 w-4 text-success" /> {p}</li>)}
+        <div className="relative overflow-hidden rounded-[10px]">
+          <img src="/img/sky.webp" alt="" aria-hidden loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+          <div className="relative m-6 rounded-[10px] border border-white/60 bg-white/55 p-7 backdrop-blur-xl md:m-12 md:p-9">
+            <p className="type-label text-[11px] text-foreground/55">{c.getStarted}</p>
+            <ul className="mt-5 space-y-3 text-[16px] font-light">
+              {c.finalPoints.map((p) => <li key={p} className="flex items-center gap-3"><Check className="h-4 w-4 text-foreground/60" /> {p}</li>)}
             </ul>
             {state === "sent" ? (
-              <p className="mt-5 flex items-center gap-2"><MailCheck className="h-4 w-4" /> {c.sent}</p>
+              <p className="mt-7 flex items-center gap-2 font-light"><MailCheck className="h-4 w-4" /> {c.sent}</p>
             ) : (
-              <form onSubmit={submit} className="mt-5 flex items-center gap-2 rounded-full border bg-background p-1">
+              <form onSubmit={submit} className="mt-7 flex items-center gap-2 rounded-full border border-foreground/10 bg-white p-1">
                 <input type="email" required autoComplete="email" aria-label="Email" value={email} onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com" className="h-8 min-w-0 flex-1 bg-transparent px-3 text-[15px] font-light outline-none" />
-                <button type="submit" disabled={state === "busy"} className="h-8 rounded-full bg-foreground px-4 text-sm text-background disabled:opacity-60">
+                  placeholder="you@example.com" className="h-9 min-w-0 flex-1 bg-transparent px-3 text-[15px] font-light outline-none" />
+                <button type="submit" disabled={state === "busy"} className="h-9 rounded-full bg-foreground px-5 text-[14px] text-background disabled:opacity-60">
                   {state === "busy" ? c.sending : c.getStarted}
                 </button>
               </form>
@@ -549,32 +666,34 @@ function Final() {
 
 function Footer() {
   const [c] = useCopy();
+  const col = "text-[17px] font-light text-white/75 transition-colors hover:text-white";
   return (
-    <footer className="bg-[oklch(0.17_0.006_60)] text-white/85">
-      <Wrap className="grid gap-12 py-16 md:grid-cols-[1.3fr_1fr_1fr]">
+    <footer className="grain grain-strong bg-[oklch(0.195_0.007_60)] text-white">
+      <Wrap className="grid gap-12 pb-16 pt-20 md:grid-cols-[1.4fr_1fr_1fr] md:pt-24">
         <div>
-          <Wordmark size="lg" tone="dark" />
-          <p className="mt-5 max-w-sm text-lg font-light leading-relaxed text-white/80">{c.footerTag}</p>
-          <div className="mt-6"><PillLink to="/login" light>{c.getStarted}</PillLink></div>
+          <Wordmark size="xl" tone="dark" />
+          <p className="mt-7 max-w-sm type-lead text-white/85">{c.footerTag}</p>
+          <div className="mt-8"><PillLink to="/login" light>{c.getStarted}</PillLink></div>
         </div>
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-white/50">{c.footerCols.explore}</p>
-          <ul className="mt-4 space-y-2.5 text-[15px] font-light">
-            <li><Link to="/argos" search={{ q: "", voice: false }} className="hover:text-white">Argos</Link></li>
-            <li><Link to="/explore" className="hover:text-white">{c.nav.browse}</Link></li>
-            <li><Link to="/pricing" className="hover:text-white">{c.nav.pricing}</Link></li>
+          <p className="type-label text-white/50">{c.footerCols.explore}</p>
+          <ul className="mt-5 space-y-3">
+            <li><Link to="/argos" search={{ q: "", voice: false }} className={col}>Argos</Link></li>
+            <li><Link to="/explore" className={col}>{c.nav.browse}</Link></li>
+            <li><Link to="/pricing" className={col}>{c.nav.pricing}</Link></li>
           </ul>
         </div>
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-white/50">{c.footerCols.company}</p>
-          <ul className="mt-4 space-y-2.5 text-[15px] font-light">
-            <li><Link to="/privacy" className="hover:text-white">Privacy</Link></li>
-            <li><Link to="/terms" className="hover:text-white">Terms</Link></li>
-            <li><a href="mailto:hello@odysstay.com" className="hover:text-white">hello@odysstay.com</a></li>
+          <p className="type-label text-white/50">{c.footerCols.company}</p>
+          <ul className="mt-5 space-y-3">
+            <li><Link to="/privacy" className={col}>Privacy</Link></li>
+            <li><Link to="/terms" className={col}>Terms</Link></li>
+            <li><Link to="/credits" className={col}>{c.credits}</Link></li>
+            <li><a href="mailto:hello@odysstay.com" className={col}>hello@odysstay.com</a></li>
           </ul>
         </div>
       </Wrap>
-      <Wrap className="flex flex-wrap items-center justify-between gap-4 border-t border-white/10 py-6 text-sm text-white/50">
+      <Wrap className="flex flex-wrap items-center justify-between gap-4 border-t border-white/10 py-7 text-[15px] font-light text-white/50">
         <p className="max-w-2xl">{c.legal}</p>
         <LangToggle light />
       </Wrap>
