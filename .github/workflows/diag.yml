@@ -30,3 +30,9 @@ jobs:
         run: |
           echo "::notice title=Secret names::$(curl -sS https://api.supabase.com/v1/projects/nryhvtxprjiylajolcef/secrets -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" | jq -r '[.[].name] | join(", ")')"
           echo "::notice title=Functions::$(curl -sS https://api.supabase.com/v1/projects/nryhvtxprjiylajolcef/functions -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" | jq -r '[.[] | "\(.slug) v\(.version) \(.status)"] | join(", ")')"
+      - name: Smoke test public functions
+        run: |
+          F=https://nryhvtxprjiylajolcef.supabase.co/functions/v1
+          K=sb_publishable_zdY6uxrouCZN2azT4rxUwQ_kZ6H86b5
+          echo "::notice title=capture (bad token, expect 401)::$(curl -s -X POST $F/capture -H "apikey: $K" -H 'content-type: application/json' -H 'x-capture-token: wrong-token-wrong-token-1234' -d '{"source":"idealista","listings":[]}' -w ' HTTP %{http_code}')"
+          echo "::notice title=argos::$(curl -s -X POST $F/argos -H "apikey: $K" -H 'content-type: application/json' -d '{"messages":[{"role":"user","text":"A house in Puglia under 40k"}],"understood":["up to €40,000","Puglia"],"total":12,"top":[{"comune":"Ceglie Messapica","price_eur":32000,"type":"house"}]}' -w ' HTTP %{http_code}' | cut -c1-600)"
