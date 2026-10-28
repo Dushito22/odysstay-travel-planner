@@ -14,7 +14,7 @@ on:
       task:
         description: "What to run"
         type: choice
-        options: [daily, deep, notary, one-euro, aste, aste-probe, notary-probe, sources-probe, pvp, perizia, rescore, retry-errors, check, pvp-probe, comuni-crawl, comuni-discover, status]
+        options: [daily, deep, notary, one-euro, immobiliare, aste, aste-probe, notary-probe, sources-probe, pvp, perizia, rescore, retry-errors, check, pvp-probe, comuni-crawl, comuni-discover, status]
         default: daily
       limit:
         description: "pvp: max lots to read. perizia: max reports to read. deep: listings to read"
@@ -37,6 +37,7 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
       WORKER_CONTACT: hello@odysstay.com
     steps:
       - name: Check secrets
@@ -94,6 +95,7 @@ jobs:
             pvp)             { python -m odysstay_worker pvp --limit ${{ github.event.inputs.limit || '25000' }} && python -m odysstay_worker geocode && python -m odysstay_worker score && python -m odysstay_worker costs && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             perizia)         { python -m odysstay_worker perizia --limit ${{ github.event.inputs.limit || '40' }} && python -m odysstay_worker score && python -m odysstay_worker costs; } 2>&1 | tee run.log ;;
             rescore)         { python -m odysstay_worker score && python -m odysstay_worker costs && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
+            immobiliare)     { python -m odysstay_worker immobiliare && python -m odysstay_worker geocode && python -m odysstay_worker score && python -m odysstay_worker costs && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             one-euro)        { python -m odysstay_worker one-euro && python -m odysstay_worker geocode && python -m odysstay_worker score && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             aste)            { python -m odysstay_worker aste --limit ${{ github.event.inputs.limit != '25000' && github.event.inputs.limit || '4000' }} && python -m odysstay_worker geocode && python -m odysstay_worker score && python -m odysstay_worker costs && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             aste-probe)      python -m odysstay_worker aste --probe 2>&1 | tee run.log ;;

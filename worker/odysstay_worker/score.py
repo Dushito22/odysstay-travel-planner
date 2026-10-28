@@ -19,7 +19,7 @@ def score_listing(l: dict, red_flags: int | dict[str, int], today: date | None =
     """red_flags: count by severity, e.g. {"high": 1, "medium": 2}. A bare int counts as medium."""
     today = today or date.today()
     reasons: list[str] = []
-    s = 15.0  # calibrated on ~16,000 court sales: roughly the top 10% score 70 or more
+    s = 15.0  # raw points, scaled at the end; the very best deals land in the low 90s
     price, sqm = l.get("price_eur"), l.get("surface_sqm")
 
     if price is not None:
@@ -101,9 +101,16 @@ def score_listing(l: dict, red_flags: int | dict[str, int], today: date | None =
             status = "closing_soon"
     if l.get("status") == "withdrawn":
         status = "withdrawn"
+    # The points above can reach about 117, so the best deals all used to read 100. Scale them to fit,
+    # then add small continuous terms (depth of discount, price per m²) so equal-looking deals still rank apart.
+    s = s * 0.78
+    if disc is not None:
+        s += min(70.0, max(0.0, float(disc))) * 0.08
+    if price and sqm and sqm > 10 and l.get("property_type") != "land":
+        s += max(0.0, 4.0 - (price / sqm) / 250)
     if status in ("closed", "withdrawn"):
         s = 0.0
-    return max(0.0, min(100.0, round(s))), reasons, status
+    return max(0.0, min(99.0, round(s))), reasons, status
 
 
 def run(db: Supa, log=print) -> int:

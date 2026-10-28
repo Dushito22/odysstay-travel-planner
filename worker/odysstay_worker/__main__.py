@@ -10,6 +10,7 @@
   python -m odysstay_worker extract [--limit 50]       read candidate notices with AI (needs ANTHROPIC_API_KEY)
   python -m odysstay_worker geocode                    put new listings on the map
   python -m odysstay_worker score                      rank listings and update open/closing/closed
+  python -m odysstay_worker immobiliare                portal listings with photos via Apify (needs APIFY_TOKEN)
   python -m odysstay_worker costs                      add default renovation estimates
   python -m odysstay_worker perizia [--limit 40]       read court appraisal reports of the best listings with AI
   python -m odysstay_worker grants                     link regional grants to listings as possible fits
@@ -77,6 +78,7 @@ def main(argv=None):
     sub.add_parser("pvp-probe")
     sub.add_parser("sources-probe")
     sub.add_parser("one-euro")
+    sub.add_parser("immobiliare")
     ag = sub.add_parser("aste")
     ag.add_argument("--probe", action="store_true")
     ag.add_argument("--limit", type=int, default=4000)
@@ -141,6 +143,9 @@ def main(argv=None):
             aste.probe()
         else:
             print(json.dumps(aste.collect(db, a.limit), indent=2))
+    elif a.cmd == "immobiliare":
+        from .collectors import immobiliare
+        print(json.dumps(immobiliare.collect(db), indent=2))
     elif a.cmd == "one-euro":
         from .collectors import one_euro
         print(json.dumps(one_euro.collect(db), indent=2))
@@ -178,8 +183,9 @@ def main(argv=None):
     elif a.cmd == "daily":
         # Court sales only: structured data from the portal, no AI calls. New and changed lots only.
         from . import costs, geocode, score
-        from .collectors import aste, notary, one_euro, pvp
+        from .collectors import aste, immobiliare, notary, one_euro, pvp
         for name, step in (("court sales", lambda: pvp.collect(db)), ("notary sales", lambda: notary.collect(db)),
+                           ("immobiliare (private demo, needs APIFY_TOKEN)", lambda: immobiliare.collect(db)),
                            ("one-euro towns", lambda: one_euro.collect(db)), ("private auctions", lambda: aste.collect(db, 600, max_minutes=40))):
             try:
                 print(name, json.dumps(step(), indent=2))

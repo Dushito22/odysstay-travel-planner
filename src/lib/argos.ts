@@ -132,10 +132,10 @@ export async function runSearch(s: ArgosSearch): Promise<{ rows: FeedRow[]; tota
 export function fallbackReply(s: ArgosSearch, n: number, relaxed: string | null, rows: FeedRow[], lang: "en" | "ru" = "en"): string {
   const photo = rows.some((r) => r.hero_image_path);
   if (lang === "ru") {
-    if (!n) return "Пока ничего открытого под это нет. Ослабьте что-то одно, бюджет или регион, и я посмотрю снова.";
+    if (!n) return "Под это пока ничего нет. Чуть расширьте бюджет или регион, и я поищу снова.";
     const lead = relaxed ? "Точного совпадения нет, поэтому я расширил поиск. " : "";
     const sea = s.notYet.length ? " Фильтровать по морю и виду я пока не умею, загляните в карту у каждого." : "";
-    return `${lead}Открыто ${n.toLocaleString("ru-RU")}. Лучшие справа${photo ? ", сначала с фото" : ""}. Большинству нужен ремонт и немного любви.${sea} Нажмите на любой, и я прочитаю судебные документы.`;
+    return `${lead}Нашёл ${n.toLocaleString("ru-RU")}. Лучшие справа${photo ? ", сначала с фото" : ""}. Почти всем нужен ремонт и немного любви.${sea} Выберите любой, и я прочитаю судебные документы.`;
   }
   if (!n) return "Nothing open matches that yet. Loosen one thing, the budget or the region, and I'll look again.";
   const what = s.understood.length ? s.understood.join(", ") : "everything open";

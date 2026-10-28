@@ -24,6 +24,26 @@ async function openAiReason(res: Response, kind: string) {
   return `The image service failed (${res.status}${msg ? `: ${msg.slice(0, 160)}` : ""}).`;
 }
 
+/** Free fallback: Pollinations (Flux), no key and no cost. Text to image only, so it draws a concept
+ * from the listing facts rather than restyling the real photo. Used when OpenAI is missing or refuses. */
+async function freeConcept(prompt: string): Promise<string> {
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt.slice(0, 900))}` +
+    `?width=1536&height=1024&model=flux&nologo=true&private=true&seed=${Math.floor(Math.random() * 1e6)}`;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const r = await fetch(url, { signal: AbortSignal.timeout(90_000) }).catch(() => null);
+    if (r?.ok && (r.headers.get("content-type") ?? "").startsWith("image/")) {
+      const buf = new Uint8Array(await r.arrayBuffer());
+      if (buf.byteLength > 5000) {
+        let bin = "";
+        for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+        return btoa(bin);
+      }
+    }
+    await new Promise((res) => setTimeout(res, 4000));
+  }
+  throw new HttpError(502, "The free image service is busy. Please try again in a minute.");
+}
+
 serve(async (req, body) => {
   const admin = adminClient();
   const user = await requireUser(req, admin);
@@ -35,7 +55,6 @@ serve(async (req, body) => {
   if (style === "Custom" && !wish?.trim()) throw new HttpError(400, "Describe what you would like to see");
 
   const apiKey = Deno.env.get("OPENAI_API_KEY");
-  if (!apiKey) throw new HttpError(500, "Server is missing OPENAI_API_KEY");
   const model = Deno.env.get("OPENAI_IMAGE_MODEL") || "gpt-image-1";
 
   const { data: profile } = await admin
@@ -98,9 +117,9 @@ serve(async (req, body) => {
   }
 
   let b64: string | undefined;
-  let prompt: string;
-  if (file) {
-    prompt = renderPrompt(listing, style, true, wish);
+  let prompt = renderPrompt(listing, style, !!file, wish);
+  let openAiError: string | null = apiKey ? null : "no key";
+  if (apiKey && file) {
     const form = new FormData();
     form.append("model", model);
     form.append("prompt", prompt);
@@ -113,29 +132,31 @@ serve(async (req, body) => {
       headers: { Authorization: `Bearer ${apiKey}` },
       body: form,
     });
-    if (!res.ok) {
-      throw new HttpError(502, await openAiReason(res, "edit"));
-    }
-    b64 = (await res.json()).data?.[0]?.b64_json;
-  } else {
-    prompt = renderPrompt(listing, style, false, wish);
+    if (res.ok) b64 = (await res.json()).data?.[0]?.b64_json;
+    else openAiError = await openAiReason(res, "edit");
+  } else if (apiKey) {
     const res = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({ model, prompt, size: "1536x1024", n: 1 }),
     });
-    if (!res.ok) {
-      throw new HttpError(502, await openAiReason(res, "gen"));
-    }
-    b64 = (await res.json()).data?.[0]?.b64_json;
+    if (res.ok) b64 = (await res.json()).data?.[0]?.b64_json;
+    else openAiError = await openAiReason(res, "gen");
+  }
+  if (!b64) {
+    if (openAiError && /refused this request/.test(openAiError)) throw new HttpError(502, openAiError);
+    console.warn("render fallback to free concept:", openAiError);
+    prompt = renderPrompt(listing, style, false, wish);
+    b64 = await freeConcept(prompt);
   }
   if (!b64) throw new HttpError(502, "No image came back. Please try again.");
 
   const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-  const path = `renders/${user.id}/${listingId}/${Date.now()}.png`;
+  const jpeg = bytes[0] === 0xff && bytes[1] === 0xd8;
+  const path = `renders/${user.id}/${listingId}/${Date.now()}.${jpeg ? "jpg" : "png"}`;
   const { error: upErr } = await admin.storage
     .from("listing-images")
-    .upload(path, bytes, { contentType: "image/png" });
+    .upload(path, bytes, { contentType: jpeg ? "image/jpeg" : "image/png" });
   if (upErr) throw upErr;
 
   const { data: img, error } = await admin
