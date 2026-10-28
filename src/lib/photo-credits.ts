@@ -27,5 +27,12 @@ export const PHOTO_CREDITS = [
     "author": "User:New2022",
     "license": "CC BY-SA 4.0",
     "source": "https://commons.wikimedia.org/wiki/File:Civita_(Bagnoregio)_-_Panorama.jpg"
+  },
+  {
+    "image": "olives",
+    "title": "Masseria Amastuola Puglia 10.jpg",
+    "author": "FrDr",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Masseria_Amastuola_Puglia_10.jpg"
   }
 ] as const;
