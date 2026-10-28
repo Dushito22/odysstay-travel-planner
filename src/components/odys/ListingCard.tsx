@@ -21,7 +21,7 @@ export function CardImage({ row, compact }: { row: FeedRow; compact?: boolean })
   const render = renderUrl(row.latest_render_path) ?? renderUrl(row.hero_image_path);
   const isRender = !!row.latest_render_path;
   return (
-    <div className={cn("relative aspect-[4/3] overflow-hidden bg-muted", !compact && "rounded-2xl")}>
+    <div className={cn("relative aspect-[4/3] overflow-hidden bg-muted", !compact && "rounded-xl")}>
       {render ? (
         <img src={render} alt={row.title_en ?? row.comune ?? "Property"} referrerPolicy="no-referrer" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" loading="lazy" />
       ) : (
@@ -32,7 +32,7 @@ export function CardImage({ row, compact }: { row: FeedRow; compact?: boolean })
             <div className="texture-muted h-full w-full" />
           )}
           <div className="absolute inset-0 flex items-end justify-between gap-2 bg-gradient-to-t from-black/60 via-black/5 to-transparent p-4">
-            <span className={cn("font-display text-white", compact ? "text-lg" : "text-2xl")}>
+            <span className={cn("font-display text-white", compact ? "text-lg" : "text-xl")}>
               {row.comune ?? "Unknown comune"}
             </span>
             {row.lat != null && <span className="rounded-full bg-black/40 px-2 py-0.5 text-[11px] text-white/90 backdrop-blur">Satellite view, no photos published</span>}
@@ -52,7 +52,7 @@ function Chip({ children, tone = "muted" }: { children: React.ReactNode; tone?: 
     success: "bg-success-soft text-success",
     brand: "border text-brand",
   };
-  return <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium", tones[tone])}>{children}</span>;
+  return <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs", tones[tone])}>{children}</span>;
 }
 
 export const savedQuery = {
@@ -120,11 +120,11 @@ export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: 
           )}
         </div>
       </Link>
-      <div className={cn("space-y-3", compact ? "p-4" : "px-1 pt-4")}>
+      <div className={cn("space-y-2.5", compact ? "p-4" : "px-0.5 pt-3.5")}>
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <Link to="/listing/$id" params={{ id: row.id }}>
-              <h3 className="truncate text-2xl leading-tight">{row.comune ?? "Unknown comune"}</h3>
+              <h3 className="truncate text-[22px] font-normal leading-tight">{row.comune ?? "Unknown comune"}</h3>
             </Link>
             <p className="truncate text-sm text-muted-foreground">
               {[row.province, row.region].filter(Boolean).join(" · ") || "Location not stated"}
@@ -133,7 +133,7 @@ export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: 
           <SaveButton id={row.id} />
         </div>
         <div>
-          <Money value={row.price_eur} className={cn("font-semibold", compact ? "text-xl" : "text-2xl")} />
+          <Money value={row.price_eur} className={cn(compact ? "text-lg" : "text-xl")} />
           {row.min_offer_eur != null && row.price_eur != null && row.min_offer_eur < row.price_eur && (
             <p className="mt-0.5 text-sm tnum">Offers from {formatEur(row.min_offer_eur)}</p>
           )}

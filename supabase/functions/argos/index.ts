@@ -41,7 +41,9 @@ serve(async (req, body) => {
     understood: body["understood"], not_yet: body["not_yet"], relaxed: body["relaxed"], total: body["total"],
     top: Array.isArray(body["top"]) ? (body["top"] as unknown[]).slice(0, 6) : [],
   });
+  const language = typeof body["language"] === "string" ? String(body["language"]).slice(0, 20) : "";
   const last = msgs[msgs.length - 1]!;
+  if (language) last.content = `(Reply in ${language}.)\n${last.content}`;
   last.content = `${last.content}\n\n<RESULTS>\n${context.slice(0, 4000)}\n</RESULTS>`;
   const reply = await callClaude(SYSTEM, msgs, 300);
   return json({ reply: reply.replace(/\s*—\s*/g, ", ").trim() });

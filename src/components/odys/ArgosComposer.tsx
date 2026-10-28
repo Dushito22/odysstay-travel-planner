@@ -65,7 +65,7 @@ export function ArgosComposer({
         send();
       }}
       className={cn(
-        "flex w-full items-end gap-2 rounded-[28px] p-2 transition-shadow",
+        "flex w-full items-end gap-1.5 rounded-[26px] p-1.5 transition-shadow",
         dark ? "frost text-white" : "border bg-card shadow-sm focus-within:shadow-hover",
       )}
     >
@@ -75,14 +75,14 @@ export function ArgosComposer({
           onClick={mic}
           aria-label={listening ? "Stop listening" : "Talk to Argos"}
           className={cn(
-            "relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-colors",
+            "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors",
             listening
               ? "bg-terra text-white"
-              : dark ? "bg-white/15 hover:bg-white/25" : "bg-primary text-primary-foreground hover:bg-primary/90",
+              : dark ? "bg-white/15 hover:bg-white/25" : "bg-azure-soft text-azure hover:bg-azure/15",
           )}
         >
           {listening && <span className="absolute inset-0 animate-ping rounded-full bg-terra/60" aria-hidden />}
-          {listening ? <Square className="relative h-4 w-4" /> : <Mic className="h-5 w-5" />}
+          {listening ? <Square className="relative h-3.5 w-3.5" /> : <Mic className="h-[18px] w-[18px]" />}
         </button>
       )}
       <textarea
@@ -101,7 +101,7 @@ export function ArgosComposer({
         aria-label="Tell Argos what you are looking for"
         placeholder={listening ? "Listening… just talk" : placeholder}
         className={cn(
-          "min-h-12 flex-1 resize-none bg-transparent px-2 py-3 text-base leading-6 outline-none md:text-lg",
+          "min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-[15px] font-light leading-6 outline-none md:text-base",
           dark ? "placeholder:text-white/60" : "placeholder:text-muted-foreground",
         )}
       />
@@ -110,11 +110,11 @@ export function ArgosComposer({
         disabled={busy || !text.trim()}
         aria-label="Send"
         className={cn(
-          "flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-opacity disabled:opacity-40",
+          "flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-opacity disabled:opacity-40",
           dark ? "bg-white text-foreground" : "bg-foreground text-background",
         )}
       >
-        <ArrowUp className="h-5 w-5" />
+        <ArrowUp className="h-[18px] w-[18px]" />
       </button>
     </form>
   );
