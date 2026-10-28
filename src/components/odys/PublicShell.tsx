@@ -9,7 +9,7 @@ export function PublicFooter() {
     <footer className="border-t">
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-5 py-10 md:flex-row md:items-start md:justify-between">
         <div className="max-w-md">
-          <Wordmark className="text-xl" />
+          <Wordmark size="md" />
           <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{LEGAL_LINE}</p>
         </div>
         <nav
@@ -44,7 +44,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
           <Link to="/" aria-label="Odysstay home">
-            <Wordmark className="text-xl" />
+            <Wordmark size="sm" />
           </Link>
           <nav className="flex items-center gap-1">
             <Button asChild variant="ghost" size="sm">

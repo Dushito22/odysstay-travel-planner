@@ -74,7 +74,7 @@ function Shell({ children }: { children: ReactNode }) {
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
-          <Link to="/"><Wordmark className="text-xl" /></Link>
+          <Link to="/"><Wordmark size="sm" /></Link>
           <Button asChild variant="ghost" size="sm"><Link to="/discover"><ArrowLeft /> Discover</Link></Button>
         </div>
       </header>

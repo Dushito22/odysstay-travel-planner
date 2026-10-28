@@ -259,13 +259,39 @@ export function SourceQuote({ children, ...q }: QuoteProps & { children: ReactNo
   );
 }
 
-export function Wordmark({ className }: { className?: string }) {
+/** The Odysstay lockup: Dushan's mark with "odysstay" underneath in Editorial New, azure.
+ * size sets the mark height; tone="dark" lightens the name for dark or video backgrounds. */
+export function Wordmark({
+  className,
+  size = "md",
+  tone = "light",
+  stacked = true,
+}: {
+  className?: string;
+  size?: "sm" | "md" | "lg" | "xl";
+  tone?: "light" | "dark";
+  stacked?: boolean;
+}) {
+  const mark = { sm: "h-7", md: "h-10", lg: "h-14", xl: "h-24" }[size];
+  const name = { sm: "text-[13px]", md: "text-[17px]", lg: "text-[22px]", xl: "text-[34px]" }[size];
   return (
-    <span
-      className={cn("inline-flex items-baseline font-display text-[1.45rem] leading-none tracking-[-0.01em]", className)}
-    >
-      Odysstay
-      <span className="ml-[0.08em] inline-block h-[0.16em] w-[0.16em] rounded-full bg-azure" aria-hidden />
+    <span className={cn("inline-flex items-center", stacked ? "flex-col gap-0.5" : "gap-2", className)}>
+      <img
+        src={size === "xl" || size === "lg" ? "/logo-256.png" : "/logo-128.png"}
+        alt=""
+        aria-hidden
+        className={cn(mark, "w-auto select-none")}
+        draggable={false}
+      />
+      <span
+        className={cn(
+          "font-display font-normal lowercase leading-none tracking-[0.01em]",
+          name,
+          tone === "dark" ? "text-[oklch(0.8_0.1_238)]" : "text-azure",
+        )}
+      >
+        odysstay
+      </span>
     </span>
   );
 }

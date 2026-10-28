@@ -43,7 +43,7 @@ export function AppShell() {
     <div className="min-h-screen md:flex">
       <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r bg-sidebar px-3 py-6 md:flex">
         <Link to="/discover" className="px-3">
-          <Wordmark />
+          <Wordmark size="md" />
         </Link>
         <nav className="mt-7 flex flex-col gap-0.5">
           {desktopNav.map(({ to, label, icon: Icon }) => (
@@ -85,7 +85,7 @@ export function AppShell() {
 
       <div className="flex min-w-0 flex-1 flex-col pb-20 md:pb-0">
         <header className="sticky top-0 z-30 flex items-center border-b bg-background/85 px-5 py-4 backdrop-blur-xl md:hidden">
-          <Wordmark className="text-xl" />
+          <Wordmark size="sm" />
         </header>
         {pathname === "/map" ? (
           <main className="relative flex-1">
