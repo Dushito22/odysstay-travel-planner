@@ -597,7 +597,7 @@ function HowItWorks() {
             <Lead className="mt-6 max-w-[620px]">{c.howBody}</Lead>
           </div>
           <img src="/img/argos-phones.webp" alt="Argos on two phones at once" loading="lazy"
-            className="mx-auto h-[260px] w-auto object-contain [mask-image:linear-gradient(to_bottom,black_88%,transparent)] md:h-[340px]" />
+            className="mx-auto h-[190px] w-auto object-contain [mask-image:linear-gradient(to_bottom,black_88%,transparent)] md:h-[250px]" />
         </div>
         <div className="mt-10 grid gap-5 lg:grid-cols-3 lg:gap-6">
           {c.steps.map((s, i) => (
@@ -647,7 +647,7 @@ function Sprezzatura() {
       <Wrap className="grid items-center gap-12 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] md:gap-20">
         <Photo name="lunch" alt="Lunch by the sea under a fringed umbrella" className="aspect-[4/5] max-h-[620px]" />
         <div className="max-w-xl">
-        <img src="/img/lemon.webp" alt="" aria-hidden loading="lazy" className="mb-6 h-[150px] w-auto -rotate-6 object-contain md:h-[190px]" />
+        <img src="/img/lemon.webp" alt="" aria-hidden loading="lazy" className="mb-6 h-[90px] w-auto -rotate-6 object-contain md:h-[115px]" />
         <div className="border-y border-foreground/15 py-10">
           <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
             <p className="font-display text-[48px] italic leading-none tracking-[-0.01em]">{s.word}</p>
@@ -694,9 +694,9 @@ function Proof() {
   const f = useQuery(exampleFactQuery(top.data?.[0])).data;
   return (
     <section className={cn("relative overflow-hidden", SECTION)}>
-      <img src="/img/fog.webp" alt="" aria-hidden loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
-      <div className="absolute inset-0 bg-gradient-to-r from-white/55 via-white/20 to-transparent" />
-      <div className="grain-overlay opacity-[0.28]" />
+      <img src="/img/olives.webp" alt="" aria-hidden loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+      <div className="absolute inset-0 bg-gradient-to-r from-white/55 via-white/15 to-transparent" />
+      <div className="grain-overlay opacity-[0.12]" />
       <Wrap className="relative grid items-center gap-14 md:grid-cols-2">
         <div>
           <Label className="text-foreground/60">{c.proofEyebrow}</Label>
@@ -751,8 +751,9 @@ function Faq() {
       <Wrap className="grid gap-10 md:grid-cols-[1fr_1.5fr]">
         <div>
           <H2>{c.faqTitle}</H2>
-          <img src="/img/argos-helmet.webp" alt="Argos in a hard hat, explaining" loading="lazy"
-            className="mt-10 hidden h-[340px] w-auto object-contain md:block" />
+          <div className="mt-12 hidden max-w-[420px] justify-center md:flex">
+            <img src="/img/argos-helmet.webp" alt="Argos in a hard hat, explaining" loading="lazy" className="h-[250px] w-auto object-contain" />
+          </div>
         </div>
         <Accordion type="single" collapsible>
           {c.faq.map((f) => (
@@ -790,8 +791,6 @@ function Final() {
         <div>
           <H2>{c.finalTitle}</H2>
           <p className="mt-6 max-w-md type-body text-foreground/62">{c.finalBody}</p>
-          <img src="/img/key.webp" alt="An old key with a 'Benvenuti a casa' tag" loading="lazy"
-            className="mt-10 h-[150px] w-auto -rotate-[10deg] object-contain drop-shadow-[0_16px_18px_oklch(0.3_0.03_60/0.18)] md:h-[190px]" />
         </div>
         <div className="relative overflow-hidden rounded-[10px]">
           <img src="/img/sky.webp" alt="" aria-hidden loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
