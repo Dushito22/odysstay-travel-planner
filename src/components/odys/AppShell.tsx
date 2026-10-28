@@ -41,17 +41,17 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen md:flex">
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r bg-sidebar px-4 py-7 md:flex">
+      <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r bg-sidebar px-3 py-6 md:flex">
         <Link to="/discover" className="px-3">
           <Wordmark />
         </Link>
-        <nav className="mt-8 flex flex-col gap-1">
+        <nav className="mt-7 flex flex-col gap-0.5">
           {desktopNav.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
               to={to}
-              className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              activeProps={{ className: "!bg-sea !text-white font-medium" }}
+              className="flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-[15px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              activeProps={{ className: "!bg-azure-soft !text-foreground" }}
             >
               <Icon className="h-4 w-4" />
               {label}
@@ -62,21 +62,21 @@ export function AppShell() {
         <div className="mt-auto flex flex-col gap-1 border-t pt-4">
           <Link
             to="/profile"
-            className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-            activeProps={{ className: "!bg-sea !text-white font-medium" }}
+            className="flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-[15px] text-muted-foreground hover:bg-muted hover:text-foreground"
+            activeProps={{ className: "!bg-azure-soft !text-foreground" }}
           >
             <User className="h-4 w-4" /> Profile
           </Link>
           <Link
             to="/vault"
-            className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-            activeProps={{ className: "!bg-sea !text-white font-medium" }}
+            className="flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-[15px] text-muted-foreground hover:bg-muted hover:text-foreground"
+            activeProps={{ className: "!bg-azure-soft !text-foreground" }}
           >
             <FolderLock className="h-4 w-4" /> Documents
           </Link>
           <button
             onClick={signOut}
-            className="flex items-center gap-3 rounded-xl px-3 py-2 text-left text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-left text-[15px] text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <LogOut className="h-4 w-4" /> Sign out
           </button>

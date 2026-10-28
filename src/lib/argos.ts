@@ -129,10 +129,16 @@ export async function runSearch(s: ArgosSearch): Promise<{ rows: FeedRow[]; tota
 }
 
 /** The reply when the AI is unavailable: short, honest, in Argos's voice. */
-export function fallbackReply(s: ArgosSearch, n: number, relaxed: string | null, rows: FeedRow[]): string {
+export function fallbackReply(s: ArgosSearch, n: number, relaxed: string | null, rows: FeedRow[], lang: "en" | "ru" = "en"): string {
+  const photo = rows.some((r) => r.hero_image_path);
+  if (lang === "ru") {
+    if (!n) return "Пока ничего открытого под это нет. Ослабьте что-то одно, бюджет или регион, и я посмотрю снова.";
+    const lead = relaxed ? "Точного совпадения нет, поэтому я расширил поиск. " : "";
+    const sea = s.notYet.length ? " Фильтровать по морю и виду я пока не умею, загляните в карту у каждого." : "";
+    return `${lead}Открыто ${n.toLocaleString("ru-RU")}. Лучшие справа${photo ? ", сначала с фото" : ""}. Большинству нужен ремонт и немного любви.${sea} Нажмите на любой, и я прочитаю судебные документы.`;
+  }
   if (!n) return "Nothing open matches that yet. Loosen one thing, the budget or the region, and I'll look again.";
   const what = s.understood.length ? s.understood.join(", ") : "everything open";
-  const photo = rows.filter((r) => r.hero_image_path).length;
   const lead = relaxed ? `Nothing exact, so I widened it to ${relaxed}. ` : "";
   const sea = s.notYet.length ? ` I can't filter for ${s.notYet.join(" or ")} yet, so check the map on each one.` : "";
   return `${lead}${n.toLocaleString("en-GB")} open for ${what}. The best ones are on the right${photo ? ", with photos first" : ""}. Most need work and a little love.${sea} Tap one and I'll read the court papers for you.`;

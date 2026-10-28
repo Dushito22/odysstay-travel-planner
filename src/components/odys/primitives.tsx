@@ -262,13 +262,10 @@ export function SourceQuote({ children, ...q }: QuoteProps & { children: ReactNo
 export function Wordmark({ className }: { className?: string }) {
   return (
     <span
-      className={cn("inline-flex items-baseline font-display text-[1.7rem] leading-none tracking-tight", className)}
+      className={cn("inline-flex items-baseline font-display text-[1.45rem] leading-none tracking-[-0.01em]", className)}
     >
       Odysstay
-      <span
-        className="ml-0.5 inline-block h-[0.2em] w-[0.2em] rounded-full bg-terra"
-        aria-hidden
-      />
+      <span className="ml-[0.08em] inline-block h-[0.16em] w-[0.16em] rounded-full bg-azure" aria-hidden />
     </span>
   );
 }

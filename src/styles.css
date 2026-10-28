@@ -6,12 +6,24 @@
 
 @custom-variant dark (&:is(.dark *, .dark));
 
-/* Odysstay design system: limestone ivory, ink navy, cypress green, a touch of terracotta and brass.
-   Editorial serif (Instrument Serif) for display, Geist for text and numbers. Glass only over the hero video. */
+/* PP Editorial New (display) and PP Neue Montreal (text), self-hosted. Editorial New has no Cyrillic:
+   Cormorant (Google Fonts, Cyrillic subset only) takes over for Russian headlines. */
+@font-face { font-family: "PP Neue Montreal"; src: url("/fonts/PPNeueMontreal-Light.woff2") format("woff2"); font-weight: 300; font-style: normal; font-display: swap; }
+@font-face { font-family: "PP Neue Montreal"; src: url("/fonts/PPNeueMontreal-LightItalic.woff2") format("woff2"); font-weight: 300; font-style: italic; font-display: swap; }
+@font-face { font-family: "PP Neue Montreal"; src: url("/fonts/PPNeueMontreal-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "PP Neue Montreal"; src: url("/fonts/PPNeueMontreal-Italic.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: "PP Neue Montreal"; src: url("/fonts/PPNeueMontreal-Semibold.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "PP Editorial New"; src: url("/fonts/PPEditorialNew-Ultralight.woff2") format("woff2"); font-weight: 200; font-style: normal; font-display: swap; }
+@font-face { font-family: "PP Editorial New"; src: url("/fonts/PPEditorialNew-UltralightItalic.woff2") format("woff2"); font-weight: 200; font-style: italic; font-display: swap; }
+@font-face { font-family: "PP Editorial New"; src: url("/fonts/PPEditorialNew-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "PP Editorial New"; src: url("/fonts/PPEditorialNew-Italic.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: swap; }
+
+/* Odysstay design system: white canvas, pale azure sections, ink text, azzurro accents, cypress green for good news.
+   PP Editorial New for display, PP Neue Montreal for text. Small controls, generous space. Glass only over the hero video. */
 
 @theme inline {
-  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Instrument Serif", ui-serif, Georgia, serif;
+  --font-sans: "PP Neue Montreal", "Inter Tight", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "PP Editorial New", "Cormorant", ui-serif, Georgia, serif;
   --radius-sm: 8px;
   --radius-md: 10px;
   --radius-lg: 16px;
@@ -38,6 +50,9 @@
   --color-terra: var(--terra);
   --color-brass: var(--brass);
   --color-cypress: var(--cypress);
+  --color-azure: var(--azure);
+  --color-azure-soft: var(--azure-soft);
+  --color-ink: var(--ink);
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
   --color-caution: var(--caution);
@@ -59,46 +74,49 @@
 }
 
 :root {
-  --radius: 14px;
-  --background: oklch(0.953 0.013 85);
-  --foreground: oklch(0.22 0.02 245);
-  --card: oklch(0.982 0.008 85);
-  --card-foreground: oklch(0.22 0.02 245);
-  --popover: oklch(0.985 0.007 85);
-  --popover-foreground: oklch(0.22 0.02 245);
-  --primary: oklch(0.33 0.045 170);
-  --primary-foreground: oklch(0.985 0.008 85);
-  --brand: oklch(0.38 0.055 168);
-  --brand-soft: oklch(0.925 0.02 150);
-  --cypress: oklch(0.33 0.045 170);
-  --terra: oklch(0.56 0.13 45);
-  --brass: oklch(0.66 0.07 80);
-  --secondary: oklch(0.93 0.014 85);
-  --secondary-foreground: oklch(0.22 0.02 245);
-  --muted: oklch(0.925 0.014 85);
-  --muted-foreground: oklch(0.47 0.02 250);
-  --accent: oklch(0.925 0.014 85);
-  --accent-foreground: oklch(0.22 0.02 245);
-  --destructive: oklch(0.52 0.17 30);
-  --destructive-foreground: oklch(0.985 0.008 85);
-  --warning: oklch(0.52 0.15 38);
-  --warning-soft: oklch(0.93 0.035 50);
-  --caution: oklch(0.5 0.1 70);
-  --caution-soft: oklch(0.94 0.035 85);
-  --success: oklch(0.44 0.08 160);
-  --success-soft: oklch(0.93 0.03 155);
-  --border: oklch(0.87 0.018 85);
-  --input: oklch(0.85 0.02 85);
-  --ring: oklch(0.38 0.055 168);
-  --shadow-hover: 0 1px 2px oklch(0.22 0.02 245 / 0.05), 0 18px 40px -18px oklch(0.22 0.02 245 / 0.22);
-  --sidebar: oklch(0.94 0.014 85);
-  --sidebar-foreground: oklch(0.22 0.02 245);
-  --sidebar-primary: oklch(0.33 0.045 170);
-  --sidebar-primary-foreground: oklch(0.985 0.008 85);
-  --sidebar-accent: oklch(0.91 0.016 85);
-  --sidebar-accent-foreground: oklch(0.22 0.02 245);
-  --sidebar-border: oklch(0.87 0.018 85);
-  --sidebar-ring: oklch(0.38 0.055 168);
+  --radius: 12px;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.2 0.006 60);
+  --ink: oklch(0.2 0.006 60);
+  --card: oklch(0.985 0.003 250);
+  --card-foreground: oklch(0.2 0.006 60);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.006 60);
+  --primary: oklch(0.2 0.006 60);
+  --primary-foreground: oklch(0.99 0 0);
+  --azure: oklch(0.52 0.13 245);
+  --azure-soft: oklch(0.95 0.018 240);
+  --brand: oklch(0.52 0.13 245);
+  --brand-soft: oklch(0.95 0.018 240);
+  --cypress: oklch(0.36 0.045 165);
+  --terra: oklch(0.58 0.13 45);
+  --brass: oklch(0.66 0.06 80);
+  --secondary: oklch(0.955 0.006 250);
+  --secondary-foreground: oklch(0.2 0.006 60);
+  --muted: oklch(0.945 0.008 245);
+  --muted-foreground: oklch(0.5 0.01 250);
+  --accent: oklch(0.955 0.006 250);
+  --accent-foreground: oklch(0.2 0.006 60);
+  --destructive: oklch(0.55 0.17 30);
+  --destructive-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.55 0.15 38);
+  --warning-soft: oklch(0.95 0.025 50);
+  --caution: oklch(0.52 0.1 70);
+  --caution-soft: oklch(0.96 0.03 85);
+  --success: oklch(0.42 0.07 160);
+  --success-soft: oklch(0.95 0.025 155);
+  --border: oklch(0.91 0.006 250);
+  --input: oklch(0.88 0.008 250);
+  --ring: oklch(0.52 0.13 245);
+  --shadow-hover: 0 1px 2px oklch(0.2 0.006 60 / 0.04), 0 16px 36px -20px oklch(0.2 0.02 245 / 0.25);
+  --sidebar: oklch(0.985 0.003 250);
+  --sidebar-foreground: oklch(0.2 0.006 60);
+  --sidebar-primary: oklch(0.2 0.006 60);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.95 0.018 240);
+  --sidebar-accent-foreground: oklch(0.2 0.006 60);
+  --sidebar-border: oklch(0.91 0.006 250);
+  --sidebar-ring: oklch(0.52 0.13 245);
 }
 
 .dark {
@@ -113,6 +131,9 @@
   --brand: oklch(0.76 0.07 160);
   --brand-soft: oklch(0.3 0.04 165);
   --cypress: oklch(0.42 0.05 170);
+  --azure: oklch(0.7 0.11 240);
+  --azure-soft: oklch(0.28 0.04 245);
+  --ink: oklch(0.95 0.01 85);
   --terra: oklch(0.7 0.12 50);
   --brass: oklch(0.74 0.07 80);
   --secondary: oklch(0.25 0.014 245);
@@ -146,13 +167,13 @@
 @utility font-display {
   font-family: var(--font-display);
   font-weight: 400;
-  letter-spacing: -0.012em;
+  letter-spacing: -0.01em;
 }
 
-/* Primary fill: solid cypress green. (Kept the old utility name so existing screens follow.) */
+/* Primary fill for active states: ink. (Old utility name kept so existing screens follow.) */
 @utility bg-sea {
-  background-color: var(--cypress);
-  color: oklch(0.985 0.008 85);
+  background-color: var(--ink);
+  color: oklch(0.99 0 0);
 }
 
 /* Paper panel: the default surface for cards and notes. */
@@ -184,6 +205,7 @@
   }
   body {
     background-color: var(--color-background);
+    font-weight: 300;
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
@@ -191,9 +213,11 @@
   }
   h1, h2, h3 {
     font-family: var(--font-display);
-    letter-spacing: -0.012em;
+    letter-spacing: -0.01em;
     font-weight: 400;
+    line-height: 1.05;
   }
+  strong, b { font-weight: 600; }
   svg.lucide {
     stroke-width: 1.75;
   }
@@ -201,7 +225,7 @@
 
 /* Maps: monochrome, cool OpenStreetMap */
 @utility map-tone {
-  filter: grayscale(1) contrast(0.85) brightness(1.06);
+  filter: grayscale(0.6) contrast(0.92) brightness(1.04);
 }
 @utility texture-muted {
   background-color: var(--muted);
@@ -209,7 +233,7 @@
   background-size: 14px 14px;
 }
 .map-tone-tiles .leaflet-tile-pane {
-  filter: grayscale(1) contrast(0.85) brightness(1.06);
+  filter: grayscale(0.6) contrast(0.92) brightness(1.04);
 }
 .dark .map-tone-tiles .leaflet-tile-pane {
   filter: grayscale(1) invert(0.92) contrast(0.85);
