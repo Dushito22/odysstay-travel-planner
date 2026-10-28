@@ -259,39 +259,35 @@ export function SourceQuote({ children, ...q }: QuoteProps & { children: ReactNo
   );
 }
 
-/** The Odysstay lockup: Dushan's mark with "odysstay" underneath in Editorial New, azure.
- * size sets the mark height; tone="dark" lightens the name for dark or video backgrounds. */
+/** The Odysstay wordmark: lowercase "odysstay" with a small dot.
+ * On dark surfaces: white with an azure dot. On light surfaces: navy with a silver dot. */
 export function Wordmark({
   className,
   size = "md",
   tone = "light",
-  stacked = true,
 }: {
   className?: string;
   size?: "sm" | "md" | "lg" | "xl";
   tone?: "light" | "dark";
-  stacked?: boolean;
 }) {
-  const mark = { sm: "h-7", md: "h-10", lg: "h-14", xl: "h-24" }[size];
-  const name = { sm: "text-[13px]", md: "text-[17px]", lg: "text-[22px]", xl: "text-[34px]" }[size];
+  const text = { sm: "text-[19px]", md: "text-[22px]", lg: "text-[30px]", xl: "text-[44px]" }[size];
   return (
-    <span className={cn("inline-flex items-center", stacked ? "flex-col gap-0.5" : "gap-2", className)}>
-      <img
-        src={size === "xl" || size === "lg" ? "/logo-256.png" : "/logo-128.png"}
-        alt=""
-        aria-hidden
-        className={cn(mark, "w-auto select-none")}
-        draggable={false}
-      />
+    <span
+      className={cn(
+        "inline-flex items-baseline font-display font-[300] lowercase leading-none tracking-[-0.01em]",
+        text,
+        tone === "dark" ? "text-white" : "text-navy",
+        className,
+      )}
+    >
+      odysstay
       <span
+        aria-hidden
         className={cn(
-          "font-display font-normal lowercase leading-none tracking-[0.01em]",
-          name,
-          tone === "dark" ? "text-[oklch(0.8_0.1_238)]" : "text-azure",
+          "ml-[0.1em] inline-block h-[0.2em] w-[0.2em] rounded-full",
+          tone === "dark" ? "bg-azure" : "bg-silver ring-1 ring-inset ring-navy/15",
         )}
-      >
-        odysstay
-      </span>
+      />
     </span>
   );
 }

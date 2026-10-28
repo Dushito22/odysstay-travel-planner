@@ -53,6 +53,8 @@
   --color-azure: var(--azure);
   --color-azure-soft: var(--azure-soft);
   --color-ink: var(--ink);
+  --color-navy: var(--navy);
+  --color-silver: var(--silver);
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
   --color-caution: var(--caution);
@@ -76,8 +78,8 @@
 :root {
   --radius: 12px;
   --background: oklch(1 0 0);
-  --foreground: oklch(0.2 0.006 60);
-  --ink: oklch(0.2 0.006 60);
+  --foreground: oklch(0.195 0.007 60);
+  --ink: oklch(0.195 0.007 60);
   --card: oklch(0.985 0.003 250);
   --card-foreground: oklch(0.2 0.006 60);
   --popover: oklch(1 0 0);
@@ -86,6 +88,8 @@
   --primary-foreground: oklch(0.99 0 0);
   --azure: oklch(0.52 0.13 245);
   --azure-soft: oklch(0.95 0.018 240);
+  --navy: oklch(0.26 0.06 258);
+  --silver: oklch(0.86 0.012 250);
   --brand: oklch(0.52 0.13 245);
   --brand-soft: oklch(0.95 0.018 240);
   --cypress: oklch(0.36 0.045 165);
@@ -93,8 +97,8 @@
   --brass: oklch(0.66 0.06 80);
   --secondary: oklch(0.955 0.006 250);
   --secondary-foreground: oklch(0.2 0.006 60);
-  --muted: oklch(0.945 0.008 245);
-  --muted-foreground: oklch(0.5 0.01 250);
+  --muted: oklch(0.951 0.007 255);
+  --muted-foreground: oklch(0.52 0.006 60);
   --accent: oklch(0.955 0.006 250);
   --accent-foreground: oklch(0.2 0.006 60);
   --destructive: oklch(0.55 0.17 30);
@@ -105,8 +109,8 @@
   --caution-soft: oklch(0.96 0.03 85);
   --success: oklch(0.42 0.07 160);
   --success-soft: oklch(0.95 0.025 155);
-  --border: oklch(0.91 0.006 250);
-  --input: oklch(0.88 0.008 250);
+  --border: oklch(0.905 0.004 60);
+  --input: oklch(0.87 0.005 60);
   --ring: oklch(0.52 0.13 245);
   --shadow-hover: 0 1px 2px oklch(0.2 0.006 60 / 0.04), 0 16px 36px -20px oklch(0.2 0.02 245 / 0.25);
   --sidebar: oklch(0.985 0.003 250);
@@ -133,6 +137,8 @@
   --cypress: oklch(0.42 0.05 170);
   --azure: oklch(0.7 0.11 240);
   --azure-soft: oklch(0.28 0.04 245);
+  --navy: oklch(0.95 0.01 250);
+  --silver: oklch(0.86 0.012 250);
   --ink: oklch(0.95 0.01 85);
   --terra: oklch(0.7 0.12 50);
   --brass: oklch(0.74 0.07 80);
@@ -164,10 +170,84 @@
   --sidebar-ring: oklch(0.76 0.07 160);
 }
 
+/* Display face: PP Editorial New Ultralight, the way Balance sets it. Never Regular for headlines. */
 @utility font-display {
   font-family: var(--font-display);
-  font-weight: 400;
+  font-weight: 200;
   letter-spacing: -0.01em;
+}
+
+/* Type scale measured from getbalance.ai: 72 / 48 / 28 display, 22 lead, 17 body, 13 label. */
+@utility type-h1 {
+  font-family: var(--font-display);
+  font-weight: 200;
+  font-size: clamp(2.75rem, 1.6rem + 3.2vw, 4.5rem);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+}
+@utility type-h2 {
+  font-family: var(--font-display);
+  font-weight: 200;
+  font-size: clamp(2.125rem, 1.6rem + 1.4vw, 3rem);
+  line-height: 1.12;
+  letter-spacing: -0.008em;
+}
+@utility type-h3 {
+  font-family: var(--font-display);
+  font-weight: 200;
+  font-size: 1.75rem;
+  line-height: 1.3;
+}
+@utility type-lead {
+  font-size: clamp(1.125rem, 1rem + 0.4vw, 1.375rem);
+  line-height: 1.55;
+  font-weight: 300;
+}
+@utility type-body {
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  font-weight: 300;
+}
+@utility type-label {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  font-weight: 300;
+  letter-spacing: 0.115em;
+  text-transform: uppercase;
+}
+
+/* Film grain over a section, like Balance's textured panels. Put on a positioned parent. */
+@utility grain {
+  position: relative;
+  isolation: isolate;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 220px 220px;
+    opacity: 0.11;
+    mix-blend-mode: multiply;
+    border-radius: inherit;
+  }
+  :where(& > *:not(.absolute):not(.fixed)) { position: relative; }
+  :where(& > *) { z-index: 1; }
+}
+/* A grain layer to place over photos and video: <div class="grain-overlay" />. */
+@utility grain-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 220px 220px;
+  opacity: 0.22;
+  mix-blend-mode: overlay;
+}
+/* On dark surfaces the grain lightens instead of darkening. */
+@utility grain-strong {
+  &::after { opacity: 0.3; mix-blend-mode: overlay; }
 }
 
 /* Primary fill for active states: ink. (Old utility name kept so existing screens follow.) */
@@ -214,9 +294,10 @@
   h1, h2, h3 {
     font-family: var(--font-display);
     letter-spacing: -0.01em;
-    font-weight: 400;
-    line-height: 1.05;
+    font-weight: 200;
+    line-height: 1.1;
   }
+  em { font-weight: inherit; }
   strong, b { font-weight: 600; }
   svg.lucide {
     stroke-width: 1.75;
