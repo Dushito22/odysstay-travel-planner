@@ -1,13 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Heart } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { budgetFit, inRegions, renderUrl, SALE_TYPE_LABELS, TYPE_LABELS, type FeedRow } from "@/lib/feed";
 import type { Profile } from "@/lib/profile";
 import { cn } from "@/lib/utils";
-import { DeadlinePill, formatEur, IllustrationLabel, Money, ScoreBadge } from "./primitives";
+import { DeadlinePill, formatEur, IllustrationLabel, Money } from "./primitives";
 
 /** Satellite photo of the exact spot (Esri World Imagery), used when the court published no photos. */
 export function satelliteUrl(lat: number, lng: number, w = 800, h = 600, halfKm = 0.18) {
@@ -17,13 +18,34 @@ export function satelliteUrl(lat: number, lng: number, w = 800, h = 600, halfKm 
   return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${bbox}&bboxSR=4326&imageSR=3857&size=${w},${h}&format=jpg&f=image`;
 }
 
+/** The listing photo. Always the same 4:3 frame. Scanned court photos (tall pages with white margins)
+ * sit on a blurred copy of themselves so every card looks the same shape. */
 export function CardImage({ row, compact }: { row: FeedRow; compact?: boolean }) {
   const render = renderUrl(row.latest_render_path) ?? renderUrl(row.hero_image_path);
   const isRender = !!row.latest_render_path;
+  const [fit, setFit] = useState<"cover" | "contain">("cover");
   return (
-    <div className={cn("relative aspect-[4/3] overflow-hidden bg-muted", !compact && "rounded-xl")}>
+    <div className={cn("relative aspect-[4/3] overflow-hidden bg-muted", !compact && "rounded-[10px]")}>
       {render ? (
-        <img src={render} alt={row.title_en ?? row.comune ?? "Property"} referrerPolicy="no-referrer" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" loading="lazy" />
+        <>
+          {fit === "contain" && (
+            <img src={render} alt="" aria-hidden referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-70 blur-xl" />
+          )}
+          <img
+            src={render}
+            alt={row.title_en ?? row.comune ?? "Property"}
+            referrerPolicy="no-referrer"
+            loading="lazy"
+            onLoad={(e) => {
+              const { naturalWidth: w, naturalHeight: h } = e.currentTarget;
+              if (h && w / h < 1.05) setFit("contain");
+            }}
+            className={cn(
+              "relative h-full w-full transition-transform duration-500 group-hover:scale-[1.03]",
+              fit === "cover" ? "object-cover" : "object-contain",
+            )}
+          />
+        </>
       ) : (
         <>
           {row.lat != null && row.lng != null ? (
@@ -31,12 +53,11 @@ export function CardImage({ row, compact }: { row: FeedRow; compact?: boolean })
           ) : (
             <div className="texture-muted h-full w-full" />
           )}
-          <div className="absolute inset-0 flex items-end justify-between gap-2 bg-gradient-to-t from-black/60 via-black/5 to-transparent p-4">
-            <span className={cn("font-display text-white", compact ? "text-lg" : "text-xl")}>
-              {row.comune ?? "Unknown comune"}
+          {row.lat != null && (
+            <span className="absolute bottom-3 left-3 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-light text-white/90 backdrop-blur">
+              Satellite view · no photos published
             </span>
-            {row.lat != null && <span className="rounded-full bg-black/40 px-2 py-0.5 text-[11px] text-white/90 backdrop-blur">Satellite view, no photos published</span>}
-          </div>
+          )}
         </>
       )}
       {isRender && <IllustrationLabel />}
@@ -46,13 +67,13 @@ export function CardImage({ row, compact }: { row: FeedRow; compact?: boolean })
 
 function Chip({ children, tone = "muted" }: { children: React.ReactNode; tone?: "muted" | "terra" | "warn" | "success" | "brand" }) {
   const tones = {
-    muted: "bg-muted text-muted-foreground",
+    muted: "bg-muted text-foreground/65",
     terra: "bg-caution-soft text-caution",
     warn: "bg-warning-soft text-warning",
     success: "bg-success-soft text-success",
-    brand: "border text-brand",
+    brand: "bg-azure-soft text-azure",
   };
-  return <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs", tones[tone])}>{children}</span>;
+  return <span className={cn("inline-flex h-6 shrink-0 items-center whitespace-nowrap rounded-full px-2.5 text-[12px] font-light", tones[tone])}>{children}</span>;
 }
 
 export const savedQuery = {
@@ -104,69 +125,71 @@ export function SaveButton({ id }: { id: string }) {
   );
 }
 
+/** One listing, Balance-calm: same frame, same rhythm, three facts that matter, the rest on the page. */
 export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: Profile | null; compact?: boolean }) {
   if (!row.id) return null;
   const fit = budgetFit(row, profile);
+  const days = row.deadline_at ?? row.auction_at;
+  const chips = [
+    row.sale_type && row.sale_type !== "sale" && row.sale_type !== "one_euro" ? (
+      <Chip key="sale" tone="brand">{SALE_TYPE_LABELS[row.sale_type] ?? row.sale_type}</Chip>
+    ) : row.sale_type === "one_euro" ? (
+      <Chip key="sale" tone="brand">€1 scheme</Chip>
+    ) : null,
+    (row.discount_pct ?? 0) >= 15 ? <Chip key="disc" tone="success">{row.discount_pct}% below valuation</Chip> : null,
+    days ? <DeadlinePill key="dl" deadline={days} /> : null,
+    row.occupancy === "free" ? <Chip key="occ">Vacant</Chip> : row.occupancy === "occupied" ? <Chip key="occ" tone="warn">Occupied</Chip> : null,
+    fit === "within" ? <Chip key="fit" tone="success">In budget</Chip> : null,
+    inRegions(row, profile) ? <Chip key="reg" tone="success">Your regions</Chip> : null,
+  ].filter(Boolean).slice(0, 3);
+  const meta = [
+    row.property_type ? TYPE_LABELS[row.property_type] ?? row.property_type : null,
+    row.surface_sqm != null ? `${Math.round(row.surface_sqm).toLocaleString("en-GB")} m²` : row.land_sqm != null ? `${Math.round(row.land_sqm).toLocaleString("en-GB")} m² land` : null,
+    row.price_per_sqm != null && row.price_eur !== 1 ? `${formatEur(Math.round(row.price_per_sqm))}/m²` : null,
+  ].filter(Boolean).join(" · ");
   return (
-    <article className={cn("group", compact && "overflow-hidden rounded-2xl bg-card")}>
-      <Link to="/listing/$id" params={{ id: row.id }} className="block">
-        <div className="relative">
-          <CardImage row={row} compact={!!compact} />
-          <div className="absolute right-3 top-3" onClick={(e) => e.preventDefault()}>
-            <ScoreBadge score={row.score} reasons={row.score_reasons} size={compact ? "sm" : "md"} />
-          </div>
-          {row.is_demo && (
-            <span className="absolute left-3 top-3 rounded-full bg-card/95 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide shadow-sm backdrop-blur">Demo</span>
-          )}
-        </div>
+    <article className={cn(
+      "group flex h-full flex-col overflow-hidden rounded-[10px] border border-foreground/[0.08] bg-card transition-shadow hover:shadow-[0_18px_40px_-24px_oklch(0.2_0.02_245/0.35)]",
+    )}>
+      <Link to="/listing/$id" params={{ id: row.id }} className="relative block">
+        <CardImage row={row} compact />
+        {row.is_demo && (
+          <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] uppercase tracking-[0.1em] backdrop-blur">Demo</span>
+        )}
       </Link>
-      <div className={cn("space-y-2.5", compact ? "p-4" : "px-0.5 pt-3.5")}>
+      <div className={cn("flex flex-1 flex-col", compact ? "p-4" : "p-5")}>
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <Link to="/listing/$id" params={{ id: row.id }}>
-              <h3 className="truncate text-[22px] font-normal leading-tight">{row.comune ?? "Unknown comune"}</h3>
+              <h3 className={cn("truncate font-display leading-tight", compact ? "text-[20px]" : "text-[24px]")}>{row.comune ?? "Unknown comune"}</h3>
             </Link>
-            <p className="truncate text-sm text-muted-foreground">
+            <p className="mt-0.5 truncate text-[13px] font-light text-foreground/55">
               {[row.province, row.region].filter(Boolean).join(" · ") || "Location not stated"}
             </p>
           </div>
-          <SaveButton id={row.id} />
+          <div className="-mr-2 -mt-1"><SaveButton id={row.id} /></div>
         </div>
-        <div>
-          <Money value={row.price_eur} className={cn(compact ? "text-lg" : "text-xl")} />
+        <div className="mt-4 flex items-baseline justify-between gap-3">
+          <Money value={row.price_eur} className={cn(compact ? "text-[20px]" : "text-[26px]", "leading-none")} showOneEuroChip={false} />
           {row.min_offer_eur != null && row.price_eur != null && row.min_offer_eur < row.price_eur && (
-            <p className="mt-0.5 text-sm tnum">Offers from {formatEur(row.min_offer_eur)}</p>
+            <span className="text-[13px] font-light text-foreground/60 tnum">offers from {formatEur(row.min_offer_eur)}</span>
           )}
-          <p className="mt-1 text-sm text-muted-foreground tnum">
-            {[
-              row.surface_sqm != null ? `${Math.round(row.surface_sqm).toLocaleString("en-GB")} m²` : null,
-              row.surface_sqm == null && row.land_sqm != null ? `${Math.round(row.land_sqm).toLocaleString("en-GB")} m² of land` : null,
-              row.price_per_sqm != null && row.price_eur !== 1 ? `${formatEur(Math.round(row.price_per_sqm))}/m²` : null,
-            ].filter(Boolean).join(" · ") || "Surface not stated"}
-          </p>
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          {row.property_type && <Chip>{TYPE_LABELS[row.property_type] ?? row.property_type}</Chip>}
-          {row.sale_type && row.sale_type !== "sale" && row.sale_type !== "one_euro" && (
-            <Chip tone="brand">{SALE_TYPE_LABELS[row.sale_type] ?? row.sale_type}</Chip>
-          )}
-          {(row.discount_pct ?? 0) >= 15 && <Chip tone="success">{row.discount_pct}% below appraisal</Chip>}
-          {row.occupancy === "free" && <Chip>Vacant</Chip>}
-          {row.occupancy === "occupied" && <Chip tone="warn">Occupied</Chip>}
-          {row.previous_auction_failed && <Chip tone="terra">Unsold before</Chip>}
-          <DeadlinePill deadline={row.deadline_at ?? row.auction_at} />
-          {(row.red_flag_count ?? 0) > 0 && (
-            <Chip tone="warn">{row.red_flag_count} red flag{row.red_flag_count === 1 ? "" : "s"}</Chip>
-          )}
-          {fit === "within" && <Chip tone="success">Matches your budget</Chip>}
-          {inRegions(row, profile) && <Chip tone="success">In your regions</Chip>}
-        </div>
-        {!compact && row.summary_en && <p className="line-clamp-2 text-sm text-muted-foreground">{row.summary_en}</p>}
-        {compact && (
-          <Link to="/listing/$id" params={{ id: row.id }} className="inline-block text-sm font-medium text-brand hover:underline">
-            View
+        <p className="mt-2 truncate text-[13px] font-light text-foreground/55 tnum">{meta || "Surface not stated"}</p>
+        <div className="mt-4 flex h-6 flex-wrap gap-1.5 overflow-hidden">{chips}</div>
+        <div className="min-h-4 flex-1" />
+        <div className="flex items-center justify-between border-t border-foreground/[0.08] pt-3.5 text-[13px] font-light">
+          {row.score != null ? (
+            <span className="flex items-center gap-2 text-foreground/60">
+              <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-azure" />
+              Deal score <span className="text-foreground tnum">{row.score}</span>
+              {(row.red_flag_count ?? 0) > 0 && <span className="text-warning">· {row.red_flag_count} red flag{row.red_flag_count === 1 ? "" : "s"}</span>}
+            </span>
+          ) : <span />}
+          <Link to="/listing/$id" params={{ id: row.id }} className="text-foreground/70 transition-colors hover:text-azure">
+            View →
           </Link>
-        )}
+        </div>
       </div>
     </article>
   );
@@ -174,9 +197,9 @@ export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: 
 
 export function ListingCardSkeleton() {
   return (
-    <div>
-      <div className="aspect-[4/3] animate-pulse rounded-2xl bg-muted" />
-      <div className="space-y-3 px-1 pt-4">
+    <div className="overflow-hidden rounded-[10px] border border-foreground/[0.08]">
+      <div className="aspect-[4/3] animate-pulse bg-muted" />
+      <div className="space-y-3 p-5">
         <div className="h-5 w-1/2 animate-pulse rounded bg-muted" />
         <div className="h-4 w-1/3 animate-pulse rounded bg-muted" />
         <div className="h-7 w-2/5 animate-pulse rounded bg-muted" />

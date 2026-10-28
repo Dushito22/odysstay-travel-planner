@@ -1,9 +1,11 @@
 """Default renovation estimates: three scenarios per listing from published per-m² price ranges.
 
-Source: Studio Madera, "Costi ristrutturazione casa al metro quadro 2026" (prices excluding VAT):
-light 350-500 €/m², medium 600-900 €/m², full (floors, roof, all systems, finishes, windows)
-1,200-1,500 €/m², and at least 30% more when most of the structure is involved.
-VAT on home renovation in Italy is 10% (reduced rate).
+Source: Cronoshare, "Quanto costa ristrutturare casa? Prezzi 2026" (3 Jan 2026): partial renovation
+300-500 €/m², complete renovation 600-900 €/m², with most Italian cities between 300 and 650 €/m²
+(Palermo 300-550, Bari 300-500, Catania 300-650). A light refresh (paint, floors laid over the old ones,
+fittings, minor electrics) is costed from the same page's per-job prices, at 150-280 €/m².
+These sit about 45% below premium-studio price lists, which matches what small-town builders charge
+for the old houses Odysstay finds. VAT on home renovation in Italy is 10% (reduced rate).
 
 These are ranges for orientation, not quotes. The user replaces them with real quotes in the deal room.
 """
@@ -11,15 +13,15 @@ from __future__ import annotations
 
 from .supa import Supa
 
-SOURCE = "Studio Madera, renovation costs per m² (2026)"
-SOURCE_URL = "https://studiomadera.it/news/73-costo-ristrutturazione-prezzo"
+SOURCE = "Cronoshare, renovation prices per m² in Italy (2026)"
+SOURCE_URL = "https://www.cronoshare.it/quanto-costa/ristrutturare-casa"
 VAT = 0.10
 SCENARIOS = {
-    "light": (350, 500, "Light: new finishes, some systems redone, non-structural walls moved"),
-    "standard": (600, 900, "Medium: most systems and finishes, bathroom and kitchen, some windows"),
-    "full": (1200, 1500, "Full: floors and roof, all systems, finishes and windows"),
+    "light": (150, 280, "Light: paint, floors over the old ones, new fittings, some electrics"),
+    "standard": (300, 500, "Partial: bathroom and kitchen, most systems, some windows"),
+    "full": (600, 900, "Complete: floors, all systems, finishes and windows"),
 }
-STRUCTURAL_UPLIFT = 0.30
+STRUCTURAL_UPLIFT = 0.20
 OLD_STOCK = {"rural_house", "building"}
 ESTIMATE_TYPES = {"house", "apartment", "rural_house", "building", "mixed"}
 # Above these, the figure is land or a whole estate, not floor area: no estimate rather than a silly one.
@@ -42,7 +44,7 @@ def estimate(sqm: float, property_type: str | None) -> list[dict]:
                        "Excludes design, permits, surveys and furniture",
                        "Prices vary by area: large northern cities run higher, small southern towns lower"]
         if uplift:
-            assumptions.append("Rural or whole-building lots: +30% for structural work (roof, floors)")
+            assumptions.append("Rural or whole-building lots: +20% for structural work (roof, floors)")
         out.append({"scenario": scenario, "low_eur": round(work_lo * (1 + VAT), -2), "high_eur": round(work_hi * (1 + VAT), -2),
                     "items": items, "assumptions": assumptions, "price_list": SOURCE, "price_list_url": SOURCE_URL})
     return out

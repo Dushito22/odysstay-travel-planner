@@ -124,7 +124,7 @@ export function DeadlinePill({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium tnum",
+        "inline-flex h-6 shrink-0 items-center whitespace-nowrap rounded-full px-2.5 text-[12px] font-light tnum",
         tone,
       )}
     >

@@ -137,8 +137,8 @@ function CountBadge({ n, className }: { n: number; className?: string }) {
 export function PageHeader({ title, intro }: { title: string; intro?: string }) {
   return (
     <div className="mb-8">
-      <h1 className="text-4xl md:text-5xl">{title}</h1>
-      {intro && <p className="mt-2 max-w-xl text-muted-foreground">{intro}</p>}
+      <h1 className="type-h2">{title}</h1>
+      {intro && <p className="mt-3 max-w-xl type-body text-foreground/60">{intro}</p>}
     </div>
   );
 }
@@ -147,7 +147,7 @@ export function ComingSoon({ title, intro }: { title: string; intro: string }) {
   return (
     <>
       <PageHeader title={title} />
-      <div className="rounded-2xl border border-dashed bg-card p-10 text-center text-muted-foreground">{intro}</div>
+      <div className="grain rounded-[10px] bg-muted p-10 text-center type-body text-foreground/60">{intro}</div>
     </>
   );
 }

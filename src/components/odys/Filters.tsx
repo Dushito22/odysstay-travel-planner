@@ -15,8 +15,8 @@ type Props = { value: FeedSearch; onChange: (patch: Partial<FeedSearch>) => void
 
 function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="space-y-3 border-b pb-5 last:border-0">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</p>
+    <div className="space-y-3 border-b border-foreground/10 pb-5 last:border-0 last:pb-0">
+      <p className="type-label text-[11px] text-foreground/55">{title}</p>
       {children}
     </div>
   );
@@ -24,7 +24,7 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
 
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-3 text-sm">
+    <label className="flex cursor-pointer items-center justify-between gap-3 text-[14px] font-light">
       <span>{label}</span>
       <Switch checked={checked} onCheckedChange={onChange} />
     </label>
@@ -64,7 +64,7 @@ export function FilterPanel({ value: v, onChange }: Props) {
         />
       </Group>
       <Group title="Sale type">
-        <p className="text-sm">Outright sale</p>
+        <p className="text-[14px] font-light text-foreground/60">Outright sales always included</p>
         <Toggle label="Include concessions and leases" checked={v.leases} onChange={(c) => set({ leases: c })} />
         <Toggle label="One-euro schemes" checked={v.oneEuro} onChange={(c) => set({ oneEuro: c })} />
       </Group>
@@ -74,7 +74,7 @@ export function FilterPanel({ value: v, onChange }: Props) {
       </Group>
       <Group title={v.minDiscount ? `Below court appraisal: ${v.minDiscount}%+` : "Below court appraisal"}>
         <Slider value={[v.minDiscount]} min={0} max={70} step={5} onValueChange={([d]) => set({ minDiscount: d ?? 0 })} aria-label="Minimum discount below the court appraisal" />
-        <p className="text-xs text-muted-foreground">Court sales only: how far the minimum offer sits below the court expert's valuation.</p>
+        <p className="text-[12px] font-light leading-relaxed text-foreground/55">Court sales only: how far the minimum offer sits below the court expert's valuation.</p>
       </Group>
       <Group title={`Min score: ${v.minScore}`}>
         <Slider value={[v.minScore]} min={0} max={100} step={5} onValueChange={([s]) => set({ minScore: s ?? 0 })} aria-label="Minimum score" />
@@ -113,15 +113,15 @@ export function FilterChips({ value: v, onChange, onReset }: Props & { onReset: 
   if (!v.hideClosed) chips.push({ label: "Showing closed", clear: () => set({ hideClosed: true }) });
 
   return (
-    <div className="flex flex-wrap items-center gap-2 text-sm">
+    <div className="flex flex-wrap items-center gap-2 text-[14px] font-light">
       {v.prefs && (
-        <span className="text-muted-foreground">
+        <span className="mr-1 text-foreground/55">
           Using your preferences,{" "}
-          <button className="text-brand underline-offset-4 hover:underline" onClick={onReset}>reset</button>
+          <button className="text-azure underline-offset-4 hover:underline" onClick={onReset}>reset</button>
         </span>
       )}
       {chips.map((c) => (
-        <button key={c.label} onClick={c.clear} className="inline-flex items-center gap-1 rounded-full border bg-card px-2.5 py-1 text-xs hover:bg-muted">
+        <button key={c.label} onClick={c.clear} className="inline-flex h-8 items-center gap-1.5 rounded-full border border-foreground/15 bg-card px-3 text-[13px] font-light transition-colors hover:border-foreground/40">
           {c.label} <X className="h-3 w-3" />
         </button>
       ))}

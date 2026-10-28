@@ -39,13 +39,22 @@ function Em({ children }: { children: ReactNode }) {
   return <em className="font-display italic">{children}</em>;
 }
 
+/** Italic emphasis in azure, for accent phrases. */
+function EmA({ children }: { children: ReactNode }) {
+  return <em className="font-display italic text-azure">{children}</em>;
+}
+/** A single azure word inside a headline. */
+function Az({ children }: { children: ReactNode }) {
+  return <span className="text-azure">{children}</span>;
+}
+
 /** Azure accent words inside the hero help pop-up. */
 function Hi({ children }: { children: ReactNode }) {
   return <span className="text-[oklch(0.8_0.1_238)]">{children}</span>;
 }
 
 /** Set to "/img/argos.webp" once the sketch arrives; until then a lettered card stands in. */
-const ARGOS_SKETCH: string | null = null;
+const ARGOS_SKETCH: string | null = "/img/argos-deeds.webp";
 
 const COPY = {
   en: {
@@ -82,6 +91,12 @@ const COPY = {
     notListedBody: "Argos reads every region, from the Alps to Lampedusa. Tell him where you'd like to wake up.",
     notListedCta: "Talk to Argos",
     statementBody: "Courts, notaries and town halls sell thousands of homes a year through notices nobody markets, in Italian, on websites from another century. We read every one of them, every day.",
+    statMini: [
+      { a: "Tribunale di Sciacca", b: "Base price vs the court's valuation", bar: true },
+      { a: "Notary · sealed bids", b: "The envelopes open at noon" },
+      { a: "Sicily, Sardinia, Molise…", b: "From €1, with a renovation pledge" },
+      { a: "Added today", b: "Read by Argos before breakfast" },
+    ],
     numbers: ["court sales open now", "notary and public-body sales", "towns selling houses for €1", "private auctions, added daily"],
     howEyebrow: "How it works",
     howTitle: <>Ten phone calls. <Em>One shrug.</Em></>,
@@ -97,14 +112,14 @@ const COPY = {
     mockMail: "Gentile Avvocato, Le scrivo per conto di un acquirente interessato al lotto 1…",
     mockDeal: ["Ceglie Messapica", "Offer filed", "Notary booked"],
     sprezz: { word: "sprezzatura", pron: "/sprets-ah-TOO-rah/ · noun · Italian", def: "The art of making the difficult look effortless.", note: "Castiglione, 1528. Back then it took a household of servants. Now it takes Argos.", sign: "Buying a house in Italy, apparently without effort." },
-    housesTitle: <>The house you'll swear you <Em>found by accident</Em>.</>,
+    housesTitle: <>The house you'll swear you <Em><Az>found</Az> by accident</Em>.</>,
     housesBody: "Real ones, open for offers today. Most need work and a little love. That's the whole discount.",
     seeAll: "See them all",
     proofEyebrow: "No source, no fact",
     proofTitle: <>If the notice doesn't say it, <Em>we don't either</Em>.</>,
     proofBody: "Every price, size and deadline links to the line it came from, with the translation beside it. If the document is silent, Argos says so. An agent that guesses is worse than no agent.",
     exampleLabel: "Example · Offer deadline",
-    voicesTitle: <>They <Em>barely tried</Em>.</>,
+    voicesTitle: <>They <EmA>barely tried</EmA>.</>,
     voices: [
       { img: "masseria", quote: "I said 'something in Puglia, under forty, walk to a bar'. Nine days later I was standing in it.", name: "Hannah & Tom", where: "Bristol → Ceglie Messapica" },
       { img: "cefalu", quote: "I don't speak a word of Italian. Argos called the notary, I drank coffee.", name: "Olga S.", where: "Moscow → Sciacca" },
@@ -165,6 +180,12 @@ const COPY = {
     notListedBody: "Argos читает все регионы, от Альп до Лампедузы. Скажите ему, где хотите просыпаться.",
     notListedCta: "Поговорить с Argos",
     statementBody: "Суды, нотариусы и муниципалитеты продают тысячи домов в год через объявления, которые никто не рекламирует: на итальянском, на сайтах из прошлого века. Мы читаем каждое, каждый день.",
+    statMini: [
+      { a: "Суд Шакки", b: "Стартовая цена против судебной оценки", bar: true },
+      { a: "Нотариус · закрытые конверты", b: "Конверты вскрывают в полдень" },
+      { a: "Сицилия, Сардиния, Молизе…", b: "От €1, с обязательством ремонта" },
+      { a: "Добавлено сегодня", b: "Argos прочитал до завтрака" },
+    ],
     numbers: ["судебных продаж сейчас", "нотариальных и государственных продаж", "городов продают дома за €1", "частные аукционы, каждый день"],
     howEyebrow: "Как это работает",
     howTitle: <>Десять звонков. <Em>Одно пожатие плеч.</Em></>,
@@ -180,14 +201,14 @@ const COPY = {
     mockMail: "Gentile Avvocato, Le scrivo per conto di un acquirente interessato al lotto 1…",
     mockDeal: ["Челье-Мессапика", "Предложение подано", "Нотариус назначен"],
     sprezz: { word: "sprezzatura", pron: "/спреццату́ра/ · сущ. · итал.", def: "Искусство делать трудное так, будто это ничего не стоит.", note: "Кастильоне, 1528. Тогда для этого нужен был целый штат слуг. Теперь достаточно Argos.", sign: "Купить дом в Италии, будто бы без усилий." },
-    housesTitle: <>Дом, который вы <Em>будто нашли случайно</Em>.</>,
+    housesTitle: <>Дом, который вы <Em>будто <Az>нашли</Az> случайно</Em>.</>,
     housesBody: "Настоящие, открыты для предложений сегодня. Большинству нужен ремонт и немного любви. В этом вся скидка.",
     seeAll: "Смотреть все",
     proofEyebrow: "Нет источника, нет факта",
     proofTitle: <>Если в объявлении этого нет, <Em>мы тоже не скажем</Em>.</>,
     proofBody: "Каждая цена, площадь и срок ведут к строке, откуда они взяты, с переводом рядом. Если в документе пусто, Argos так и скажет. Агент, который гадает, хуже, чем никакой.",
     exampleLabel: "Пример · Срок подачи",
-    voicesTitle: <>Они <Em>почти не старались</Em>.</>,
+    voicesTitle: <>Они <EmA>почти не старались</EmA>.</>,
     voices: [
       { img: "masseria", quote: "Я сказала: «Апулия, до сорока, пешком до бара». Через девять дней я стояла внутри.", name: "Ханна и Том", where: "Бристоль → Челье-Мессапика" },
       { img: "cefalu", quote: "Я не говорю по-итальянски ни слова. Argos звонил нотариусу, я пила кофе.", name: "Ольга С.", where: "Москва → Шакка" },
@@ -365,11 +386,17 @@ function Hero() {
             </button>
           ))}
         </div>
-        <Link to="/explore" className="mt-7 inline-flex items-center gap-1.5 text-[13px] font-light text-white/75 underline-offset-4 hover:text-white hover:underline">
-          {c.browseAll} <ArrowRight className="h-3.5 w-3.5" />
-        </Link>
       </div>
-      <p className="relative z-10 pb-5 text-center text-xs font-light text-white/55">{c.powered}</p>
+      <div className="relative z-10 flex flex-col items-center gap-4 px-5 pb-6">
+        <Link to="/explore"
+          className="group inline-flex h-10 items-center gap-2 rounded-full border border-white/25 bg-azure/75 pl-5 pr-1.5 text-[14px] font-light text-white shadow-[0_10px_30px_-12px_oklch(0.52_0.13_245/0.8)] backdrop-blur-md transition-colors hover:bg-azure/90">
+          {c.browseAll}
+          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-white/35 transition-transform group-hover:translate-x-0.5">
+            <ArrowRight className="h-3.5 w-3.5" />
+          </span>
+        </Link>
+        <p className="text-center text-xs font-light text-white/55">{c.powered}</p>
+      </div>
     </section>
   );
 }
@@ -412,9 +439,9 @@ function MeetArgos() {
   return (
     <section className="py-20 md:py-32">
       <Wrap className="grid items-center gap-12 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:gap-20">
-        <div className="grain relative flex aspect-[4/5] max-h-[560px] w-full flex-col items-center justify-center overflow-hidden rounded-[10px] bg-muted">
+        <div className="grain relative flex aspect-[4/5] max-h-[600px] w-full flex-col items-center justify-center overflow-hidden rounded-[10px] bg-muted">
           {ARGOS_SKETCH ? (
-            <img src={ARGOS_SKETCH} alt="A sketch of Argos" className="absolute inset-0 h-full w-full object-contain p-8" />
+            <img src={ARGOS_SKETCH} alt="Argos at his desk, reading a property deed" loading="lazy" className="absolute inset-x-0 bottom-0 h-[88%] w-full object-contain object-bottom" />
           ) : (
             <>
               <p className="font-display text-[88px] italic leading-none tracking-[-0.02em] md:text-[112px]">
@@ -482,14 +509,34 @@ function Statement() {
         <Lead className="mt-7">{c.statementBody}</Lead>
         <dl className="mt-12 grid grid-cols-2 gap-3 md:mt-14 lg:grid-cols-4 lg:gap-6">
           {nums.map((v, i) => (
-            <div key={i} className="grain flex min-h-[132px] flex-col justify-between rounded-[10px] border border-foreground/[0.07] bg-muted p-5 md:min-h-[176px] md:p-7">
+            <div key={i} className="grain flex min-h-[220px] flex-col rounded-[10px] border border-foreground/[0.07] bg-muted p-5 md:min-h-[268px] md:p-7">
               <dt className="font-display text-[38px] leading-none tracking-[-0.02em] tnum md:text-[52px]">{v}</dt>
-              <dd className="mt-5 text-[13px] font-light text-foreground/62 md:mt-6 md:text-[15px]">{c.numbers[i]}</dd>
+              <dd className="mt-3 text-[13px] font-light text-foreground/62 md:text-[15px]">{c.numbers[i]}</dd>
+              <StatMini {...c.statMini[i]!} />
             </div>
           ))}
         </dl>
       </Wrap>
     </section>
+  );
+}
+
+/** The little example card at the bottom of each number box, so the boxes show what the number is made of. */
+function StatMini({ a, b, bar }: { a: string; b: string; bar?: boolean }) {
+  return (
+    <div className="mt-auto rounded-[8px] border border-white/80 bg-white/70 px-3.5 py-3 shadow-[0_1px_2px_oklch(0_0_0/0.04)]">
+      <p className="flex items-center gap-2 text-[11px] uppercase tracking-[0.1em] text-foreground/55">
+        <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-azure" />
+        <span className="truncate">{a}</span>
+      </p>
+      {bar && (
+        <div aria-hidden className="mt-2.5 space-y-1">
+          <div className="h-1.5 w-full rounded-full bg-foreground/12" />
+          <div className="h-1.5 w-[51%] rounded-full bg-azure" />
+        </div>
+      )}
+      <p className="mt-2 text-[12px] font-light leading-snug text-foreground/75 md:text-[13px]">{b}</p>
+    </div>
   );
 }
 
@@ -543,10 +590,16 @@ function HowItWorks() {
   return (
     <section id="how" className={cn("grain scroll-mt-16 bg-muted", SECTION)}>
       <Wrap>
-        <Label>{c.howEyebrow}</Label>
-        <H2 className="mt-5">{c.howTitle}</H2>
-        <Lead className="mt-6 max-w-[620px]">{c.howBody}</Lead>
-        <div className="mt-14 grid gap-5 lg:grid-cols-3 lg:gap-6">
+        <div className="grid items-end gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
+          <div className="md:pb-6">
+            <Label>{c.howEyebrow}</Label>
+            <H2 className="mt-5">{c.howTitle}</H2>
+            <Lead className="mt-6 max-w-[620px]">{c.howBody}</Lead>
+          </div>
+          <img src="/img/argos-phones.webp" alt="Argos on two phones at once" loading="lazy"
+            className="mx-auto h-[260px] w-auto object-contain [mask-image:linear-gradient(to_bottom,black_88%,transparent)] md:h-[340px]" />
+        </div>
+        <div className="mt-10 grid gap-5 lg:grid-cols-3 lg:gap-6">
           {c.steps.map((s, i) => (
             <div key={s.title} className="rounded-[10px] border border-white/70 bg-white/55 p-6 md:p-7">
               <h3 className="type-h3">{s.title}</h3>
@@ -593,7 +646,9 @@ function Sprezzatura() {
     <section className={SECTION}>
       <Wrap className="grid items-center gap-12 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] md:gap-20">
         <Photo name="lunch" alt="Lunch by the sea under a fringed umbrella" className="aspect-[4/5] max-h-[620px]" />
-        <div className="max-w-xl border-y border-foreground/15 py-10">
+        <div className="max-w-xl">
+        <img src="/img/lemon.webp" alt="" aria-hidden loading="lazy" className="mb-6 h-[150px] w-auto -rotate-6 object-contain md:h-[190px]" />
+        <div className="border-y border-foreground/15 py-10">
           <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
             <p className="font-display text-[48px] italic leading-none tracking-[-0.01em]">{s.word}</p>
             <p className="type-label text-[11px] text-foreground/50">{s.pron}</p>
@@ -601,6 +656,7 @@ function Sprezzatura() {
           <p className="mt-7 type-lead">{s.def}</p>
           <p className="mt-4 type-body text-foreground/62">{s.note}</p>
           <p className="mt-8 text-right font-display text-[20px] italic text-foreground/60">{s.sign}</p>
+        </div>
         </div>
       </Wrap>
     </section>
@@ -637,23 +693,26 @@ function Proof() {
   const top = useQuery(topListingsQuery(3));
   const f = useQuery(exampleFactQuery(top.data?.[0])).data;
   return (
-    <section className={cn("grain grain-strong bg-[oklch(0.195_0.007_60)] text-[oklch(0.975_0.004_80)]", SECTION)}>
-      <Wrap className="grid items-center gap-14 md:grid-cols-2">
+    <section className={cn("relative overflow-hidden", SECTION)}>
+      <img src="/img/fog.webp" alt="" aria-hidden loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+      <div className="absolute inset-0 bg-gradient-to-r from-white/55 via-white/20 to-transparent" />
+      <div className="grain-overlay opacity-[0.28]" />
+      <Wrap className="relative grid items-center gap-14 md:grid-cols-2">
         <div>
-          <Label className="text-white/55">{c.proofEyebrow}</Label>
+          <Label className="text-foreground/60">{c.proofEyebrow}</Label>
           <H2 className="mt-5">{c.proofTitle}</H2>
-          <p className="mt-6 max-w-md type-body text-white/65">{c.proofBody}</p>
+          <p className="mt-6 max-w-md type-body text-foreground/70">{c.proofBody}</p>
         </div>
-        <div className="rounded-[10px] border border-white/12 bg-white/[0.04] p-7 md:p-8">
-          <p className="type-label text-[11px] text-white/50">{f ? `${f.comune ?? ""} · ${f.label_en}` : c.exampleLabel}</p>
+        <div className="relative overflow-hidden rounded-[10px] border border-white/70 bg-white/55 p-7 shadow-[0_24px_60px_-30px_oklch(0.2_0.02_160/0.45)] backdrop-blur-xl md:p-8">
+          <p className="type-label text-[11px] text-foreground/55">{f ? `${f.comune ?? ""} · ${f.label_en}` : c.exampleLabel}</p>
           <div className="mt-4 font-display text-[36px] leading-tight">
             {f ? <SourceQuote quote={f.quote} quoteEn={f.quote_en} page={f.page} sourceUrl={f.source_url}>{f.value_text ?? f.value_num}</SourceQuote> : "17 July 2026, 12:00"}
           </div>
-          <div className="mt-6 h-px bg-white/12" />
-          <blockquote lang="it" className="mt-6 border-l border-azure pl-4 text-[15px] font-light leading-relaxed text-white/85">
+          <div className="mt-6 h-px bg-foreground/12" />
+          <blockquote lang="it" className="mt-6 border-l border-azure pl-4 text-[15px] font-light leading-relaxed text-foreground/85">
             “{f ? f.quote : "Le offerte dovranno pervenire entro e non oltre le ore 12:00 del 17 luglio 2026."}”
           </blockquote>
-          <p className="mt-2 pl-4 text-[15px] font-light text-white/55">{f ? f.quote_en : "Offers must arrive no later than 12:00 on 17 July 2026."}</p>
+          <p className="mt-2 pl-4 text-[15px] font-light text-foreground/60">{f ? f.quote_en : "Offers must arrive no later than 12:00 on 17 July 2026."}</p>
         </div>
       </Wrap>
     </section>
@@ -690,7 +749,11 @@ function Faq() {
   return (
     <section className={cn("border-t border-foreground/10", SECTION)}>
       <Wrap className="grid gap-10 md:grid-cols-[1fr_1.5fr]">
-        <H2>{c.faqTitle}</H2>
+        <div>
+          <H2>{c.faqTitle}</H2>
+          <img src="/img/argos-helmet.webp" alt="Argos in a hard hat, explaining" loading="lazy"
+            className="mt-10 hidden h-[340px] w-auto object-contain md:block" />
+        </div>
         <Accordion type="single" collapsible>
           {c.faq.map((f) => (
             <AccordionItem key={f.q} value={f.q} className="border-foreground/12">
@@ -727,9 +790,11 @@ function Final() {
         <div>
           <H2>{c.finalTitle}</H2>
           <p className="mt-6 max-w-md type-body text-foreground/62">{c.finalBody}</p>
+          <img src="/img/key.webp" alt="An old key with a 'Benvenuti a casa' tag" loading="lazy"
+            className="mt-10 h-[150px] w-auto -rotate-[10deg] object-contain drop-shadow-[0_16px_18px_oklch(0.3_0.03_60/0.18)] md:h-[190px]" />
         </div>
         <div className="relative overflow-hidden rounded-[10px]">
-          <img src="/img/window.webp" alt="" aria-hidden loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+          <img src="/img/sky.webp" alt="" aria-hidden loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
           <div className="relative m-6 rounded-[10px] border border-white/60 bg-white/55 p-7 backdrop-blur-xl md:m-12 md:p-9">
             <p className="type-label text-[11px] text-foreground/55">{c.getStarted}</p>
             <ul className="mt-5 space-y-3 text-[16px] font-light">
@@ -756,34 +821,28 @@ function Final() {
 
 function Footer() {
   const [c] = useCopy();
-  const col = "text-[17px] font-light text-white/75 transition-colors hover:text-white";
+  const link = "text-[15px] font-light text-white/80 transition-colors hover:text-white";
   return (
-    <footer className="grain grain-strong bg-[oklch(0.195_0.007_60)] text-white">
-      <Wrap className="grid gap-12 pb-16 pt-20 md:grid-cols-[1.4fr_1fr_1fr] md:pt-24">
+    <footer className="relative overflow-hidden text-white">
+      <img src="/img/cypress.webp" alt="" aria-hidden loading="lazy" className="absolute inset-0 h-full w-full object-cover object-[50%_45%]" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[oklch(0.22_0.03_250/0.72)] via-[oklch(0.25_0.03_250/0.28)] to-transparent" />
+      <div className="grain-overlay opacity-[0.3]" />
+      <Wrap className="relative grid gap-10 pb-10 pt-40 md:grid-cols-[1.2fr_1fr] md:items-end md:pt-56">
         <div>
-          <Wordmark size="xl" tone="dark" />
-          <p className="mt-7 max-w-sm type-lead text-white/85">{c.footerTag}</p>
-          <div className="mt-8"><PillLink to="/login" light>{c.getStarted}</PillLink></div>
+          <Wordmark size="lg" tone="dark" />
+          <p className="mt-4 max-w-sm text-[17px] font-light leading-relaxed text-white/85">{c.footerTag}</p>
         </div>
-        <div>
-          <p className="type-label text-white/50">{c.footerCols.explore}</p>
-          <ul className="mt-5 space-y-3">
-            <li><Link to="/argos" search={{ q: "", voice: false }} className={col}>Argos</Link></li>
-            <li><Link to="/explore" className={col}>{c.nav.browse}</Link></li>
-            <li><Link to="/pricing" className={col}>{c.nav.pricing}</Link></li>
-          </ul>
-        </div>
-        <div>
-          <p className="type-label text-white/50">{c.footerCols.company}</p>
-          <ul className="mt-5 space-y-3">
-            <li><Link to="/privacy" className={col}>Privacy</Link></li>
-            <li><Link to="/terms" className={col}>Terms</Link></li>
-            <li><Link to="/credits" className={col}>{c.credits}</Link></li>
-            <li><a href="mailto:hello@odysstay.com" className={col}>hello@odysstay.com</a></li>
-          </ul>
-        </div>
+        <nav className="flex flex-wrap gap-x-7 gap-y-3 md:justify-end">
+          <Link to="/argos" search={{ q: "", voice: false }} className={link}>Argos</Link>
+          <Link to="/explore" className={link}>{c.nav.browse}</Link>
+          <Link to="/pricing" className={link}>{c.nav.pricing}</Link>
+          <Link to="/privacy" className={link}>Privacy</Link>
+          <Link to="/terms" className={link}>Terms</Link>
+          <Link to="/credits" className={link}>{c.credits}</Link>
+          <a href="mailto:hello@odysstay.com" className={link}>hello@odysstay.com</a>
+        </nav>
       </Wrap>
-      <Wrap className="flex flex-wrap items-center justify-between gap-4 border-t border-white/10 py-7 text-[15px] font-light text-white/50">
+      <Wrap className="relative flex flex-wrap items-center justify-between gap-4 border-t border-white/15 py-5 text-[13px] font-light text-white/60">
         <p className="max-w-2xl">{c.legal}</p>
         <LangToggle light />
       </Wrap>
