@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Odysstay Capture",
+  "version": "0.1.0",
+  "description": "Sends the Idealista and Immobiliare listings you look at to your Odysstay feed.",
+  "permissions": ["storage"],
+  "host_permissions": ["https://nryhvtxprjiylajolcef.supabase.co/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "Odysstay Capture", "default_popup": "popup.html" },
+  "content_scripts": [
+    {
+      "matches": ["https://www.idealista.it/*", "https://idealista.it/*", "https://www.immobiliare.it/*", "https://immobiliare.it/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

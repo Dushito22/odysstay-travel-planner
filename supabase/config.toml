@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.argos]
 verify_jwt = false
+
+[functions.capture]
+verify_jwt = false
