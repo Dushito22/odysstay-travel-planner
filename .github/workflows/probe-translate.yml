@@ -6,5 +6,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          curl -sS -m 90 -X POST "https://nryhvtxprjiylajolcef.supabase.co/functions/v1/translate-ui" -H "apikey: sb_publishable_zdY6uxrouCZN2azT4rxUwQ_kZ6H86b5" -H "Authorization: Bearer sb_publishable_zdY6uxrouCZN2azT4rxUwQ_kZ6H86b5" -H "Content-Type: application/json" -d '{"lang":"ru","texts":["Court-ordered sale (Tribunale di Catania). Base price €48,410, offers valid from €36,308; the court expert valued it at €153,000.","Who runs the sale","Needs full renovation","About 1 h 55 min to Cagliari (102 km)","Minimum offer is 76% below it","Read the full notice carefully.","Inspect the property with a surveyor."]}' | tee out.json
-          echo
+          curl -sS -m 90 -X POST "https://nryhvtxprjiylajolcef.supabase.co/functions/v1/translate-ui" -H "apikey: sb_publishable_zdY6uxrouCZN2azT4rxUwQ_kZ6H86b5" -H "Authorization: Bearer sb_publishable_zdY6uxrouCZN2azT4rxUwQ_kZ6H86b5" -H "Content-Type: application/json" -d '{"lang":"ru","texts":["Court-ordered sale (Tribunale di Catania). Base price €48,410, offers valid from €36,308; the court expert valued it at €153,000.","Who runs the sale","Needs full renovation","About 1 h 55 min to Cagliari (102 km)","Minimum offer is 76% below it","Read the full notice carefully.","Inspect the property with a surveyor."]}' -o out.json
+          mkdir probe && cp out.json probe/
+          cd probe && git init -q && git checkout -q -b samples-data
+          git -c user.name=bot -c user.email=bot@users.noreply.github.com add -A
+          git -c user.name=bot -c user.email=bot@users.noreply.github.com commit -qm probe
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" samples-data
