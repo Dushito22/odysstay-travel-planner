@@ -142,7 +142,7 @@ function RootComponent() {
     if (lang === "ru") {
       const go = () => startAutoTranslate();
       if (hydrated) go();
-      else t = window.setTimeout(() => { hydrated = true; go(); }, 900);
+      else t = window.setTimeout(() => { hydrated = true; go(); }, 600);
     } else stopAutoTranslate();
     return () => { window.clearTimeout(t); stopAutoTranslate(); };
   }, [lang]);

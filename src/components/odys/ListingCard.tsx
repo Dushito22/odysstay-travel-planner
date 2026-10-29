@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { budgetFit, CONDITION_LABELS, inRegions, isCourtPhoto, renderUrl, SALE_TYPE_LABELS, TYPE_LABELS, type FeedRow } from "@/lib/feed";
+import { useLang } from "@/lib/i18n";
 import { useT } from "@/lib/tr";
 import type { Profile } from "@/lib/profile";
 import { cn } from "@/lib/utils";
@@ -132,6 +133,7 @@ export function SaveButton({ id }: { id: string }) {
 /** One listing, Balance-calm: same frame, same rhythm, three facts that matter, the rest on the page. */
 export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: Profile | null; compact?: boolean }) {
   const t = useT();
+  const lang = useLang();
   if (!row.id) return null;
   const fit = budgetFit(row, profile);
   const days = row.deadline_at ?? row.auction_at;
@@ -150,7 +152,7 @@ export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: 
   ].filter(Boolean).slice(0, 3);
   const meta = [
     row.property_type ? t(TYPE_LABELS[row.property_type] ?? row.property_type) : null,
-    row.surface_sqm != null ? `${Math.round(row.surface_sqm).toLocaleString("en-GB")} m²` : row.land_sqm != null ? `${Math.round(row.land_sqm).toLocaleString("en-GB")} m² land` : null,
+    row.surface_sqm != null ? `${Math.round(row.surface_sqm).toLocaleString("en-GB")} ${lang === "ru" ? "м²" : "m²"}` : row.land_sqm != null ? `${Math.round(row.land_sqm).toLocaleString("en-GB")} ${lang === "ru" ? "м² земли" : "m² land"}` : null,
     row.price_per_sqm != null && row.price_eur !== 1 ? `${formatEur(Math.round(row.price_per_sqm))}/m²` : null,
   ].filter(Boolean).join(" · ");
   return (
@@ -170,7 +172,7 @@ export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: 
               <h3 className={cn("truncate font-display leading-tight", compact ? "text-[20px]" : "text-[24px]")}>{row.comune ?? t("Unknown comune")}</h3>
             </Link>
             <p className="mt-0.5 truncate text-[13px] font-light text-foreground/55">
-              {[row.province, row.region].filter(Boolean).join(" · ") || t("Location not stated")}
+              {[row.province, row.region ? t(row.region) : null].filter(Boolean).join(" · ") || t("Location not stated")}
             </p>
           </div>
           <div className="-mr-2 -mt-1"><SaveButton id={row.id} /></div>
@@ -189,7 +191,7 @@ export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: 
             <span className="flex items-center gap-2 text-foreground/60">
               <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-azure" />
               {t("Deal score")} <span className="text-foreground tnum">{row.score}</span>
-              {(row.red_flag_count ?? 0) > 0 && <span className="text-warning">· {row.red_flag_count} red flag{row.red_flag_count === 1 ? "" : "s"}</span>}
+              {(row.red_flag_count ?? 0) > 0 && <span className="text-warning">· {lang === "ru" ? `тревожных сигналов: ${row.red_flag_count}` : `${row.red_flag_count} red flag${row.red_flag_count === 1 ? "" : "s"}`}</span>}
             </span>
           ) : <span />}
           <Link to="/listing/$id" params={{ id: row.id }} className="text-foreground/70 transition-colors hover:text-azure">

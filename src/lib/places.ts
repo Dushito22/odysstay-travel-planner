@@ -43,11 +43,13 @@ export function driveMinutes(straightKm: number) {
   return Math.max(5, Math.round(((straightKm * 1.3) / 70) * 60 / 5) * 5);
 }
 
-export function formatDrive(min: number) {
-  if (min < 60) return `${min} min`;
+export function formatDrive(min: number, ru = false) {
+  const H = ru ? "ч" : "h";
+  const M = ru ? "мин" : "min";
+  if (min < 60) return `${min} ${M}`;
   const h = Math.floor(min / 60);
   const m = min % 60;
-  return m ? `${h} h ${m} min` : `${h} h`;
+  return m ? `${h} ${H} ${m} ${M}` : `${h} ${H}`;
 }
 
 export function nearest(lat: number, lng: number, list: Place[], n: number) {
@@ -56,3 +58,20 @@ export function nearest(lat: number, lng: number, list: Place[], n: number) {
     .sort((a, b) => a.km - b.km)
     .slice(0, n);
 }
+
+/** Russian forms of the reference cities and airports, for readers on the Russian site. */
+const RU_PLACES: Record<string, string> = {
+  Rome: "Рим", Milan: "Милан", Naples: "Неаполь", Turin: "Турин", Palermo: "Палермо", Genoa: "Генуя", Bologna: "Болонья",
+  Florence: "Флоренция", Bari: "Бари", Catania: "Катания", Venice: "Венеция", Verona: "Верона", Messina: "Мессина",
+  Padua: "Падуя", Trieste: "Триест", Brescia: "Брешиа", Parma: "Парма", Perugia: "Перуджа", Pisa: "Пиза", Siena: "Сиена",
+  Lucca: "Лукка", Lecce: "Лечче", Cagliari: "Кальяри", Sassari: "Сассари", "Reggio Calabria": "Реджо-ди-Калабрия",
+  Cosenza: "Козенца", Ancona: "Анкона", Pescara: "Пескара", "L'Aquila": "Л'Акуила", Trento: "Тренто", Bolzano: "Больцано",
+  Udine: "Удине", Salerno: "Салерно", Taranto: "Таранто", Potenza: "Потенца", Campobasso: "Кампобассо", Como: "Комо",
+  Bergamo: "Бергамо", Rimini: "Римини", Siracusa: "Сиракузы", Agrigento: "Агридженто", Trapani: "Трапани", Matera: "Матера",
+  Assisi: "Ассизи", Orvieto: "Орвието", Arezzo: "Ареццо", Viterbo: "Витербо", Ravenna: "Равенна", Modena: "Модена",
+  Mantua: "Мантуя", Aosta: "Аоста", Foggia: "Фоджа", Brindisi: "Бриндизи", Olbia: "Ольбия", Alghero: "Альгеро",
+  Treviso: "Тревизо", Comiso: "Комизо", "Lamezia Terme": "Ламеция-Терме",
+  "Rome Fiumicino": "Рим (Фьюмичино)", "Rome Ciampino": "Рим (Чампино)", "Milan Malpensa": "Милан (Мальпенса)",
+  "Milan Linate": "Милан (Линате)", "Milan Bergamo": "Милан (Бергамо)",
+};
+export const ruPlace = (name: string) => RU_PLACES[name] ?? name;
