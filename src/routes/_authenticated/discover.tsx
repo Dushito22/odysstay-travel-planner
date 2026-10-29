@@ -46,11 +46,11 @@ function DiscoverPage() {
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
           <p className="type-label text-foreground/55">{t("Discover")}</p>
-          <h1 className="mt-4 type-h2">{ru ? <>Все открытые дома Италии, <em className="font-display italic text-azure">лучшие сначала</em>.</> : <>Every open house in Italy, <em className="font-display italic text-azure">best first</em>.</>}</h1>
+          <h1 className="mt-4 type-h2">{ru ? <>Дома в Италии на продажу: <em className="font-display italic text-azure">самые выгодные сначала</em>.</> : <>Every open house in Italy, <em className="font-display italic text-azure">best first</em>.</>}</h1>
           <p className="mt-3 type-body text-foreground/60 tnum">
-            {isLoading ? (ru ? "Читаем сегодняшние объявления…" : "Reading today's notices…") : total > rows.length
-              ? (ru ? `${total.toLocaleString("ru-RU")} открыто по Италии. Показываем лучшие ${rows.length}, сузьте поиск фильтрами.` : `${total.toLocaleString("en-GB")} open across Italy. Showing the best ${rows.length}, narrow it down with filters.`)
-              : (ru ? `Открыто объектов по Италии: ${rows.length.toLocaleString("ru-RU")}` : `${rows.length.toLocaleString("en-GB")} ${rows.length === 1 ? "house" : "houses"} open across Italy`)}
+            {isLoading ? (ru ? "Загружаем свежие объявления…" : "Reading today's notices…") : total > rows.length
+              ? (ru ? `Всего на продажу: ${total.toLocaleString("ru-RU")}. Показываем ${rows.length} самых выгодных, остальное можно отфильтровать.` : `${total.toLocaleString("en-GB")} open across Italy. Showing the best ${rows.length}, narrow it down with filters.`)
+              : (ru ? `Объектов на продажу по всей Италии: ${rows.length.toLocaleString("ru-RU")}` : `${rows.length.toLocaleString("en-GB")} ${rows.length === 1 ? "house" : "houses"} open across Italy`)}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

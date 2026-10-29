@@ -207,7 +207,7 @@ export function AgentChat({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 space-y-4 overflow-y-auto p-5" aria-live="polite">
+        <div data-notranslate className="flex-1 space-y-4 overflow-y-auto p-5" aria-live="polite">
           {conv.isLoading ? (
             <p className="text-sm text-muted-foreground">Loading conversation</p>
           ) : messages.length === 0 ? (

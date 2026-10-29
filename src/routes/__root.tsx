@@ -9,6 +9,7 @@ import {
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { startAutoTranslate, stopAutoTranslate } from "@/lib/autotranslate";
 import { useLang } from "@/lib/i18n";
 
 import appCss from "../styles.css?url";
@@ -128,11 +129,23 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+let hydrated = false;
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
   const lang = useLang();
-  useEffect(() => { document.documentElement.lang = lang; }, [lang]);
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    // The first start waits until the server-rendered page has finished hydrating, so the swap cannot upset React.
+    let t: number | undefined;
+    if (lang === "ru") {
+      const go = () => startAutoTranslate();
+      if (hydrated) go();
+      else t = window.setTimeout(() => { hydrated = true; go(); }, 900);
+    } else stopAutoTranslate();
+    return () => { window.clearTimeout(t); stopAutoTranslate(); };
+  }, [lang]);
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {
