@@ -15,6 +15,8 @@ export const feedSearchSchema = z.object({
   minSurface: fallback(z.number(), 0).default(0),
   minScore: fallback(z.number(), 0).default(0),
   minDiscount: fallback(z.number(), 0).default(0),
+  condition: fallback(z.array(z.string()), []).default([]),
+  realPhotos: fallback(z.boolean(), false).default(false),
   leases: fallback(z.boolean(), false).default(false),
   oneEuro: fallback(z.boolean(), true).default(true),
   unsold: fallback(z.boolean(), false).default(false),
@@ -26,7 +28,7 @@ export type FeedSearch = z.infer<typeof feedSearchSchema>;
 export type FeedFilters = Omit<FeedSearch, "sort" | "prefs">;
 
 export const DEFAULT_FILTERS: FeedFilters = {
-  regions: [], types: [], maxPrice: 0, minSurface: 0, minScore: 0, minDiscount: 0,
+  regions: [], types: [], maxPrice: 0, minSurface: 0, minScore: 0, minDiscount: 0, condition: [], realPhotos: false,
   leases: false, oneEuro: true, unsold: false, hideClosed: true,
 };
 
@@ -90,6 +92,8 @@ export async function fetchFeed(f: FeedFilters, sort = "best"): Promise<{ rows: 
   if (!showDemo) q = q.eq("is_demo", false);
   if (f.regions.length) q = q.in("region", f.regions);
   if (f.types.length) q = q.in("property_type", f.types);
+  if (f.condition.length) q = q.in("condition", f.condition);
+  if (f.realPhotos) q = q.not("hero_image_path", "is", null).not("hero_image_path", "ilike", "%giustizia.it%").not("hero_image_path", "ilike", "%astegiudiziarie%").not("hero_image_path", "ilike", "%astetraprivati%");
   if (f.maxPrice > 0) q = q.lte("price_eur", f.maxPrice);
   if (f.minSurface > 0) q = q.gte("surface_sqm", f.minSurface);
   if (f.minScore > 0) q = q.gte("score", f.minScore);
@@ -140,6 +144,15 @@ export function sortFeed(rows: FeedRow[], sort: string, p: Profile | null) {
       return r.sort((a, b) => num(b.score, -1) - num(a.score, -1));
   }
 }
+
+/** Court inspection photos are low-resolution scanned pages, not listing photos. */
+export function isCourtPhoto(u: string | null | undefined) {
+  return !!u && /giustizia\.it|astegiudiziarie|astetraprivati|notariato\.it/i.test(u);
+}
+
+export const CONDITION_LABELS: Record<string, string> = {
+  ruin: "Total ruin", needs_work: "Needs fixing", ready: "Ready to live in",
+};
 
 export function photoUrls(r: Pick<FeedRow, "photo_urls">): string[] {
   return Array.isArray(r.photo_urls) ? r.photo_urls.filter((u): u is string => typeof u === "string") : [];

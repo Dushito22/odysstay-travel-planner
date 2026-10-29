@@ -8,7 +8,8 @@ import { ListingCard, ListingCardSkeleton } from "@/components/odys/ListingCard"
 import { SourceQuote, Wordmark } from "@/components/odys/primitives";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { setLang, useLang, type Lang } from "@/lib/i18n";
+import { LangToggle } from "@/components/odys/LangToggle";
+import { useLang, type Lang } from "@/lib/i18n";
 import { exampleFactQuery, sendMagicLink, sourceCountsQuery, topListingsQuery } from "@/lib/public";
 import { cn } from "@/lib/utils";
 
@@ -264,24 +265,6 @@ function Index() {
       <Faq />
       <Final />
       <Footer />
-    </div>
-  );
-}
-
-export function LangToggle({ light = false }: { light?: boolean }) {
-  const lang = useLang();
-  return (
-    <div className="flex items-center gap-1.5 text-[13px]">
-      {(["en", "ru"] as const).map((l, i) => (
-        <span key={l} className="flex items-center gap-1.5">
-          {i > 0 && <span aria-hidden className={light ? "text-white/45" : "text-foreground/45"}>·</span>}
-          <button type="button" onClick={() => setLang(l)} aria-pressed={lang === l}
-            className={cn("uppercase transition-colors",
-              lang === l ? (light ? "text-white" : "text-foreground") : light ? "font-light text-white/45 hover:text-white/80" : "font-light text-foreground/45 hover:text-foreground/80")}>
-            {l}
-          </button>
-        </span>
-      ))}
     </div>
   );
 }
@@ -754,7 +737,7 @@ function Faq() {
       <Wrap className="grid gap-10 md:grid-cols-[1fr_1.5fr]">
         <div className="flex flex-col md:max-w-[420px] md:items-center md:text-center">
           <H2>{c.faqTitle}</H2>
-          <img src="/img/argos-helmet.webp" alt="Argos in a hard hat, explaining" loading="lazy" className="mt-10 hidden h-[250px] w-auto object-contain md:block" />
+          <img src="/img/medusa.webp" alt="A Sicilian mosaic head of Medusa" loading="lazy" className="mt-10 hidden h-[270px] w-auto object-contain md:block" />
         </div>
         <Accordion type="single" collapsible>
           {c.faq.map((f) => (

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { translateUrl } from "@/components/odys/primitives";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { setLang, useLang } from "@/lib/i18n";
 import { translateListing, type ListingTranslation } from "@/lib/agent";
 import { cn } from "@/lib/utils";
 
@@ -17,9 +18,7 @@ type Lang = (typeof LANGS)[number]["code"];
 export function Description({ listingId, italian, signedIn }: { listingId: string; italian: string; signedIn: boolean }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const [lang, setLang] = useState<Lang>(() => {
-    try { return (localStorage.getItem("odys-lang") as Lang) || "en"; } catch { return "en"; }
-  });
+  const lang = useLang();
   const [showItalian, setShowItalian] = useState(false);
   const cached = useQuery({
     queryKey: ["translations", listingId],
@@ -39,7 +38,6 @@ export function Description({ listingId, italian, signedIn }: { listingId: strin
 
   function pick(l: Lang) {
     setLang(l);
-    try { localStorage.setItem("odys-lang", l); } catch { /* private mode */ }
   }
 
   return (

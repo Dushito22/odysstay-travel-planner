@@ -3,7 +3,9 @@
 Private demo source, off unless the APIFY_TOKEN secret is set. Immobiliare.it has no public listings API
 and its terms forbid scraping; the owner chose this for his own testing. Every listing links back to the
 original ad. On Apify's free plan a run returns at most 100 results and the free monthly credit covers
-roughly 7,000 results, so each run takes the newest ads under a price cap in two regions, rotating daily.
+roughly 7,000 results, so each run takes the newest ads under a price cap in a few regions, rotating daily.
+Regions, price cap and results per region can be raised (IMMOBILIARE_REGIONS, IMMOBILIARE_MAX_PRICE, IMMOBILIARE_PER_REGION)
+when there is credit to spend; about $0.70 per 1,000 results.
 """
 from __future__ import annotations
 
@@ -117,7 +119,10 @@ def run_actor(token: str, start_urls: list[str], max_items: int, log=print) -> l
     return items.json()
 
 
-def collect(db: Supa, regions: int = 2, max_price: int = 80000, per_region: int = 50, log=print) -> dict:
+def collect(db: Supa, regions: int | None = None, max_price: int | None = None, per_region: int | None = None, log=print) -> dict:
+    regions = regions or int(os.environ.get("IMMOBILIARE_REGIONS") or 2)
+    max_price = max_price or int(os.environ.get("IMMOBILIARE_MAX_PRICE") or 100000)
+    per_region = per_region or int(os.environ.get("IMMOBILIARE_PER_REGION") or 100)
     token = os.environ.get("APIFY_TOKEN")
     if not token:
         return {"skipped": "APIFY_TOKEN not set"}

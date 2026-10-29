@@ -737,6 +737,7 @@ export type Database = {
           sale_mode: string | null
           address: string | null
           auction_at: string | null
+          condition: string | null
           comune: string | null
           country: string
           created_at: string
@@ -778,6 +779,7 @@ export type Database = {
           sale_mode?: string | null
           address?: string | null
           auction_at?: string | null
+          condition?: string | null
           comune?: string | null
           country?: string
           created_at?: string
@@ -819,6 +821,7 @@ export type Database = {
           sale_mode?: string | null
           address?: string | null
           auction_at?: string | null
+          condition?: string | null
           comune?: string | null
           country?: string
           created_at?: string
@@ -1236,6 +1239,7 @@ export type Database = {
           sale_mode: string | null
           address: string | null
           auction_at: string | null
+          condition: string | null
           comune: string | null
           country: string | null
           created_at: string | null

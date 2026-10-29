@@ -78,7 +78,10 @@ def main(argv=None):
     sub.add_parser("pvp-probe")
     sub.add_parser("sources-probe")
     sub.add_parser("one-euro")
-    sub.add_parser("immobiliare")
+    im = sub.add_parser("immobiliare")
+    im.add_argument("--regions", type=int, default=None)
+    im.add_argument("--max-price", type=int, default=None)
+    im.add_argument("--per-region", type=int, default=None)
     ag = sub.add_parser("aste")
     ag.add_argument("--probe", action="store_true")
     ag.add_argument("--limit", type=int, default=4000)
@@ -145,7 +148,7 @@ def main(argv=None):
             print(json.dumps(aste.collect(db, a.limit), indent=2))
     elif a.cmd == "immobiliare":
         from .collectors import immobiliare
-        print(json.dumps(immobiliare.collect(db), indent=2))
+        print(json.dumps(immobiliare.collect(db, a.regions, a.max_price, a.per_region), indent=2))
     elif a.cmd == "one-euro":
         from .collectors import one_euro
         print(json.dumps(one_euro.collect(db), indent=2))

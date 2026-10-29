@@ -1,3 +1,4 @@
+import { useT } from "@/lib/tr";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -9,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { FeedFilters } from "@/lib/feed";
 
 export function SaveSearchButton({ filters, sort, variant = "outline" }: { filters: FeedFilters; sort: string; variant?: "outline" | "default" }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -37,9 +39,9 @@ export function SaveSearchButton({ filters, sort, variant = "outline" }: { filte
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button variant={variant}>Save this search</Button></DialogTrigger>
+      <DialogTrigger asChild><Button variant={variant}>{t("Save this search")}</Button></DialogTrigger>
       <DialogContent>
-        <DialogHeader><DialogTitle className="font-display">Save this search</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle className="font-display">{t("Save this search")}</DialogTitle></DialogHeader>
         <div className="space-y-2">
           <Label htmlFor="ss-name">Name</Label>
           <Input id="ss-name" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} placeholder="Sicily under €50k" autoFocus />
