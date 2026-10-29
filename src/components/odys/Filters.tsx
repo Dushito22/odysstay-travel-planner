@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { DEFAULT_FILTERS, TYPE_LABELS, type FeedSearch } from "@/lib/feed";
+import { CONDITION_LABELS, DEFAULT_FILTERS, TYPE_LABELS, type FeedSearch } from "@/lib/feed";
+import { useT } from "@/lib/tr";
 import { PROPERTY_TYPES, REGIONS } from "@/lib/profile";
 import { Chip } from "./prefs";
 import { formatEur } from "./primitives";
@@ -34,49 +35,58 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
 const toggleIn = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
 export function FilterPanel({ value: v, onChange }: Props) {
+  const t = useT();
   const set = (p: Partial<FeedSearch>) => onChange({ ...p, prefs: false });
   return (
     <div className="space-y-5">
-      <Group title="Region">
+      <Group title={t("Region")}>
         <div className="flex flex-wrap gap-1.5">
           {REGIONS.map((r) => (
             <Chip key={r} active={v.regions.includes(r)} onClick={() => set({ regions: toggleIn(v.regions, r) })}>{r}</Chip>
           ))}
         </div>
       </Group>
-      <Group title="Max price">
+      <Group title={t("Max price")}>
         <Input
-          type="number" inputMode="numeric" min={0} step={5000} placeholder="Any price"
+          type="number" inputMode="numeric" min={0} step={5000} placeholder={t("Any price")}
           value={v.maxPrice || ""} onChange={(e) => set({ maxPrice: Math.max(0, Number(e.target.value) || 0) })}
         />
       </Group>
-      <Group title="Property type">
+      <Group title={t("Property type")}>
         <div className="flex flex-wrap gap-1.5">
-          {PROPERTY_TYPES.map((t) => (
-            <Chip key={t.value} active={v.types.includes(t.value)} onClick={() => set({ types: toggleIn(v.types, t.value) })}>{t.label}</Chip>
+          {PROPERTY_TYPES.map((pt) => (
+            <Chip key={pt.value} active={v.types.includes(pt.value)} onClick={() => set({ types: toggleIn(v.types, pt.value) })}>{t(pt.label)}</Chip>
           ))}
         </div>
       </Group>
-      <Group title="Min surface m²">
+      <Group title={t("State of the property")}>
+        <div className="flex flex-wrap gap-1.5">
+          {Object.entries(CONDITION_LABELS).map(([k, label]) => (
+            <Chip key={k} active={v.condition.includes(k)} onClick={() => set({ condition: toggleIn(v.condition, k) })}>{t(label)}</Chip>
+          ))}
+        </div>
+        <Toggle label={t("Real photos only")} checked={v.realPhotos} onChange={(c) => set({ realPhotos: c })} />
+      </Group>
+      <Group title={t("Min surface m²")}>
         <Input
-          type="number" inputMode="numeric" min={0} step={10} placeholder="Any size"
+          type="number" inputMode="numeric" min={0} step={10} placeholder={t("Any size")}
           value={v.minSurface || ""} onChange={(e) => set({ minSurface: Math.max(0, Number(e.target.value) || 0) })}
         />
       </Group>
-      <Group title="Sale type">
+      <Group title={t("Sale type")}>
         <p className="text-[14px] font-light text-foreground/60">Outright sales always included</p>
         <Toggle label="Include concessions and leases" checked={v.leases} onChange={(c) => set({ leases: c })} />
         <Toggle label="One-euro schemes" checked={v.oneEuro} onChange={(c) => set({ oneEuro: c })} />
       </Group>
-      <Group title="Status">
+      <Group title={t("Status")}>
         <Toggle label="Previously unsold only" checked={v.unsold} onChange={(c) => set({ unsold: c })} />
         <Toggle label="Hide closed" checked={v.hideClosed} onChange={(c) => set({ hideClosed: c })} />
       </Group>
-      <Group title={v.minDiscount ? `Below court appraisal: ${v.minDiscount}%+` : "Below court appraisal"}>
+      <Group title={v.minDiscount ? `Below court appraisal: ${v.minDiscount}%+` : t("Below court appraisal")}>
         <Slider value={[v.minDiscount]} min={0} max={70} step={5} onValueChange={([d]) => set({ minDiscount: d ?? 0 })} aria-label="Minimum discount below the court appraisal" />
         <p className="text-[12px] font-light leading-relaxed text-foreground/55">Court sales only: how far the minimum offer sits below the court expert's valuation.</p>
       </Group>
-      <Group title={`Min score: ${v.minScore}`}>
+      <Group title={`${t("Min score")}: ${v.minScore}`}>
         <Slider value={[v.minScore]} min={0} max={100} step={5} onValueChange={([s]) => set({ minScore: s ?? 0 })} aria-label="Minimum score" />
       </Group>
     </div>
@@ -84,13 +94,14 @@ export function FilterPanel({ value: v, onChange }: Props) {
 }
 
 export function MobileFilters(props: Props) {
+  const t = useT();
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="outline" className="lg:hidden"><SlidersHorizontal /> Filters</Button>
+        <Button variant="outline" className="lg:hidden"><SlidersHorizontal /> {t("Filters")}</Button>
       </SheetTrigger>
       <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-xl">
-        <SheetHeader><SheetTitle className="font-display">Filters</SheetTitle></SheetHeader>
+        <SheetHeader><SheetTitle className="font-display">{t("Filters")}</SheetTitle></SheetHeader>
         <div className="px-4 pb-6"><FilterPanel {...props} /></div>
       </SheetContent>
     </Sheet>
@@ -98,11 +109,14 @@ export function MobileFilters(props: Props) {
 }
 
 export function FilterChips({ value: v, onChange, onReset }: Props & { onReset: () => void }) {
+  const t = useT();
   const set = (p: Partial<FeedSearch>) => onChange({ ...p, prefs: false });
   const chips: { label: string; clear: () => void }[] = [
     ...v.regions.map((r) => ({ label: r, clear: () => set({ regions: v.regions.filter((x) => x !== r) }) })),
-    ...v.types.map((t) => ({ label: TYPE_LABELS[t] ?? t, clear: () => set({ types: v.types.filter((x) => x !== t) }) })),
+    ...v.types.map((ty) => ({ label: t(TYPE_LABELS[ty] ?? ty), clear: () => set({ types: v.types.filter((x) => x !== ty) }) })),
   ];
+  v.condition.forEach((k) => chips.push({ label: t(CONDITION_LABELS[k] ?? k), clear: () => set({ condition: v.condition.filter((x) => x !== k) }) }));
+  if (v.realPhotos) chips.push({ label: t("Real photos only"), clear: () => set({ realPhotos: false }) });
   if (v.maxPrice) chips.push({ label: `Up to ${formatEur(v.maxPrice)}`, clear: () => set({ maxPrice: 0 }) });
   if (v.minSurface) chips.push({ label: `From ${v.minSurface} m²`, clear: () => set({ minSurface: 0 }) });
   if (v.minScore) chips.push({ label: `Score ${v.minScore}+`, clear: () => set({ minScore: 0 }) });
@@ -116,8 +130,8 @@ export function FilterChips({ value: v, onChange, onReset }: Props & { onReset: 
     <div className="flex flex-wrap items-center gap-2 text-[14px] font-light">
       {v.prefs && (
         <span className="mr-1 text-foreground/55">
-          Using your preferences,{" "}
-          <button className="text-azure underline-offset-4 hover:underline" onClick={onReset}>reset</button>
+          {t("Using your preferences,")}{" "}
+          <button className="text-azure underline-offset-4 hover:underline" onClick={onReset}>{t("reset")}</button>
         </span>
       )}
       {chips.map((c) => (

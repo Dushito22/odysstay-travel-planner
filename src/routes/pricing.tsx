@@ -3,6 +3,7 @@ import { Check } from "lucide-react";
 
 import { PublicShell } from "@/components/odys/PublicShell";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/lib/tr";
 import { cn } from "@/lib/utils";
 
 const PLANS = [
@@ -16,7 +17,7 @@ const PLANS = [
       "Full listing pages, every fact sourced from the notice",
       "Agent chat on any listing",
       "1 active deal with plan, messages and quotes",
-      "3 illustrations a day",
+      "1 illustration to try it",
       "Saved searches with email alerts",
     ],
     cta: { label: "Start free", to: "/discover" as const },
@@ -62,12 +63,13 @@ export const Route = createFileRoute("/pricing")({
 });
 
 function Pricing() {
+  const t = useT();
   return (
     <PublicShell>
       <div className="mx-auto max-w-2xl text-center">
-        <h1 className="text-4xl md:text-5xl">Simple pricing</h1>
+        <h1 className="text-4xl md:text-5xl">{t("Simple pricing")}</h1>
         <p className="mt-4 text-lg text-muted-foreground">
-          Free to explore. Pay only when you're working several properties at once.
+          {t("Free to explore. Pay only when you're working several properties at once.")}
         </p>
       </div>
       <div className="mx-auto mt-12 grid max-w-4xl gap-6 md:grid-cols-2">
@@ -79,27 +81,27 @@ function Pricing() {
               p.featured && "border-foreground shadow-hover",
             )}
           >
-            <h2 className="text-2xl">{p.name}</h2>
+            <h2 className="text-2xl">{t(p.name)}</h2>
             <p className="mt-4">
               <span className="font-display text-5xl font-semibold tnum">{p.price}</span>
               <span className="text-muted-foreground">{p.period}</span>
             </p>
-            <p className="mt-3 text-muted-foreground">{p.blurb}</p>
+            <p className="mt-3 text-muted-foreground">{t(p.blurb)}</p>
             <ul className="mt-6 flex-1 space-y-3">
               {p.features.map((f) => (
                 <li key={f} className="flex items-start gap-3 text-sm">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" /> {f}
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" /> {t(f)}
                 </li>
               ))}
             </ul>
             <div className="mt-8">
               {"to" in p.cta ? (
                 <Button asChild size="lg" variant="outline" className="w-full">
-                  <Link to={p.cta.to}>{p.cta.label}</Link>
+                  <Link to={p.cta.to}>{t(p.cta.label)}</Link>
                 </Button>
               ) : (
                 <Button asChild size="lg" className="w-full">
-                  <a href={p.cta.href}>{p.cta.label}</a>
+                  <a href={p.cta.href}>{t(p.cta.label)}</a>
                 </Button>
               )}
             </div>
@@ -107,8 +109,7 @@ function Pricing() {
         ))}
       </div>
       <p className="mx-auto mt-10 max-w-2xl text-center text-sm text-muted-foreground">
-        Fees to the comune, notary, surveyor or other professionals are paid by you directly to
-        them. Odysstay never holds your money.
+        {t("Fees to the comune, notary, surveyor or other professionals are paid by you directly to them. Odysstay never holds your money.")}
       </p>
     </PublicShell>
   );

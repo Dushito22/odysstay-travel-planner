@@ -42,6 +42,8 @@ describe("saved search summaries", () => {
       minSurface: 0,
       minScore: 0,
       minDiscount: 0,
+      condition: [],
+      realPhotos: false,
       leases: false,
       oneEuro: true,
       unsold: false,

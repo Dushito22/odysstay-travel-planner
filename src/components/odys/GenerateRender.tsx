@@ -13,28 +13,30 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { generateRender, RENDER_STYLES } from "@/lib/agent";
+import { useLang } from "@/lib/i18n";
+import { useT } from "@/lib/tr";
 import { cn } from "@/lib/utils";
 
 /** Lets a signed-in user generate an AI illustration of the listing in a chosen style. */
 export function GenerateRender({
   listingId,
   signedIn,
-  hasOriginal,
   photo,
   onCreated,
 }: {
   listingId: string;
   signedIn: boolean;
-  hasOriginal: boolean;
-  /** Official photo currently shown, used as the starting point. */
+  /** The real listing photo that gets restyled. */
   photo?: string | undefined;
   onCreated?: (imageId: string) => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [style, setStyle] = useState<string>(RENDER_STYLES[0].value);
   const [busy, setBusy] = useState(false);
   const [wish, setWish] = useState("");
   const [limit, setLimit] = useState<string | null>(null);
+  const lang = useLang();
   const qc = useQueryClient();
   const navigate = useNavigate();
 
@@ -62,27 +64,22 @@ export function GenerateRender({
       <Button
         variant="secondary"
         size="sm"
-        onClick={() =>
-          signedIn
-            ? setOpen(true)
-            : navigate({ to: "/login", search: { redirect: `/listing/${listingId}` } })
-        }
+        onClick={() => setOpen(true)}
       >
-        <Sparkles /> Imagine it renovated
+        <Sparkles /> {t("Imagine it renovated")}
       </Button>
       <Sheet open={open} onOpenChange={(o) => !busy && setOpen(o)}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-md">
           <SheetHeader>
-            <SheetTitle>Imagine it renovated</SheetTitle>
+            <SheetTitle>{t("Imagine it renovated")}</SheetTitle>
             <SheetDescription>
-              {hasOriginal
-                ? "We restyle the real photo and keep the building's shape, windows and setting."
-                : "There is no photo in the notice, so this is a concept built only from the facts: type, size and region."}{" "}
-              Every image is labelled as an illustration.
+              {lang === "ru"
+                ? "Мы перерисовываем настоящее фото и сохраняем форму здания, окна и окружение. Каждое изображение подписано как иллюстрация."
+                : "We restyle the real photo and keep the building's shape, windows and setting. Every image is labelled as an illustration."}
             </SheetDescription>
           </SheetHeader>
           <div className="mt-6 px-4">
-            <label htmlFor="render-wish" className="text-sm font-medium">Describe what you want (optional)</label>
+            <label htmlFor="render-wish" className="text-sm font-medium">{t("Describe what you want (optional)")}</label>
             <textarea
               id="render-wish"
               value={wish}
@@ -110,6 +107,7 @@ export function GenerateRender({
             ))}
           </div>
           <div className="mt-6 space-y-3 px-4 pb-6">
+            <p className="text-center text-[13px] font-light text-foreground/60">{t("Free accounts can create one illustration. Pro is unlimited.")}</p>
             {limit && (
               <div className="rounded-2xl bg-caution-soft p-4 text-sm text-caution">
                 <p>{limit}</p>
@@ -118,8 +116,8 @@ export function GenerateRender({
                 </Link>
               </div>
             )}
-            <Button className="w-full" onClick={go} disabled={busy || (style === "Custom" && !wish.trim())}>
-              {busy ? "Creating, this takes up to a minute" : "Create illustration"}
+            <Button className="w-full" onClick={signedIn ? go : () => navigate({ to: "/login", search: { redirect: `/listing/${listingId}` } })} disabled={busy || (signedIn && style === "Custom" && !wish.trim())}>
+              {busy ? t("Creating, this takes up to a minute") : signedIn ? t("Create illustration") : t("Sign in to create")}
             </Button>
           </div>
         </SheetContent>

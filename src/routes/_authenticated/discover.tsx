@@ -8,6 +8,8 @@ import { SaveSearchButton } from "@/components/odys/SaveSearchButton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { feedSearchSchema, SORTS, type FeedSearch } from "@/lib/feed";
 import { useFeed } from "@/lib/use-feed";
+import { useLang } from "@/lib/i18n";
+import { useT } from "@/lib/tr";
 
 export const Route = createFileRoute("/_authenticated/discover")({
   validateSearch: zodValidator(feedSearchSchema),
@@ -18,6 +20,8 @@ export const Route = createFileRoute("/_authenticated/discover")({
 const PAGE = 24;
 
 function DiscoverPage() {
+  const t = useT();
+  const ru = useLang() === "ru";
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/discover" });
   const replace = useCallback((s: FeedSearch) => navigate({ search: s, replace: true }), [navigate]);
@@ -41,20 +45,20 @@ function DiscoverPage() {
     <div>
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <p className="type-label text-foreground/55">Discover</p>
-          <h1 className="mt-4 type-h2">Every open house in Italy, <em className="font-display italic text-azure">best first</em>.</h1>
+          <p className="type-label text-foreground/55">{t("Discover")}</p>
+          <h1 className="mt-4 type-h2">{ru ? <>Все открытые дома Италии, <em className="font-display italic text-azure">лучшие сначала</em>.</> : <>Every open house in Italy, <em className="font-display italic text-azure">best first</em>.</>}</h1>
           <p className="mt-3 type-body text-foreground/60 tnum">
-            {isLoading ? "Reading today's notices…" : total > rows.length
-              ? `${total.toLocaleString("en-GB")} open across Italy. Showing the best ${rows.length}, narrow it down with filters.`
-              : `${rows.length.toLocaleString("en-GB")} ${rows.length === 1 ? "house" : "houses"} open across Italy`}
+            {isLoading ? (ru ? "Читаем сегодняшние объявления…" : "Reading today's notices…") : total > rows.length
+              ? (ru ? `${total.toLocaleString("ru-RU")} открыто по Италии. Показываем лучшие ${rows.length}, сузьте поиск фильтрами.` : `${total.toLocaleString("en-GB")} open across Italy. Showing the best ${rows.length}, narrow it down with filters.`)
+              : (ru ? `Открыто объектов по Италии: ${rows.length.toLocaleString("ru-RU")}` : `${rows.length.toLocaleString("en-GB")} ${rows.length === 1 ? "house" : "houses"} open across Italy`)}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <MobileFilters value={search} onChange={patch} />
           <Select value={sort} onValueChange={(s) => patch({ sort: s })}>
-            <SelectTrigger className="w-44" aria-label="Sort"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-56" aria-label="Sort"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {SORTS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+              {SORTS.map((s) => <SelectItem key={s.value} value={s.value}>{t(s.label)}</SelectItem>)}
             </SelectContent>
           </Select>
           <SaveSearchButton filters={filters} sort={sort} />

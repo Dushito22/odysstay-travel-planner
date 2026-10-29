@@ -2,9 +2,12 @@ import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useT } from "@/lib/tr";
+import { LangToggle } from "./LangToggle";
 import { LEGAL_LINE, Wordmark } from "./primitives";
 
 export function PublicFooter() {
+  const t = useT();
   return (
     <footer className="border-t">
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-5 py-10 md:flex-row md:items-start md:justify-between">
@@ -17,16 +20,16 @@ export function PublicFooter() {
           className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground"
         >
           <Link to="/explore" className="hover:text-foreground">
-            Explore
+            {t("Explore")}
           </Link>
           <Link to="/pricing" className="hover:text-foreground">
-            Pricing
+            {t("Pricing")}
           </Link>
           <Link to="/privacy" className="hover:text-foreground">
-            Privacy
+            {t("Privacy")}
           </Link>
           <Link to="/terms" className="hover:text-foreground">
-            Terms
+            {t("Terms")}
           </Link>
           <a href="mailto:hello@odysstay.com" className="hover:text-foreground">
             hello@odysstay.com
@@ -39,6 +42,7 @@ export function PublicFooter() {
 
 /** Header and footer for public pages (pricing, legal). The landing page has its own hero header. */
 export function PublicShell({ children }: { children: ReactNode }) {
+  const t = useT();
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur-xl">
@@ -46,12 +50,13 @@ export function PublicShell({ children }: { children: ReactNode }) {
           <Link to="/" aria-label="Odysstay home">
             <Wordmark size="sm" />
           </Link>
-          <nav className="flex items-center gap-1">
+          <nav className="flex items-center gap-3">
+            <LangToggle />
             <Button asChild variant="ghost" size="sm">
-              <Link to="/pricing">Pricing</Link>
+              <Link to="/pricing">{t("Pricing")}</Link>
             </Button>
             <Button asChild size="sm">
-              <Link to="/explore">Explore</Link>
+              <Link to="/explore">{t("Explore")}</Link>
             </Button>
           </nav>
         </div>

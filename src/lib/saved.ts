@@ -111,6 +111,8 @@ export function searchFromFilters(j: Json): FeedSearch {
     minSurface: num(f["minSurface"]),
     minScore: num(f["minScore"]),
     minDiscount: num(f["minDiscount"]),
+    condition: arr(f["condition"]),
+    realPhotos: bool(f["realPhotos"], false),
     leases: bool(f["leases"], DEFAULT_FILTERS.leases),
     oneEuro: bool(f["oneEuro"], DEFAULT_FILTERS.oneEuro),
     unsold: bool(f["unsold"], DEFAULT_FILTERS.unsold),

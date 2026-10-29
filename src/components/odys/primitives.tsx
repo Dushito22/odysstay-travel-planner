@@ -3,6 +3,8 @@ import { ExternalLink, Quote } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useLang } from "@/lib/i18n";
+import { useT } from "@/lib/tr";
 import { cn } from "@/lib/utils";
 
 const eur = new Intl.NumberFormat("en-GB", {
@@ -107,18 +109,22 @@ export function DeadlinePill({
   deadline: string | Date | null | undefined;
   now?: Date;
 }) {
+  const lang = useLang();
+  const t = useT();
   if (!deadline) return null;
   const days = differenceInCalendarDays(new Date(deadline), now);
+  const ru = lang === "ru";
+  const plural = (n: number) => (n % 10 === 1 && n % 100 !== 11 ? "день" : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? "дня" : "дней");
   let label: string;
   let tone: string;
   if (days < 0) {
-    label = "Closed";
+    label = t("Closed");
     tone = "bg-warning-soft text-warning";
   } else if (days < 15) {
-    label = days === 0 ? "Closes today" : `Closes in ${days} day${days === 1 ? "" : "s"}`;
+    label = days === 0 ? t("Closes today") : ru ? `Закрывается через ${days} ${plural(days)}` : `Closes in ${days} day${days === 1 ? "" : "s"}`;
     tone = "bg-caution-soft text-caution";
   } else {
-    label = `${days} days left`;
+    label = ru ? `Осталось ${days} ${plural(days)}` : `${days} days left`;
     tone = "bg-success-soft text-success";
   }
   return (

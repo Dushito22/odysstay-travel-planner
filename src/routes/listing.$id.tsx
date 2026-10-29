@@ -12,17 +12,19 @@ import { AgentChatButton } from "@/components/odys/AgentChat";
 import { GenerateRender } from "@/components/odys/GenerateRender";
 import { Description } from "@/components/odys/Description";
 import { Nearby } from "@/components/odys/Nearby";
-import { CardImage, SaveButton } from "@/components/odys/ListingCard";
+import { LangToggle } from "@/components/odys/LangToggle";
+import { CardImage, satelliteUrl, SaveButton } from "@/components/odys/ListingCard";
 import {
   DeadlinePill, formatEur, IllustrationLabel, LEGAL_LINE, Money, NotStated, ScoreBadge, SourceQuote, Wordmark,
 } from "@/components/odys/primitives";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { photoUrls, renderUrl, SALE_TYPE_LABELS, TYPE_LABELS } from "@/lib/feed";
+import { isCourtPhoto, photoUrls, renderUrl, SALE_TYPE_LABELS, TYPE_LABELS } from "@/lib/feed";
 import {
   factValue, grantDeduction, listingQuery, orderImages, pickEstimates, startDeal, UpgradeRequired,
   type CostEstimate, type Fact, type ListingBundle,
 } from "@/lib/listing";
+import { useT } from "@/lib/tr";
 import { cn } from "@/lib/utils";
 
 const ListingMap = lazy(() => import("@/components/odys/ListingMap"));
@@ -70,12 +72,16 @@ function ListingError({ error, reset }: ErrorComponentProps) {
 }
 
 function Shell({ children }: { children: ReactNode }) {
+  const t = useT();
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
           <Link to="/"><Wordmark size="sm" /></Link>
-          <Button asChild variant="ghost" size="sm"><Link to="/discover"><ArrowLeft /> Discover</Link></Button>
+          <div className="flex items-center gap-4">
+            <LangToggle />
+            <Button asChild variant="ghost" size="sm"><Link to="/discover"><ArrowLeft /> {t("Discover")}</Link></Button>
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-5 pb-16">{children}</main>
@@ -85,10 +91,11 @@ function Shell({ children }: { children: ReactNode }) {
 }
 
 function Section({ title, kicker, children, id }: { title: string; kicker?: string; children: ReactNode; id?: string }) {
+  const t = useT();
   return (
     <section id={id} className="border-t py-10">
-      {kicker && <p className="mb-2 text-xs font-normal uppercase tracking-[0.18em] text-muted-foreground">{kicker}</p>}
-      <h2 className="mb-6 text-2xl md:text-3xl">{title}</h2>
+      {kicker && <p className="mb-2 text-xs font-normal uppercase tracking-[0.18em] text-muted-foreground">{t(kicker)}</p>}
+      <h2 className="mb-6 text-2xl md:text-3xl">{t(title)}</h2>
       {children}
     </section>
   );
@@ -208,6 +215,7 @@ function useUserId() {
 }
 
 function ListingPage() {
+  const t = useT();
   const { id } = Route.useParams();
   const { data } = useSuspenseQuery(listingQuery(id));
   const { listing: l, facts, flags } = data;
@@ -236,7 +244,7 @@ function ListingPage() {
                 ["Offer deadline", <FactValue key="dl" fact={byKey["deadline"]} sourceUrl={src} />],
               ].filter(Boolean) as [string, ReactNode][]).map(([label, node], i, all) => (
                 <div key={label} className={cn("bg-card p-5", fillClass(i, all.length))}>
-                  <dt className="text-xs font-normal uppercase tracking-wide text-muted-foreground">{label}</dt>
+                  <dt className="text-xs font-normal uppercase tracking-wide text-muted-foreground">{t(label)}</dt>
                   <dd className="mt-2 font-display text-[24px] tnum">{node}</dd>
                 </div>
               ))}
@@ -293,7 +301,7 @@ function ListingPage() {
 
           <CostSection data={data} userId={userId} />
           <OfficialDocuments data={data} />
-          <SaleContacts data={data} />
+          <SaleContacts data={data} userId={userId} />
           <HowBuying saleType={l.sale_type} />
 
 
@@ -377,17 +385,64 @@ function OfficialDocuments({ data }: { data: ListingBundle }) {
   );
 }
 
-function SaleContacts({ data }: { data: ListingBundle }) {
+function ArgosContact({ data, userId }: { data: ListingBundle; userId: string | null }) {
+  const t = useT();
+  const l = data.listing;
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+  const { data: deal } = useQuery({
+    queryKey: ["deal-for", l.id, userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("deals").select("id").eq("listing_id", l.id!).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+  async function go() {
+    if (!userId) { navigate({ to: "/login", search: { redirect: `/listing/${l.id}` } }); return; }
+    if (deal) { navigate({ to: "/deals/$id", params: { id: deal.id } }); return; }
+    setBusy(true);
+    try {
+      navigate({ to: "/deals/$id", params: { id: await startDeal(l) } });
+    } catch (e) {
+      if (e instanceof UpgradeRequired) toast("The free plan includes one active deal at a time.", { action: { label: "See plans", onClick: () => navigate({ to: "/pricing" }) } });
+      else toast.error("Could not start. Please try again.");
+    } finally { setBusy(false); }
+  }
+  return (
+    <div className="grain mb-6 overflow-hidden rounded-[14px] bg-muted p-6 md:p-7">
+      <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+        <div className="max-w-xl">
+          <p className="font-display text-[26px] leading-tight md:text-[30px]">
+            {t("Argos can contact them for you")}
+          </p>
+          <p className="mt-2 font-light leading-relaxed text-foreground/70">
+            {t("Argos writes to the sale delegate, the notary or the agency in Italian, on your behalf. He asks for the viewing, the documents and the exact rules, then brings you the answer in your language. You read every message before it goes out.")}
+          </p>
+        </div>
+        <Button size="lg" onClick={go} disabled={busy} className="shrink-0">
+          {!userId && <Lock />} {userId ? t("Let Argos contact them") : t("Sign in to let Argos contact them")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function SaleContacts({ data, userId }: { data: ListingBundle; userId: string | null }) {
+  const t = useT();
   const l = data.listing;
   const people = asContacts(l.contacts);
   if (!people.length && !l.court) return null;
   return (
     <Section title="Who runs the sale">
+      <ArgosContact data={data} userId={userId} />
       {l.court && (
         <p className="mb-4 text-muted-foreground">
           {l.court}{l.case_ref ? `, ${l.case_ref}` : ""}{l.sale_mode ? `. Bidding: ${l.sale_mode}` : ""}
         </p>
       )}
+      {people.length > 0 && <p className="mb-3 text-sm text-foreground/55">{t("Or reach them yourself")}</p>}
       {people.length > 0 && (
         <ul className="grid gap-3 sm:grid-cols-2">
           {people.map((c, i) => (
@@ -429,6 +484,7 @@ function PricePerSqm({ facts }: { facts: Record<string, Fact | undefined> }) {
 }
 
 function Identity({ data }: { data: ListingBundle }) {
+  const t = useT();
   const l = data.listing;
   return (
     <div className="flex flex-wrap items-end justify-between gap-6 pb-8 pt-10">
@@ -439,16 +495,16 @@ function Identity({ data }: { data: ListingBundle }) {
           {l.property_type && <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-normal text-muted-foreground">{TYPE_LABELS[l.property_type] ?? l.property_type}</span>}
           {l.sale_type && <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-normal text-brand">{SALE_TYPE_LABELS[l.sale_type] ?? l.sale_type}</span>}
         </div>
-        <h1 className="text-5xl md:text-6xl">{l.comune ?? "Unknown comune"}</h1>
+        <h1 className="text-5xl md:text-6xl">{l.comune ?? t("Unknown comune")}</h1>
         <p className="mt-2 text-lg text-muted-foreground">
-          {[l.province, l.region].filter(Boolean).join(" · ") || "Location not stated"}
+          {[l.province, l.region].filter(Boolean).join(" · ") || t("Location not stated")}
         </p>
         {l.title_en && <p className="mt-4 max-w-2xl text-lg">{l.title_en}</p>}
       </div>
       <div className="flex items-center gap-4">
         <div className="text-right">
-          <p className="text-xs font-normal uppercase tracking-wide text-muted-foreground">Deal score</p>
-          <p className="text-sm text-muted-foreground">Tap for reasons</p>
+          <p className="text-xs font-normal uppercase tracking-wide text-muted-foreground">{t("Deal score")}</p>
+          <p className="text-sm text-muted-foreground">{t("Tap for reasons")}</p>
         </div>
         <ScoreBadge score={l.score} reasons={l.score_reasons} />
       </div>
@@ -457,7 +513,9 @@ function Identity({ data }: { data: ListingBundle }) {
 }
 
 function Gallery({ data, userId }: { data: ListingBundle; userId: string | null }) {
-  const id = data.listing.id!;
+  const t = useT();
+  const l = data.listing;
+  const id = l.id!;
   const { data: images = [] } = useQuery({
     queryKey: ["listing-images", id, userId],
     queryFn: async () => {
@@ -466,30 +524,40 @@ function Gallery({ data, userId }: { data: ListingBundle; userId: string | null 
       return orderImages(data);
     },
   });
-  const official = photoUrls(data.listing).map((url, i) => ({
-    id: `official-${i}`, kind: "original", storage_path: url, caption_en: "Official photo from the court listing",
+  const urls = photoUrls(l);
+  const scans = urls.length > 0 && urls.every(isCourtPhoto);
+  const official = urls.map((url, i) => ({
+    id: `official-${i}`, kind: scans ? "scan" : "original", storage_path: url,
+    caption_en: scans ? "Court inspection photo, a low-resolution scan" : "Photo from the listing",
   }));
-  const all = [...images.filter((i) => i.kind === "render"), ...(official.length ? official : images.filter((i) => i.kind !== "render"))];
+  // Court photos are scanned pages. Where we know the spot, the satellite view leads and the scans follow.
+  const satellite = l.lat != null && l.lng != null && (scans || !urls.length)
+    ? [{ id: "satellite", kind: "satellite", storage_path: satelliteUrl(l.lat, l.lng, 1400, 788, 0.22), caption_en: "Satellite view of the exact spot" }]
+    : [];
+  const all = [...images.filter((i) => i.kind === "render"), ...satellite, ...(official.length ? official : images.filter((i) => i.kind !== "render"))];
   const [active, setActive] = useState(0);
   const img = all[active];
+  const cover = img?.kind === "render" || img?.kind === "satellite";
+  const hasReal = official.some((o) => o.kind === "original") || images.some((i) => i.kind === "original");
   return (
     <div>
       <div className="relative overflow-hidden rounded-3xl">
         {img ? (
           <div className="relative aspect-[16/9] bg-muted">
-            <img src={renderUrl(img.storage_path) ?? ""} alt={img.caption_en ?? "Property image"} referrerPolicy="no-referrer" className="h-full w-full object-cover" />
+            {!cover && <img src={renderUrl(img.storage_path) ?? ""} alt="" aria-hidden referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl" />}
+            <img src={renderUrl(img.storage_path) ?? ""} alt={img.caption_en ?? "Property image"} referrerPolicy="no-referrer"
+              className={cn("relative h-full w-full", cover ? "object-cover" : "object-contain")} />
             {img.kind === "render" && <IllustrationLabel className="bottom-4 left-4" />}
           </div>
         ) : (
-          <div className="[&>div]:aspect-[16/9] md:[&>div]:aspect-[21/9]"><CardImage row={data.listing} /></div>
+          <div className="[&>div]:aspect-[16/9] md:[&>div]:aspect-[21/9]"><CardImage row={l} /></div>
         )}
         <div className="absolute right-4 top-4">
-          {data.listing.id && (
+          {l.id && hasReal && (
             <GenerateRender
-              listingId={data.listing.id}
+              listingId={l.id}
               signedIn={!!userId}
-              hasOriginal={all.some((i) => i.kind === "original")}
-              photo={img?.id.startsWith("official-") ? img.storage_path : undefined}
+              photo={img?.kind === "original" ? img.storage_path : official.find((o) => o.kind === "original")?.storage_path}
               onCreated={() => setActive(0)}
             />
           )}
@@ -505,7 +573,7 @@ function Gallery({ data, userId }: { data: ListingBundle; userId: string | null 
           ))}
         </div>
       )}
-      {img?.caption_en && <p className="mt-2 text-sm text-muted-foreground">{img.caption_en}</p>}
+      {img?.caption_en && <p className="mt-2 text-sm text-muted-foreground">{img.kind === "scan" ? img.caption_en : t(img.caption_en)}</p>}
     </div>
   );
 }
@@ -710,6 +778,7 @@ function HowBuying({ saleType }: { saleType: string | null }) {
 }
 
 function ActionCard({ data, userId }: { data: ListingBundle; userId: string | null }) {
+  const t = useT();
   const l = data.listing;
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
@@ -747,27 +816,27 @@ function ActionCard({ data, userId }: { data: ListingBundle; userId: string | nu
 
   return (
     <div className="rounded-3xl border bg-card p-6 shadow-hover">
-      <p className="text-xs font-normal uppercase tracking-wide text-muted-foreground">Base price</p>
+      <p className="text-xs font-normal uppercase tracking-wide text-muted-foreground">{t("Base price")}</p>
       <div className="mt-1 flex items-center justify-between">
         <Money value={l.price_eur} className="text-[36px]" />
         {l.id && <SaveButton id={l.id} />}
       </div>
       {l.min_offer_eur != null && l.price_eur != null && l.min_offer_eur < l.price_eur && (
-        <p className="mt-1 text-sm tnum">Offers valid from <span className="font-semibold">{formatEur(l.min_offer_eur)}</span></p>
+        <p className="mt-1 text-sm tnum">{t("Offers valid from")} <span className="font-semibold">{formatEur(l.min_offer_eur)}</span></p>
       )}
       <div className="mt-2"><DeadlinePill deadline={l.deadline_at ?? l.auction_at} /></div>
 
       <div className="mt-6 space-y-2">
         {deal ? (
-          <Button asChild size="lg" className="w-full"><Link to="/deals/$id" params={{ id: deal.id }}>Open your deal</Link></Button>
+          <Button asChild size="lg" className="w-full"><Link to="/deals/$id" params={{ id: deal.id }}>{t("Open your deal")}</Link></Button>
         ) : (
           <Button size="lg" className="w-full" onClick={onStart} disabled={busy}>
-            {!userId && <Lock />} {busy ? "Starting" : userId ? "Start a deal" : "Sign in to start a deal"}
+            {!userId && <Lock />} {busy ? "…" : userId ? t("Start a deal") : t("Sign in to start a deal")}
           </Button>
         )}
         {l.id && (
           <AgentChatButton listingId={l.id} dealId={deal?.id ?? null} signedIn={!!userId} className="h-auto w-full whitespace-normal py-2.5">
-            <MessageCircle /> Ask the agent about this property
+            <MessageCircle /> {t("Ask the agent about this property")}
           </AgentChatButton>
         )}
       </div>

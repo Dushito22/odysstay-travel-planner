@@ -5,7 +5,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-import { budgetFit, inRegions, renderUrl, SALE_TYPE_LABELS, TYPE_LABELS, type FeedRow } from "@/lib/feed";
+import { budgetFit, CONDITION_LABELS, inRegions, isCourtPhoto, renderUrl, SALE_TYPE_LABELS, TYPE_LABELS, type FeedRow } from "@/lib/feed";
+import { useT } from "@/lib/tr";
 import type { Profile } from "@/lib/profile";
 import { cn } from "@/lib/utils";
 import { DeadlinePill, formatEur, IllustrationLabel, Money } from "./primitives";
@@ -21,7 +22,10 @@ export function satelliteUrl(lat: number, lng: number, w = 800, h = 600, halfKm 
 /** The listing photo. Always the same 4:3 frame. Scanned court photos (tall pages with white margins)
  * sit on a blurred copy of themselves so every card looks the same shape. */
 export function CardImage({ row, compact }: { row: FeedRow; compact?: boolean }) {
-  const render = renderUrl(row.latest_render_path) ?? renderUrl(row.hero_image_path);
+  const t = useT();
+  // Court inspection photos are low-resolution scanned pages. When we know where the house is, a satellite view is the better cover.
+  const scan = !row.latest_render_path && isCourtPhoto(row.hero_image_path) && row.lat != null && row.lng != null;
+  const render = scan ? null : renderUrl(row.latest_render_path) ?? renderUrl(row.hero_image_path);
   const isRender = !!row.latest_render_path;
   const [fit, setFit] = useState<"cover" | "contain">("cover");
   return (
@@ -55,7 +59,7 @@ export function CardImage({ row, compact }: { row: FeedRow; compact?: boolean })
           )}
           {row.lat != null && (
             <span className="absolute bottom-3 left-3 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-light text-white/90 backdrop-blur">
-              Satellite view · no photos published
+              {t("Satellite view · no photos published")}
             </span>
           )}
         </>
@@ -127,23 +131,25 @@ export function SaveButton({ id }: { id: string }) {
 
 /** One listing, Balance-calm: same frame, same rhythm, three facts that matter, the rest on the page. */
 export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: Profile | null; compact?: boolean }) {
+  const t = useT();
   if (!row.id) return null;
   const fit = budgetFit(row, profile);
   const days = row.deadline_at ?? row.auction_at;
   const chips = [
     row.sale_type && row.sale_type !== "sale" && row.sale_type !== "one_euro" ? (
-      <Chip key="sale" tone="brand">{SALE_TYPE_LABELS[row.sale_type] ?? row.sale_type}</Chip>
+      <Chip key="sale" tone="brand">{t(SALE_TYPE_LABELS[row.sale_type] ?? row.sale_type)}</Chip>
     ) : row.sale_type === "one_euro" ? (
-      <Chip key="sale" tone="brand">€1 scheme</Chip>
+      <Chip key="sale" tone="brand">{t("€1 scheme")}</Chip>
     ) : null,
-    (row.discount_pct ?? 0) >= 15 ? <Chip key="disc" tone="success">{row.discount_pct}% below valuation</Chip> : null,
+    row.condition ? <Chip key="cond" tone={row.condition === "ruin" ? "terra" : row.condition === "ready" ? "success" : "warn"}>{t(CONDITION_LABELS[row.condition] ?? row.condition)}</Chip> : null,
+    (row.discount_pct ?? 0) >= 15 ? <Chip key="disc" tone="success">{t("below valuation") === "below valuation" ? `${row.discount_pct}% below valuation` : `на ${row.discount_pct}% ниже оценки`}</Chip> : null,
     days ? <DeadlinePill key="dl" deadline={days} /> : null,
-    row.occupancy === "free" ? <Chip key="occ">Vacant</Chip> : row.occupancy === "occupied" ? <Chip key="occ" tone="warn">Occupied</Chip> : null,
-    fit === "within" ? <Chip key="fit" tone="success">In budget</Chip> : null,
-    inRegions(row, profile) ? <Chip key="reg" tone="success">Your regions</Chip> : null,
+    row.occupancy === "free" ? <Chip key="occ">{t("Vacant")}</Chip> : row.occupancy === "occupied" ? <Chip key="occ" tone="warn">{t("Occupied")}</Chip> : null,
+    fit === "within" ? <Chip key="fit" tone="success">{t("In budget")}</Chip> : null,
+    inRegions(row, profile) ? <Chip key="reg" tone="success">{t("Your regions")}</Chip> : null,
   ].filter(Boolean).slice(0, 3);
   const meta = [
-    row.property_type ? TYPE_LABELS[row.property_type] ?? row.property_type : null,
+    row.property_type ? t(TYPE_LABELS[row.property_type] ?? row.property_type) : null,
     row.surface_sqm != null ? `${Math.round(row.surface_sqm).toLocaleString("en-GB")} m²` : row.land_sqm != null ? `${Math.round(row.land_sqm).toLocaleString("en-GB")} m² land` : null,
     row.price_per_sqm != null && row.price_eur !== 1 ? `${formatEur(Math.round(row.price_per_sqm))}/m²` : null,
   ].filter(Boolean).join(" · ");
@@ -161,10 +167,10 @@ export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: 
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <Link to="/listing/$id" params={{ id: row.id }}>
-              <h3 className={cn("truncate font-display leading-tight", compact ? "text-[20px]" : "text-[24px]")}>{row.comune ?? "Unknown comune"}</h3>
+              <h3 className={cn("truncate font-display leading-tight", compact ? "text-[20px]" : "text-[24px]")}>{row.comune ?? t("Unknown comune")}</h3>
             </Link>
             <p className="mt-0.5 truncate text-[13px] font-light text-foreground/55">
-              {[row.province, row.region].filter(Boolean).join(" · ") || "Location not stated"}
+              {[row.province, row.region].filter(Boolean).join(" · ") || t("Location not stated")}
             </p>
           </div>
           <div className="-mr-2 -mt-1"><SaveButton id={row.id} /></div>
@@ -172,22 +178,22 @@ export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: 
         <div className="mt-4 flex items-baseline justify-between gap-3">
           <Money value={row.price_eur} className={cn(compact ? "text-[20px]" : "text-[26px]", "leading-none")} showOneEuroChip={false} />
           {row.min_offer_eur != null && row.price_eur != null && row.min_offer_eur < row.price_eur && (
-            <span className="text-[13px] font-light text-foreground/60 tnum">offers from {formatEur(row.min_offer_eur)}</span>
+            <span className="text-[13px] font-light text-foreground/60 tnum">{t("offers from")} {formatEur(row.min_offer_eur)}</span>
           )}
         </div>
-        <p className="mt-2 truncate text-[13px] font-light text-foreground/55 tnum">{meta || "Surface not stated"}</p>
+        <p className="mt-2 truncate text-[13px] font-light text-foreground/55 tnum">{meta || t("Surface not stated")}</p>
         <div className="mt-4 flex h-6 flex-wrap gap-1.5 overflow-hidden">{chips}</div>
         <div className="min-h-4 flex-1" />
         <div className="flex items-center justify-between border-t border-foreground/[0.08] pt-3.5 text-[13px] font-light">
           {row.score != null ? (
             <span className="flex items-center gap-2 text-foreground/60">
               <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-azure" />
-              Deal score <span className="text-foreground tnum">{row.score}</span>
+              {t("Deal score")} <span className="text-foreground tnum">{row.score}</span>
               {(row.red_flag_count ?? 0) > 0 && <span className="text-warning">· {row.red_flag_count} red flag{row.red_flag_count === 1 ? "" : "s"}</span>}
             </span>
           ) : <span />}
           <Link to="/listing/$id" params={{ id: row.id }} className="text-foreground/70 transition-colors hover:text-azure">
-            View →
+            {t("View →")}
           </Link>
         </div>
       </div>

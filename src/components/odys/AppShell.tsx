@@ -5,6 +5,8 @@ import { Bookmark, Compass, FolderLock, Handshake, Inbox, LogOut, Map, User } fr
 import { supabase } from "@/integrations/supabase/client";
 import { inboxCountQuery } from "@/lib/deal";
 import { useInboxRealtime } from "@/lib/use-deal";
+import { useT } from "@/lib/tr";
+import { LangToggle } from "./LangToggle";
 import { LEGAL_LINE, Wordmark } from "./primitives";
 
 const desktopNav = [
@@ -24,6 +26,7 @@ const mobileNav = [
 ] as const;
 
 export function AppShell() {
+  const t = useT();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -54,31 +57,32 @@ export function AppShell() {
               activeProps={{ className: "!bg-azure-soft !text-foreground" }}
             >
               <Icon className="h-4 w-4" />
-              {label}
+              {t(label)}
               {to === "/inbox" && inboxCount > 0 && <CountBadge n={inboxCount} className="ml-auto" />}
             </Link>
           ))}
         </nav>
         <div className="mt-auto flex flex-col gap-1 border-t pt-4">
+          <LangToggle className="px-3 pb-2" />
           <Link
             to="/profile"
             className="flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-[15px] text-muted-foreground hover:bg-muted hover:text-foreground"
             activeProps={{ className: "!bg-azure-soft !text-foreground" }}
           >
-            <User className="h-4 w-4" /> Profile
+            <User className="h-4 w-4" /> {t("Profile")}
           </Link>
           <Link
             to="/vault"
             className="flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-[15px] text-muted-foreground hover:bg-muted hover:text-foreground"
             activeProps={{ className: "!bg-azure-soft !text-foreground" }}
           >
-            <FolderLock className="h-4 w-4" /> Documents
+            <FolderLock className="h-4 w-4" /> {t("Documents")}
           </Link>
           <button
             onClick={signOut}
             className="flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-left text-[15px] text-muted-foreground hover:bg-muted hover:text-foreground"
           >
-            <LogOut className="h-4 w-4" /> Sign out
+            <LogOut className="h-4 w-4" /> {t("Sign out")}
           </button>
         </div>
       </aside>
@@ -86,6 +90,7 @@ export function AppShell() {
       <div className="flex min-w-0 flex-1 flex-col pb-20 md:pb-0">
         <header className="sticky top-0 z-30 flex items-center border-b bg-background/85 px-5 py-4 backdrop-blur-xl md:hidden">
           <Wordmark size="sm" />
+          <LangToggle className="ml-auto" />
         </header>
         {pathname === "/map" ? (
           <main className="relative flex-1">
@@ -115,7 +120,7 @@ export function AppShell() {
               <Icon className="h-5 w-5" />
               {to === "/inbox" && inboxCount > 0 && <CountBadge n={inboxCount} className="absolute -right-3 -top-2" />}
             </span>
-            {label}
+            {t(label)}
           </Link>
         ))}
       </nav>

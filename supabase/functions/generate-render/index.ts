@@ -2,13 +2,14 @@
 import { RENDER_STYLES, renderPrompt } from "../_shared/agent-core.ts";
 import { adminClient, HttpError, json, requireUser, serve, str, uuid } from "../_shared/runtime.ts";
 
-const FREE_DAILY = 3;
-/** Official photo hosts of our sources. Only URLs stored on the listing and on these hosts are fetched. */
+/** Free accounts get one illustration in total, to try it. */
+const FREE_TOTAL = 1;
+/** Photo hosts we accept for restyling: real listing photos only. Court inspection photos are scanned pages
+ * and are never restyled. Only URLs stored on the listing and on these hosts are fetched. */
 const PHOTO_HOSTS = [
-  "https://resource-pvp.giustizia.it/",
-  "https://www.astegiudiziarie.it/",
+  "https://pwm.im-cdn.it/",
+  "https://img.immobiliare.it/",
   "https://www.astetraprivati.it/",
-  "https://www.avvisinotarili.notariato.it/",
 ];
 
 /** Turns an OpenAI failure into a message the user can act on. */
@@ -24,26 +25,6 @@ async function openAiReason(res: Response, kind: string) {
   return `The image service failed (${res.status}${msg ? `: ${msg.slice(0, 160)}` : ""}).`;
 }
 
-/** Free fallback: Pollinations (Flux), no key and no cost. Text to image only, so it draws a concept
- * from the listing facts rather than restyling the real photo. Used when OpenAI is missing or refuses. */
-async function freeConcept(prompt: string): Promise<string> {
-  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt.slice(0, 900))}` +
-    `?width=1536&height=1024&model=flux&nologo=true&private=true&seed=${Math.floor(Math.random() * 1e6)}`;
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const r = await fetch(url, { signal: AbortSignal.timeout(90_000) }).catch(() => null);
-    if (r?.ok && (r.headers.get("content-type") ?? "").startsWith("image/")) {
-      const buf = new Uint8Array(await r.arrayBuffer());
-      if (buf.byteLength > 5000) {
-        let bin = "";
-        for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
-        return btoa(bin);
-      }
-    }
-    await new Promise((res) => setTimeout(res, 4000));
-  }
-  throw new HttpError(502, "The free image service is busy. Please try again in a minute.");
-}
-
 serve(async (req, body) => {
   const admin = adminClient();
   const user = await requireUser(req, admin);
@@ -55,6 +36,7 @@ serve(async (req, body) => {
   if (style === "Custom" && !wish?.trim()) throw new HttpError(400, "Describe what you would like to see");
 
   const apiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!apiKey) throw new HttpError(503, "Illustrations are not switched on yet. Please try again soon.");
   const model = Deno.env.get("OPENAI_IMAGE_MODEL") || "gpt-image-1";
 
   const { data: profile } = await admin
@@ -63,18 +45,15 @@ serve(async (req, body) => {
     .eq("id", user.id)
     .maybeSingle();
   if ((profile?.plan ?? "free") === "free") {
-    const dayStart = new Date();
-    dayStart.setUTCHours(0, 0, 0, 0);
     const { count } = await admin
       .from("listing_images")
       .select("id", { count: "exact", head: true })
       .eq("created_by", user.id)
-      .eq("kind", "render")
-      .gte("created_at", dayStart.toISOString());
-    if ((count ?? 0) >= FREE_DAILY) {
+      .eq("kind", "render");
+    if ((count ?? 0) >= FREE_TOTAL) {
       throw new HttpError(
         429,
-        `The free plan includes ${FREE_DAILY} illustrations a day. Upgrade to Pro for unlimited.`,
+        `The free plan includes ${FREE_TOTAL} illustration. Upgrade to Pro for unlimited.`,
       );
     }
   }
@@ -101,6 +80,7 @@ serve(async (req, body) => {
     .filter((u): u is string => typeof u === "string" && PHOTO_HOSTS.some((h) => u.startsWith(h)));
   const wanted = typeof body["photo"] === "string" ? body["photo"] : null;
   const officialUrl = wanted && photos.includes(wanted) ? wanted : photos[0] ?? null;
+  if (!original && !officialUrl) throw new HttpError(400, "This listing has no real photo to restyle.");
 
   let file: Blob | null = null;
   if (original) {
@@ -117,38 +97,22 @@ serve(async (req, body) => {
   }
 
   let b64: string | undefined;
-  let prompt = renderPrompt(listing, style, !!file, wish);
-  let openAiError: string | null = apiKey ? null : "no key";
-  if (apiKey && file) {
-    const form = new FormData();
-    form.append("model", model);
-    form.append("prompt", prompt);
-    form.append("size", "1536x1024");
-    form.append("input_fidelity", "high");
-    const ext = file.type === "image/jpeg" ? "jpg" : "png";
-    form.append("image", new File([file], `original.${ext}`, { type: file.type || "image/png" }));
-    const res = await fetch("https://api.openai.com/v1/images/edits", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}` },
-      body: form,
-    });
-    if (res.ok) b64 = (await res.json()).data?.[0]?.b64_json;
-    else openAiError = await openAiReason(res, "edit");
-  } else if (apiKey) {
-    const res = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model, prompt, size: "1536x1024", n: 1 }),
-    });
-    if (res.ok) b64 = (await res.json()).data?.[0]?.b64_json;
-    else openAiError = await openAiReason(res, "gen");
-  }
-  if (!b64) {
-    if (openAiError && /refused this request/.test(openAiError)) throw new HttpError(502, openAiError);
-    console.warn("render fallback to free concept:", openAiError);
-    prompt = renderPrompt(listing, style, false, wish);
-    b64 = await freeConcept(prompt);
-  }
+  const prompt = renderPrompt(listing, style, !!file, wish);
+  if (!file) throw new HttpError(502, "Could not read the listing photo. Please try another one.");
+  const form = new FormData();
+  form.append("model", model);
+  form.append("prompt", prompt);
+  form.append("size", "1536x1024");
+  form.append("input_fidelity", "high");
+  const ext = file.type === "image/jpeg" ? "jpg" : "png";
+  form.append("image", new File([file], `original.${ext}`, { type: file.type || "image/png" }));
+  const res = await fetch("https://api.openai.com/v1/images/edits", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: form,
+  });
+  if (!res.ok) throw new HttpError(502, await openAiReason(res, "edit"));
+  b64 = (await res.json()).data?.[0]?.b64_json;
   if (!b64) throw new HttpError(502, "No image came back. Please try again.");
 
   const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));

@@ -9,6 +9,7 @@ import {
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { useLang } from "@/lib/i18n";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -130,6 +131,8 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+  const lang = useLang();
+  useEffect(() => { document.documentElement.lang = lang; }, [lang]);
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {
