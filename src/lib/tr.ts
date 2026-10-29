@@ -3,7 +3,7 @@ import { useCallback } from "react";
 import { useLang } from "./i18n";
 
 /** Interface strings outside the landing page. English is the key; a missing entry shows the English. */
-const RU: Record<string, string> = {
+export const RU: Record<string, string> = {
   // navigation and shells
   Discover: "Поиск", Map: "Карта", Deals: "Сделки", Inbox: "Входящие", Saved: "Избранное", Profile: "Профиль",
   Documents: "Документы", "Sign out": "Выйти", Explore: "Обзор", Pricing: "Тарифы", Privacy: "Конфиденциальность",
@@ -42,7 +42,7 @@ const RU: Record<string, string> = {
   "Satellite view · no photos published": "Вид со спутника · фото не опубликованы",
   // cards and filters
   "View →": "Открыть →", "offers from": "ставки от", "Surface not stated": "Площадь не указана", Vacant: "Свободно", Occupied: "Занято",
-  "In budget": "В рамках бюджета", "Your regions": "Ваши регионы", "Every open house in Italy,": "Каждый открытый дом в Италии,",
+  "In budget": "В рамках бюджета", "Your regions": "Ваши регионы", "Every open house in Italy,": "Дома в Италии на продажу:",
   Region: "Регион", "Max price": "Макс. цена", "Property type": "Тип объекта", "Min surface m²": "Мин. площадь, м²",
   "Sale type": "Тип продажи", Status: "Статус", "Below court appraisal": "Ниже оценки суда", Filters: "Фильтры",
   "State of the property": "Состояние объекта", "Total ruin": "Руина", "Needs fixing": "Нужен ремонт", "Ready to live in": "Можно жить",

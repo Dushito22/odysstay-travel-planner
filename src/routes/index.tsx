@@ -187,7 +187,7 @@ const COPY = {
       { a: "Сицилия, Сардиния, Молизе…", b: "От €1, если возьмётесь за ремонт" },
       { a: "Новое сегодня", b: "Argos прочитал ещё до завтрака" },
     ],
-    numbers: ["судебных продаж открыто", "продаж через нотариусов и госорганы", "городов продают дома за €1", "частных аукционов, новые каждый день"],
+    numbers: ["судебных торгов идёт прямо сейчас", "продаж через нотариусов и госорганы", "городов продают дома за €1", "частных аукционов, новые каждый день"],
     howEyebrow: "Как это работает",
     howTitle: <>Десять звонков. <Em>Ноль нервов.</Em></>,
     howBody: "За кулисами: суды, мэрии, геометр, нотариус и дедлайн во вторник в полдень. На сцене: вы, с бокалом и в полном спокойствии.",
@@ -203,7 +203,7 @@ const COPY = {
     mockDeal: ["Челье-Мессапика", "Предложение подано", "Нотариус назначен"],
     sprezz: { word: "sprezzatura", pron: "/спреццату́ра/ · сущ. · итал.", def: "Умение делать сложное так, будто это совсем легко.", note: "Кастильоне, 1528 год. Тогда для этого требовался целый штат слуг. Сегодня хватит одного Argos.", sign: "Купить дом в Италии, словно между делом." },
     housesTitle: <>Дом, который вы <Em>как будто <Az>нашли</Az> случайно</Em>.</>,
-    housesBody: "Настоящие дома, открытые для предложений прямо сейчас. Почти всем нужен ремонт и немного любви. В этом и весь секрет цены.",
+    housesBody: "Настоящие дома, на которые прямо сейчас можно подать заявку. Почти всем нужен ремонт и немного любви. В этом и весь секрет цены.",
     seeAll: "Смотреть все",
     proofEyebrow: "Нет источника, нет факта",
     proofTitle: <>Чего нет в документах, <Em>того нет и у нас</Em>.</>,
@@ -730,6 +730,17 @@ function Voices() {
   );
 }
 
+/** The animated Medusa is about 330 KB. A 25 KB still of its first frame shows at once, and the animation swaps in when it has loaded. */
+function MedusaHead() {
+  const [src, setSrc] = useState("/img/medusa-still.webp");
+  useEffect(() => {
+    const im = new Image();
+    im.onload = () => setSrc("/img/medusa.webp");
+    im.src = "/img/medusa.webp";
+  }, []);
+  return <img src={src} alt="A Sicilian mosaic head of Medusa" width={206} height={243} className="mt-10 hidden h-[243px] w-auto object-contain md:block" />;
+}
+
 function Faq() {
   const [c] = useCopy();
   return (
@@ -737,7 +748,7 @@ function Faq() {
       <Wrap className="grid gap-10 md:grid-cols-[1fr_1.5fr]">
         <div className="flex flex-col md:max-w-[420px] md:items-center md:text-center">
           <H2>{c.faqTitle}</H2>
-          <img src="/img/medusa.webp" alt="A Sicilian mosaic head of Medusa" loading="lazy" className="mt-10 hidden h-[270px] w-auto object-contain md:block" />
+          <MedusaHead />
         </div>
         <Accordion type="single" collapsible>
           {c.faq.map((f) => (

@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.capture]
 verify_jwt = false
+
+[functions.translate-ui]
+verify_jwt = false

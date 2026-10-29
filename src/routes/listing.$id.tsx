@@ -495,7 +495,7 @@ function Identity({ data }: { data: ListingBundle }) {
           {l.property_type && <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-normal text-muted-foreground">{TYPE_LABELS[l.property_type] ?? l.property_type}</span>}
           {l.sale_type && <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-normal text-brand">{SALE_TYPE_LABELS[l.sale_type] ?? l.sale_type}</span>}
         </div>
-        <h1 className="text-5xl md:text-6xl">{l.comune ?? t("Unknown comune")}</h1>
+        <h1 data-notranslate className="text-5xl md:text-6xl">{l.comune ?? t("Unknown comune")}</h1>
         <p className="mt-2 text-lg text-muted-foreground">
           {[l.province, l.region].filter(Boolean).join(" · ") || t("Location not stated")}
         </p>
