@@ -151,7 +151,7 @@ export function isCourtPhoto(u: string | null | undefined) {
 }
 
 export const CONDITION_LABELS: Record<string, string> = {
-  ruin: "Total ruin", needs_work: "Needs fixing", ready: "Ready to live in",
+  ruin: "Brave souls only", needs_work: "Needs some love", ready: "Just add you",
 };
 
 export function photoUrls(r: Pick<FeedRow, "photo_urls">): string[] {
