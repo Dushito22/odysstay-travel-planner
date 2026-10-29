@@ -24,6 +24,7 @@ import {
   factValue, grantDeduction, listingQuery, orderImages, pickEstimates, startDeal, UpgradeRequired,
   type CostEstimate, type Fact, type ListingBundle,
 } from "@/lib/listing";
+import { useLang } from "@/lib/i18n";
 import { useT } from "@/lib/tr";
 import { cn } from "@/lib/utils";
 
@@ -338,11 +339,12 @@ function fillClass(i: number, n: number) {
 }
 
 function Appraisal({ fact, discount, sourceUrl }: { fact: Fact | undefined; discount: number | null; sourceUrl: string | null }) {
+  const ru = useLang() === "ru";
   return (
     <span>
       <FactValue fact={fact} sourceUrl={sourceUrl} />
       {discount != null && discount > 0 && (
-        <span className="mt-1 block text-xs font-normal text-success">Minimum offer is {discount}% below it</span>
+        <span className="mt-1 block text-xs font-normal text-success">{ru ? `Минимальная ставка на ${discount}% ниже оценки` : `Minimum offer is ${discount}% below it`}</span>
       )}
     </span>
   );
@@ -497,7 +499,7 @@ function Identity({ data }: { data: ListingBundle }) {
         </div>
         <h1 data-notranslate className="text-5xl md:text-6xl">{l.comune ?? t("Unknown comune")}</h1>
         <p className="mt-2 text-lg text-muted-foreground">
-          {[l.province, l.region].filter(Boolean).join(" · ") || t("Location not stated")}
+          {[l.province, l.region ? t(l.region) : null].filter(Boolean).join(" · ") || t("Location not stated")}
         </p>
         {l.title_en && <p className="mt-4 max-w-2xl text-lg">{l.title_en}</p>}
       </div>
