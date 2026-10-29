@@ -64,7 +64,7 @@ serve(async (_req, body) => {
     if (rows.length) await admin.from("ui_translations").upsert(rows);
   } catch (e) {
     console.error("translate-ui", e);
-    return json({ translations: out, paused: true });
+    return json({ translations: out, paused: true, reason: e instanceof Error ? e.message.slice(0, 200) : "error" });
   }
   return json({ translations: out });
 });
