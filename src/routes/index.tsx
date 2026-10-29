@@ -71,7 +71,7 @@ const COPY = {
     helpLabel: "How to talk to Argos",
     chips: ["A stone house under €50k, some work is fine", "Show me the €1 houses", "Court auctions in Sicily under €30k", "Surprise me"],
     browseAll: "Rather browse? See every listing",
-    powered: "Argos, your AI agent in Italy · powered by Claude and GPT",
+    powered: "Argos, your AI agent in Italy · always ON",
     statement: [<>Italy sells houses <Em>below the court's valuation</Em>.</>, " Nobody tells you where."],
     argosLabel: "Your agent",
     argosTitle: <>Meet <Em>Argos</Em>.</>,
@@ -160,7 +160,7 @@ const COPY = {
     helpLabel: "Как говорить с Argos",
     chips: ["Каменный дом до €50 тыс., ремонт не пугает", "Покажи дома за €1", "Суды на Сицилии, до €30 тыс.", "Удиви меня"],
     browseAll: "Просто посмотреть? Все объявления",
-    powered: "Argos, ваш ИИ-агент в Италии · работает на Claude и GPT",
+    powered: "Argos, ваш ИИ-агент в Италии · всегда на связи",
     statement: [<>Италия продаёт дома <Em>дешевле судебной оценки</Em>.</>, " Просто об этом никто не рассказывает."],
     argosLabel: "Ваш агент",
     argosTitle: <>Знакомьтесь, <Em>Argos</Em>.</>,
@@ -730,17 +730,6 @@ function Voices() {
   );
 }
 
-/** The animated Medusa is about 330 KB. A 25 KB still of its first frame shows at once, and the animation swaps in when it has loaded. */
-function MedusaHead() {
-  const [src, setSrc] = useState("/img/medusa-still.webp");
-  useEffect(() => {
-    const im = new Image();
-    im.onload = () => setSrc("/img/medusa.webp");
-    im.src = "/img/medusa.webp";
-  }, []);
-  return <img src={src} alt="A Sicilian mosaic head of Medusa" width={206} height={243} className="mt-10 hidden h-[243px] w-auto object-contain md:block" />;
-}
-
 function Faq() {
   const [c] = useCopy();
   return (
@@ -748,7 +737,7 @@ function Faq() {
       <Wrap className="grid gap-10 md:grid-cols-[1fr_1.5fr]">
         <div className="flex flex-col md:max-w-[420px] md:items-center md:text-center">
           <H2>{c.faqTitle}</H2>
-          <MedusaHead />
+          <img src="/img/medusa.webp" alt="A Sicilian mosaic head of Medusa" width={170} height={243} decoding="async" className="mt-10 hidden h-[243px] w-auto object-contain md:block" />
         </div>
         <Accordion type="single" collapsible>
           {c.faq.map((f) => (
