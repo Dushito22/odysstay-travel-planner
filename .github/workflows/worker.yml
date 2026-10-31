@@ -14,7 +14,7 @@ on:
       task:
         description: "What to run"
         type: choice
-        options: [daily, deep, notary, one-euro, immobiliare, aste, aste-probe, notary-probe, sources-probe, pvp, perizia, rescore, retry-errors, check, pvp-probe, comuni-crawl, comuni-discover, status]
+        options: [daily, deep, notary, one-euro, immobiliare, immobiliare-all, aste, aste-probe, notary-probe, sources-probe, pvp, perizia, rescore, retry-errors, check, pvp-probe, comuni-crawl, comuni-discover, status]
         default: daily
       limit:
         description: "pvp: max lots to read. perizia: max reports to read. deep: listings to read"
@@ -96,6 +96,7 @@ jobs:
             perizia)         { python -m odysstay_worker perizia --limit ${{ github.event.inputs.limit || '40' }} && python -m odysstay_worker score && python -m odysstay_worker costs; } 2>&1 | tee run.log ;;
             rescore)         { python -m odysstay_worker score && python -m odysstay_worker costs && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             immobiliare)     { python -m odysstay_worker immobiliare && python -m odysstay_worker geocode && python -m odysstay_worker score && python -m odysstay_worker costs && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
+            immobiliare-all) { IMMOBILIARE_REGIONS=14 IMMOBILIARE_BANDS=0-25000,25000-50000,50000-100000 python -m odysstay_worker immobiliare && python -m odysstay_worker geocode && python -m odysstay_worker score && python -m odysstay_worker costs && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             one-euro)        { python -m odysstay_worker one-euro && python -m odysstay_worker geocode && python -m odysstay_worker score && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             aste)            { python -m odysstay_worker aste --limit ${{ github.event.inputs.limit != '25000' && github.event.inputs.limit || '4000' }} && python -m odysstay_worker geocode && python -m odysstay_worker score && python -m odysstay_worker costs && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             aste-probe)      python -m odysstay_worker aste --probe 2>&1 | tee run.log ;;

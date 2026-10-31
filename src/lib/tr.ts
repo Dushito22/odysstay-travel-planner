@@ -43,7 +43,7 @@ export const RU: Record<string, string> = {
   // cards and filters
   "View →": "Открыть →", "offers from": "ставки от", "Surface not stated": "Площадь не указана", Vacant: "Свободно", Occupied: "Занято",
   "In budget": "В рамках бюджета", "Your regions": "Ваши регионы", "Every open house in Italy,": "Дома в Италии на продажу:",
-  Region: "Регион", "Max price": "Макс. цена", "Property type": "Тип объекта", "Min surface m²": "Мин. площадь, м²",
+  Region: "Регион", "Max price": "Макс. цена", "Ask Argos": "Спросить Argos", From: "От", To: "До", "Up to": "До", "Property type": "Тип объекта", "Min surface m²": "Мин. площадь, м²",
   "Sale type": "Тип продажи", Status: "Статус", "Below court appraisal": "Ниже оценки суда", Filters: "Фильтры",
   "State of the property": "Состояние объекта", "Brave souls only": "Для смелых", "Needs some love": "Ждёт заботливых рук", "Just add you": "Осталось только вам заехать",
   "Real photos only": "Только с настоящими фото", "Hide court-scan photos": "Скрыть сканы из суда",

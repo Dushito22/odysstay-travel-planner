@@ -1,6 +1,6 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bookmark, Compass, FolderLock, Handshake, Inbox, LogOut, Map, User } from "lucide-react";
+import { Bookmark, Compass, FolderLock, Handshake, Inbox, LogOut, Map, Sparkles, User } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { inboxCountQuery } from "@/lib/deal";
@@ -45,10 +45,14 @@ export function AppShell() {
   return (
     <div className="min-h-screen md:flex">
       <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r bg-sidebar px-3 py-6 md:flex">
-        <Link to="/discover" className="px-3">
+        <Link to="/" className="px-3" aria-label="odysstay home">
           <Wordmark size="md" />
         </Link>
-        <nav className="mt-7 flex flex-col gap-0.5">
+        <Link to="/argos" search={{ q: "", voice: false }}
+          className="mx-1 mt-6 flex items-center gap-2.5 rounded-full border border-azure/25 bg-azure-soft/60 px-3 py-2 text-[15px] text-foreground transition-colors hover:bg-azure-soft">
+          <Sparkles className="h-4 w-4 text-azure" /> {t("Ask Argos")}
+        </Link>
+        <nav className="mt-4 flex flex-col gap-0.5">
           {desktopNav.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}

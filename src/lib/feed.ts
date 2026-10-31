@@ -11,6 +11,7 @@ export const feedSearchSchema = z.object({
   sort: fallback(z.string(), "best").optional(),
   regions: fallback(z.array(z.string()), []).default([]),
   types: fallback(z.array(z.string()), []).default([]),
+  minPrice: fallback(z.number(), 0).default(0),
   maxPrice: fallback(z.number(), 0).default(0),
   minSurface: fallback(z.number(), 0).default(0),
   minScore: fallback(z.number(), 0).default(0),
@@ -28,7 +29,7 @@ export type FeedSearch = z.infer<typeof feedSearchSchema>;
 export type FeedFilters = Omit<FeedSearch, "sort" | "prefs">;
 
 export const DEFAULT_FILTERS: FeedFilters = {
-  regions: [], types: [], maxPrice: 0, minSurface: 0, minScore: 0, minDiscount: 0, condition: [], realPhotos: false,
+  regions: [], types: [], minPrice: 0, maxPrice: 0, minSurface: 0, minScore: 0, minDiscount: 0, condition: [], realPhotos: false,
   leases: false, oneEuro: true, unsold: false, hideClosed: true,
 };
 
@@ -85,8 +86,10 @@ const SERVER_ORDER: Record<string, { col: string; asc: boolean }> = {
 
 export async function fetchFeed(f: FeedFilters, sort = "best"): Promise<{ rows: FeedRow[]; total: number }> {
   const o = SERVER_ORDER[sort] ?? SERVER_ORDER["best"]!;
-  let q = supabase.from("listing_feed").select("*", { count: "estimated" })
-    .order(o.col, { ascending: o.asc, nullsFirst: false }).limit(FEED_LIMIT);
+  let q = supabase.from("listing_feed").select("*", { count: "estimated" });
+  // People choose with their eyes: on the default sorts, listings with real photos lead.
+  if (sort === "best" || sort === "foryou") q = q.order("has_real_photo", { ascending: false, nullsFirst: false });
+  q = q.order(o.col, { ascending: o.asc, nullsFirst: false }).limit(FEED_LIMIT);
   if (sort === "closing") q = q.gt("days_left", 0);
   if (f.minDiscount > 0) q = q.gte("discount_pct", f.minDiscount);
   if (!showDemo) q = q.eq("is_demo", false);
@@ -94,7 +97,10 @@ export async function fetchFeed(f: FeedFilters, sort = "best"): Promise<{ rows: 
   if (f.types.length) q = q.in("property_type", f.types);
   if (f.condition.length) q = q.in("condition", f.condition);
   if (f.realPhotos) q = q.not("hero_image_path", "is", null).not("hero_image_path", "ilike", "%giustizia.it%").not("hero_image_path", "ilike", "%astegiudiziarie%").not("hero_image_path", "ilike", "%astetraprivati%");
+  if (f.minPrice > 0) q = q.gte("price_eur", f.minPrice);
   if (f.maxPrice > 0) q = q.lte("price_eur", f.maxPrice);
+  // Shares of a cellar, 15 m² "houses", €900 lots: never what a buyer means.
+  q = q.eq("is_scrap", false);
   if (f.minSurface > 0) q = q.gte("surface_sqm", f.minSurface);
   if (f.minScore > 0) q = q.gte("score", f.minScore);
   if (f.unsold) q = q.eq("previous_auction_failed", true);
@@ -139,10 +145,17 @@ export function sortFeed(rows: FeedRow[], sort: string, p: Profile | null) {
     case "newest":
       return r.sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
     case "foryou":
-      return r.sort((a, b) => forYouScore(b, p) - forYouScore(a, p));
+      return r.sort((a, b) => Number(!!b.has_real_photo) - Number(!!a.has_real_photo) || forYouScore(b, p) - forYouScore(a, p));
     default:
-      return r.sort((a, b) => num(b.score, -1) - num(a.score, -1));
+      return r.sort((a, b) => Number(!!b.has_real_photo) - Number(!!a.has_real_photo) || num(b.score, -1) - num(a.score, -1));
   }
+}
+
+/** "Under €50k" means a €30k to €50k house to a buyer, not a €4k field. Below about 60% of the
+ * ceiling the stock is mostly plots, shares and ruins, so a stated ceiling becomes a band. */
+export function budgetBand(max: number): { minPrice: number; maxPrice: number } {
+  if (max < 20000) return { minPrice: 0, maxPrice: max };
+  return { minPrice: Math.round((max * 0.6) / 5000) * 5000, maxPrice: max };
 }
 
 /** Court inspection photos are low-resolution scanned pages, not listing photos. */

@@ -87,11 +87,14 @@ export function AgentChat({
   dealId,
   open,
   onOpenChange,
+  initial,
 }: {
   listingId: string;
   dealId: string | null;
   open: boolean;
   onOpenChange: (o: boolean) => void;
+  /** A question to send as soon as the conversation has loaded. */
+  initial?: string;
 }) {
   const qc = useQueryClient();
   const conv = useQuery(conversationQuery(listingId, dealId));
@@ -134,6 +137,13 @@ export function AgentChat({
     }
   }, [conv.data]);
   useEffect(() => { bottom.current?.scrollIntoView({ behavior: "smooth" }); }, [messages.length, busy]);
+  const asked = useRef(false);
+  useEffect(() => {
+    if (!initial || asked.current || !conv.isFetched) return;
+    asked.current = true;
+    void send(initial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial, conv.isFetched]);
 
   async function send(q: string) {
     const message = q.trim();
@@ -151,7 +161,7 @@ export function AgentChat({
     setMessages((m) => [...m, optimistic]);
     try {
       const r = await askAgent({
-        conversation_id: convId,
+        conversation_id: convId ?? conv.data?.id ?? null,
         listing_id: listingId,
         deal_id: dealId,
         message,

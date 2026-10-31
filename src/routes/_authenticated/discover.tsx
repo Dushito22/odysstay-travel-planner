@@ -2,13 +2,14 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { zodValidator } from "@tanstack/zod-adapter";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { ArgosComposer } from "@/components/odys/ArgosComposer";
 import { FilterChips, FilterPanel, MobileFilters, RESET_SEARCH } from "@/components/odys/Filters";
 import { ListingCard, ListingCardSkeleton } from "@/components/odys/ListingCard";
 import { SaveSearchButton } from "@/components/odys/SaveSearchButton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { feedSearchSchema, SORTS, type FeedSearch } from "@/lib/feed";
 import { useFeed } from "@/lib/use-feed";
-import { useLang } from "@/lib/i18n";
+import { speechLang, useLang } from "@/lib/i18n";
 import { useT } from "@/lib/tr";
 
 export const Route = createFileRoute("/_authenticated/discover")({
@@ -62,6 +63,17 @@ function DiscoverPage() {
             </SelectContent>
           </Select>
           <SaveSearchButton filters={filters} sort={sort} />
+        </div>
+      </div>
+
+      <div className="mt-6 flex flex-col gap-3 rounded-[14px] bg-gradient-to-r from-[oklch(0.93_0.02_240)] to-[oklch(0.965_0.01_235)] p-4 md:flex-row md:items-center md:gap-5 md:p-5">
+        <p className="shrink-0 font-display text-[20px] leading-tight md:w-56">
+          {ru ? <>Или просто скажите <em className="italic text-azure">Argos</em></> : <>Or just tell <em className="italic text-azure">Argos</em></>}
+        </p>
+        <div className="min-w-0 flex-1">
+          <ArgosComposer tone="light" lang={speechLang(ru ? "ru" : "en")}
+            placeholder={ru ? "Каменный дом в Абруццо до €50 тыс., ремонт не пугает…" : "A stone house in Abruzzo under €50k, some work is fine…"}
+            onSubmit={(q, spoken) => navigate({ to: "/argos", search: { q, ...(spoken ? { voice: true } : {}) } })} />
         </div>
       </div>
 

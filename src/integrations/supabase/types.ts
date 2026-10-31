@@ -1253,6 +1253,8 @@ export type Database = {
           land_sqm: number | null
           lat: number | null
           latest_render_path: string | null
+          has_real_photo: boolean | null
+          is_scrap: boolean | null
           lng: number | null
           lot: string | null
           occupancy: string | null
