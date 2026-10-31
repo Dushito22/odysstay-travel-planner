@@ -116,18 +116,19 @@ def score_listing(l: dict, red_flags: int | dict[str, int], today: date | None =
 def run(db: Supa, log=print) -> int:
     listings = db.select("listings", {"select": "id,price_eur,surface_sqm,property_type,sale_type,discount_pct,"
                                       "previous_auction_failed,occupancy,deadline_at,auction_at,status,score,score_reasons,photo_urls",
-                                      "is_demo": "eq.false", "status": "neq.withdrawn"})
+                                      "is_demo": "eq.false", "status": "neq.withdrawn", "order": "id"})
     flags: dict[str, dict[str, int]] = {}
     for f in db.select("listing_red_flags", {"select": "listing_id,severity"}):
         d = flags.setdefault(f["listing_id"], {})
         d[f.get("severity") or "medium"] = d.get(f.get("severity") or "medium", 0) + 1
-    changed = []
+    changed: dict[str, dict] = {}  # keyed by id: a row can never be sent twice in one upsert
     for l in listings:
         s, reasons, status = score_listing(l, flags.get(l["id"], {}))
         if (l.get("score"), l.get("score_reasons"), l.get("status")) != (s, reasons, status):
-            changed.append({"id": l["id"], "score": s, "score_reasons": reasons, "status": status})
-    for i in range(0, len(changed), 500):  # one request per 500 rows instead of one per row
-        db.upsert("listings", changed[i : i + 500], on_conflict="id")
+            changed[l["id"]] = {"id": l["id"], "score": s, "score_reasons": reasons, "status": status}
+    rows = list(changed.values())
+    for i in range(0, len(rows), 500):  # one request per 500 rows instead of one per row
+        db.upsert("listings", rows[i : i + 500], on_conflict="id")
     n = len(changed)
     log(f"Scored {len(listings)} listings ({n} changed)")
     return n
