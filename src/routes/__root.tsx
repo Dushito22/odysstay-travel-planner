@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { startAutoTranslate, stopAutoTranslate } from "@/lib/autotranslate";
+import { rememberList } from "@/lib/last-list";
 import { useLang } from "@/lib/i18n";
 
 import appCss from "../styles.css?url";
@@ -146,6 +147,12 @@ function RootComponent() {
     } else stopAutoTranslate();
     return () => { window.clearTimeout(t); stopAutoTranslate(); };
   }, [lang]);
+
+  useEffect(() => {
+    const at = router.state.location;
+    rememberList(at.href, at.pathname);
+    return router.subscribe("onResolved", ({ toLocation }) => rememberList(toLocation.href, toLocation.pathname));
+  }, [router]);
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {

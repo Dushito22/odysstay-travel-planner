@@ -37,7 +37,9 @@ serve(async (req, body) => {
 
   const apiKey = Deno.env.get("OPENAI_API_KEY");
   if (!apiKey) throw new HttpError(503, "Illustrations are not switched on yet. Please try again soon.");
-  const model = Deno.env.get("OPENAI_IMAGE_MODEL") || "gpt-image-1";
+  // Newest first. A model the account cannot use ("does not exist", no access) falls through to the next.
+  const models = [...new Set([Deno.env.get("OPENAI_IMAGE_MODEL"), "gpt-image-2", "gpt-image-1.5", "gpt-image-1"]
+    .filter((m): m is string => !!m))];
 
   const { data: profile } = await admin
     .from("profiles")
@@ -99,19 +101,39 @@ serve(async (req, body) => {
   let b64: string | undefined;
   const prompt = renderPrompt(listing, style, !!file, wish);
   if (!file) throw new HttpError(502, "Could not read the listing photo. Please try another one.");
-  const form = new FormData();
-  form.append("model", model);
-  form.append("prompt", prompt);
-  form.append("size", "1536x1024");
-  form.append("input_fidelity", "high");
   const ext = file.type === "image/jpeg" ? "jpg" : "png";
-  form.append("image", new File([file], `original.${ext}`, { type: file.type || "image/png" }));
-  const res = await fetch("https://api.openai.com/v1/images/edits", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}` },
-    body: form,
-  });
-  if (!res.ok) throw new HttpError(502, await openAiReason(res, "edit"));
+  const image = new File([file], `original.${ext}`, { type: file.type || "image/png" });
+  let res: Response | null = null;
+  let failure = "";
+  for (const model of models) {
+    // input_fidelity only exists on some models; drop it if the model rejects it.
+    for (const fidelity of [true, false]) {
+      const form = new FormData();
+      form.append("model", model);
+      form.append("prompt", prompt);
+      form.append("size", "1536x1024");
+      form.append("quality", "medium"); // about a quarter of the cost of "high", and plenty for a card
+      if (fidelity) form.append("input_fidelity", "high");
+      form.append("image", image);
+      res = await fetch("https://api.openai.com/v1/images/edits", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}` },
+        body: form,
+      });
+      if (res.ok) break;
+      const text = await res.clone().text();
+      if (fidelity && res.status === 400 && /input_fidelity/i.test(text)) continue;
+      break;
+    }
+    if (res!.ok) break;
+    const text = await res!.clone().text();
+    const missing = res!.status === 404 || /does not exist|not found|do not have access|model_not_found/i.test(text);
+    failure = await openAiReason(res!, `edit:${model}`);
+    if (!missing) throw new HttpError(502, failure);
+  }
+  if (!res?.ok) throw new HttpError(502, failure
+    ? `No image model is open to this OpenAI key (${models.join(", ")}). In platform.openai.com, verify the organisation (Settings > Organization) and allow image models for the project (Settings > Project > Limits).`
+    : "The image service is unavailable.");
   b64 = (await res.json()).data?.[0]?.b64_json;
   if (!b64) throw new HttpError(502, "No image came back. Please try again.");
 

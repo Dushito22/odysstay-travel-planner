@@ -126,11 +126,18 @@ def collect(db: Supa, regions: int | None = None, max_price: int | None = None, 
     token = os.environ.get("APIFY_TOKEN")
     if not token:
         return {"skipped": "APIFY_TOKEN not set"}
-    picked = pick_regions(regions)
+    picked = pick_regions(min(regions, len(REGIONS)))
+    # Price bands, e.g. "0-25000,25000-50000,50000-100000": each band is its own run of up to per_region results,
+    # so cheap houses are not crowded out by the €90k ones.
+    bands = []
+    for b in (os.environ.get("IMMOBILIARE_BANDS") or f"0-{max_price}").split(","):
+        lo, _, hi = b.strip().partition("-")
+        if hi.strip().isdigit():
+            bands.append((int(lo or 0), int(hi)))
     saved, seen = 0, 0
-    for region, slug in picked:
-        url = f"https://www.immobiliare.it/vendita-case/{slug}/?prezzoMassimo={max_price}&criterio=dataModifica&ordine=desc"
-        log(f"Immobiliare {region}: {url}")
+    for (region, slug), (lo, hi) in [(r, b) for r in picked for b in bands]:
+        url = f"https://www.immobiliare.it/vendita-case/{slug}/?prezzoMassimo={hi}" + (f"&prezzoMinimo={lo}" if lo else "") + "&criterio=dataModifica&ordine=desc"
+        log(f"Immobiliare {region} €{lo:,}-{hi:,}: {url}")
         try:
             items = run_actor(token, [url], per_region, log)
         except Exception as e:  # noqa: BLE001
@@ -150,4 +157,4 @@ def collect(db: Supa, regions: int | None = None, max_price: int | None = None, 
                 if facts:
                     db.insert("listing_facts", facts, returning=False)
             saved += len(lid)
-    return {"regions": [r for r, _ in picked], "results": seen, "saved": saved}
+    return {"regions": [r for r, _ in picked], "bands": bands, "results": seen, "saved": saved}

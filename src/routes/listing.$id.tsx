@@ -3,13 +3,13 @@ import {
   ClientOnly, createFileRoute, Link, useNavigate, useRouter, type ErrorComponentProps,
 } from "@tanstack/react-router";
 import {
-  AlertTriangle, ArrowLeft, ExternalLink, FileText, Lock, Mail, MapPin, MessageCircle, Phone,
+  AlertTriangle, ArrowLeft, ExternalLink, FileText, Lock, Mail, MapPin, Phone,
 } from "lucide-react";
-import { lazy, Suspense, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
-import { AgentChatButton } from "@/components/odys/AgentChat";
 import { GenerateRender } from "@/components/odys/GenerateRender";
+import { ArgosHandleButton, argosTake, AskArgos } from "@/components/odys/ListingArgos";
 import { Description } from "@/components/odys/Description";
 import { Nearby } from "@/components/odys/Nearby";
 import { LangToggle } from "@/components/odys/LangToggle";
@@ -25,6 +25,7 @@ import {
   type CostEstimate, type Fact, type ListingBundle,
 } from "@/lib/listing";
 import { useLang } from "@/lib/i18n";
+import { lastList } from "@/lib/last-list";
 import { useT } from "@/lib/tr";
 import { cn } from "@/lib/utils";
 
@@ -72,8 +73,19 @@ function ListingError({ error, reset }: ErrorComponentProps) {
   );
 }
 
+function BackToResults() {
+  const r = useLang() === "ru";
+  const [last, setLast] = useState<ReturnType<typeof lastList>>(null);
+  useEffect(() => { setLast(lastList()); }, []);
+  const label = last?.kind === "argos" ? (r ? "Назад к Argos" : "Back to Argos") : last ? (r ? "К результатам" : "Back to results") : (r ? "Все дома" : "All houses");
+  return (
+    <Button asChild variant="ghost" size="sm">
+      <a href={last?.href ?? "/discover"}><ArrowLeft /> {label}</a>
+    </Button>
+  );
+}
+
 function Shell({ children }: { children: ReactNode }) {
-  const t = useT();
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur-xl">
@@ -81,7 +93,7 @@ function Shell({ children }: { children: ReactNode }) {
           <Link to="/"><Wordmark size="sm" /></Link>
           <div className="flex items-center gap-4">
             <LangToggle />
-            <Button asChild variant="ghost" size="sm"><Link to="/discover"><ArrowLeft /> {t("Discover")}</Link></Button>
+            <BackToResults />
           </div>
         </div>
       </header>
@@ -226,10 +238,15 @@ function ListingPage() {
 
   return (
     <Shell>
-      <Identity data={data} />
-      <Gallery data={data} userId={userId} />
+      <section className="grid gap-8 pt-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(340px,1fr)] lg:gap-10 lg:pt-10">
+        <Gallery data={data} userId={userId} />
+        <HeroPanel data={data} userId={userId} />
+      </section>
 
-      <div className="grid gap-12 lg:grid-cols-[1fr_340px]">
+      <div className="mt-6 grid gap-12 lg:grid-cols-[1fr_340px]">
+        <aside className="lg:order-last lg:pt-10">
+          <div className="lg:sticky lg:top-24"><AskArgos l={l} userId={userId} /></div>
+        </aside>
         <div className="min-w-0">
           <Section title="Key numbers">
             <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border bg-border md:grid-cols-3">
@@ -322,9 +339,6 @@ function ListingPage() {
           </Section>
         </div>
 
-        <aside className="lg:pt-10">
-          <div className="lg:sticky lg:top-24"><ActionCard data={data} userId={userId} /></div>
-        </aside>
       </div>
     </Shell>
   );
@@ -485,30 +499,59 @@ function PricePerSqm({ facts }: { facts: Record<string, Fact | undefined> }) {
   );
 }
 
-function Identity({ data }: { data: ListingBundle }) {
+function HeroPanel({ data, userId }: { data: ListingBundle; userId: string | null }) {
   const t = useT();
+  const lang = useLang();
+  const r = lang === "ru";
   const l = data.listing;
+  const take = argosTake(l, lang);
   return (
-    <div className="flex flex-wrap items-end justify-between gap-6 pb-8 pt-10">
-      <div className="min-w-0">
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          {l.is_demo && <span className="rounded-full bg-sea px-2.5 py-1 text-[11px] font-normal uppercase tracking-wide text-white">Demo</span>}
-          <DeadlinePill deadline={l.deadline_at ?? l.auction_at} />
-          {l.property_type && <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-normal text-muted-foreground">{TYPE_LABELS[l.property_type] ?? l.property_type}</span>}
-          {l.sale_type && <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-normal text-brand">{SALE_TYPE_LABELS[l.sale_type] ?? l.sale_type}</span>}
-        </div>
-        <h1 data-notranslate className="text-5xl md:text-6xl">{l.comune ?? t("Unknown comune")}</h1>
-        <p className="mt-2 text-lg text-muted-foreground">
-          {[l.province, l.region ? t(l.region) : null].filter(Boolean).join(" · ") || t("Location not stated")}
-        </p>
-        {l.title_en && <p className="mt-4 max-w-2xl text-lg">{l.title_en}</p>}
+    <div className="flex min-w-0 flex-col">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {l.is_demo && <span className="rounded-full bg-sea px-2.5 py-1 text-[11px] font-normal uppercase tracking-wide text-white">Demo</span>}
+        <DeadlinePill deadline={l.deadline_at ?? l.auction_at} />
+        {l.property_type && <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-normal text-muted-foreground">{t(TYPE_LABELS[l.property_type] ?? l.property_type)}</span>}
+        {l.sale_type && <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-normal text-brand">{t(SALE_TYPE_LABELS[l.sale_type] ?? l.sale_type)}</span>}
       </div>
-      <div className="flex items-center gap-4">
-        <div className="text-right">
-          <p className="text-xs font-normal uppercase tracking-wide text-muted-foreground">{t("Deal score")}</p>
-          <p className="text-sm text-muted-foreground">{t("Tap for reasons")}</p>
+      <h1 data-notranslate className="text-[44px] leading-[0.95] md:text-[52px]">{l.comune ?? t("Unknown comune")}</h1>
+      <p className="mt-2 text-muted-foreground">
+        {[l.province, l.region ? t(l.region) : null].filter(Boolean).join(" · ") || t("Location not stated")}
+        {l.title_en && <span className="text-foreground/70"> · {l.title_en}</span>}
+      </p>
+
+      <div className="mt-6 flex items-end justify-between gap-4 border-t border-foreground/10 pt-5">
+        <div>
+          <Money value={l.price_eur} className="text-[38px] leading-none" />
+          <p className="mt-2 text-sm text-muted-foreground tnum">
+            {[
+              l.min_offer_eur != null && l.price_eur != null && l.min_offer_eur < l.price_eur ? `${t("Offers valid from")} ${formatEur(l.min_offer_eur)}` : null,
+              l.surface_sqm ? `${Math.round(l.surface_sqm)} m²` : null,
+              l.price_per_sqm ? `${formatEur(l.price_per_sqm)}/m²` : null,
+            ].filter(Boolean).join(" · ")}
+          </p>
         </div>
-        <ScoreBadge score={l.score} reasons={l.score_reasons} />
+        <div className="flex items-center gap-3">
+          {l.id && <SaveButton id={l.id} />}
+          <ScoreBadge score={l.score} reasons={l.score_reasons} />
+        </div>
+      </div>
+
+      <div className="mt-5 rounded-[12px] border border-foreground/10 bg-card p-5">
+        <p className="font-display text-[19px] italic text-azure">{r ? "Мнение Argos" : "Argos's take"}</p>
+        <ul className="mt-3 space-y-2.5">
+          {take.map((x) => (
+            <li key={x} className="flex gap-2.5 text-[15px] font-light leading-snug text-foreground/80">
+              <span aria-hidden className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-azure" />{x}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="mt-5">
+        <ArgosHandleButton l={l} userId={userId} className="w-full" />
+        <p className="mt-2 text-center text-[12px] font-light text-muted-foreground">
+          {r ? "Argos пишет продавцу по-итальянски, вы одобряете каждое сообщение." : "Argos writes to the seller in Italian. You approve every message."}
+        </p>
       </div>
     </div>
   );
@@ -543,16 +586,16 @@ function Gallery({ data, userId }: { data: ListingBundle; userId: string | null 
   const hasReal = official.some((o) => o.kind === "original") || images.some((i) => i.kind === "original");
   return (
     <div>
-      <div className="relative overflow-hidden rounded-3xl">
+      <div className="relative overflow-hidden rounded-[14px]">
         {img ? (
-          <div className="relative aspect-[16/9] bg-muted">
+          <div className="relative aspect-[4/3] bg-muted">
             {!cover && <img src={renderUrl(img.storage_path) ?? ""} alt="" aria-hidden referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl" />}
             <img src={renderUrl(img.storage_path) ?? ""} alt={img.caption_en ?? "Property image"} referrerPolicy="no-referrer"
               className={cn("relative h-full w-full", cover ? "object-cover" : "object-contain")} />
             {img.kind === "render" && <IllustrationLabel className="bottom-4 left-4" />}
           </div>
         ) : (
-          <div className="[&>div]:aspect-[16/9] md:[&>div]:aspect-[21/9]"><CardImage row={l} /></div>
+          <div className="[&>div]:aspect-[4/3]"><CardImage row={l} /></div>
         )}
         <div className="absolute right-4 top-4">
           {l.id && hasReal && (
@@ -776,85 +819,5 @@ function HowBuying({ saleType }: { saleType: string | null }) {
       )}
       <p className="mt-4 text-sm text-muted-foreground">General guide only. The notice sets the exact rules and dates.</p>
     </Section>
-  );
-}
-
-function ActionCard({ data, userId }: { data: ListingBundle; userId: string | null }) {
-  const t = useT();
-  const l = data.listing;
-  const navigate = useNavigate();
-  const [busy, setBusy] = useState(false);
-  const [upgrade, setUpgrade] = useState(false);
-  const { data: deal, refetch } = useQuery({
-    queryKey: ["deal-for", l.id, userId],
-    enabled: !!userId,
-    queryFn: async () => {
-      const { data, error } = await supabase.from("deals").select("id").eq("listing_id", l.id!).maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-  });
-  const here = `/listing/${l.id}`;
-
-  async function onStart() {
-    if (!userId) {
-      navigate({ to: "/login", search: { redirect: here } });
-      return;
-    }
-    setBusy(true);
-    try {
-      const dealId = await startDeal(l);
-      navigate({ to: "/deals/$id", params: { id: dealId } });
-    } catch (e) {
-      if (e instanceof UpgradeRequired) setUpgrade(true);
-      else {
-        toast.error("Could not start the deal. Please try again.");
-        refetch();
-      }
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="rounded-3xl border bg-card p-6 shadow-hover">
-      <p className="text-xs font-normal uppercase tracking-wide text-muted-foreground">{t("Base price")}</p>
-      <div className="mt-1 flex items-center justify-between">
-        <Money value={l.price_eur} className="text-[36px]" />
-        {l.id && <SaveButton id={l.id} />}
-      </div>
-      {l.min_offer_eur != null && l.price_eur != null && l.min_offer_eur < l.price_eur && (
-        <p className="mt-1 text-sm tnum">{t("Offers valid from")} <span className="font-semibold">{formatEur(l.min_offer_eur)}</span></p>
-      )}
-      <div className="mt-2"><DeadlinePill deadline={l.deadline_at ?? l.auction_at} /></div>
-
-      <div className="mt-6 space-y-2">
-        {deal ? (
-          <Button asChild size="lg" className="w-full"><Link to="/deals/$id" params={{ id: deal.id }}>{t("Open your deal")}</Link></Button>
-        ) : (
-          <Button size="lg" className="w-full" onClick={onStart} disabled={busy}>
-            {!userId && <Lock />} {busy ? "…" : userId ? t("Start a deal") : t("Sign in to start a deal")}
-          </Button>
-        )}
-        {l.id && (
-          <AgentChatButton listingId={l.id} dealId={deal?.id ?? null} signedIn={!!userId} className="h-auto w-full whitespace-normal py-2.5">
-            <MessageCircle /> {t("Ask the agent about this property")}
-          </AgentChatButton>
-        )}
-      </div>
-
-      {upgrade && (
-        <div className="mt-4 rounded-2xl bg-caution-soft p-4 text-sm text-caution">
-          <p className="font-semibold">You already have an active deal</p>
-          <p className="mt-1">The free plan includes one active deal at a time. Upgrade to Pro to work on several, or close your current deal first.</p>
-          <div className="mt-2 flex gap-4">
-            <Link to="/deals" className="font-medium underline">See your deals</Link>
-            <Link to="/pricing" className="font-medium underline">See plans</Link>
-          </div>
-        </div>
-      )}
-
-      <p className="mt-6 text-xs leading-relaxed text-muted-foreground">{LEGAL_LINE}</p>
-    </div>
   );
 }

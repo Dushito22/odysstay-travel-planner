@@ -25,6 +25,8 @@ export const Route = createFileRoute("/argos")({
 });
 
 type Msg = { role: "user" | "argos"; text: string };
+type Saved = { q: string; msgs: Msg[]; search: ArgosSearch | null; rows: FeedRow[]; total: number };
+const KEY = "odys-argos";
 
 const T = {
   en: {
@@ -56,6 +58,22 @@ function ArgosPage() {
   const [busy, setBusy] = useState(false);
   const [aloud, setAloud] = useState(voice);
   const started = useRef(false);
+
+  // Coming back from a listing restores the conversation and results instead of asking again.
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(KEY) ?? "null") as Saved | null;
+      if (saved && saved.q === q && saved.msgs.length) {
+        started.current = true;
+        setMsgs(saved.msgs); setSearch(saved.search); setRows(saved.rows); setTotal(saved.total);
+      }
+    } catch { /* storage blocked */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (busy || !msgs.length) return;
+    try { sessionStorage.setItem(KEY, JSON.stringify({ q, msgs, search, rows, total } satisfies Saved)); } catch { /* full or blocked */ }
+  }, [busy, msgs, search, rows, total, q]);
   const bottom = useRef<HTMLDivElement>(null);
 
   useEffect(() => { bottom.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs.length, busy]);

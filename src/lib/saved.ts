@@ -107,6 +107,7 @@ export function searchFromFilters(j: Json): FeedSearch {
     sort: typeof f["sort"] === "string" ? f["sort"] : "best",
     regions: arr(f["regions"]),
     types: arr(f["types"]),
+    minPrice: num(f["minPrice"]),
     maxPrice: num(f["maxPrice"]),
     minSurface: num(f["minSurface"]),
     minScore: num(f["minScore"]),
@@ -126,7 +127,9 @@ export function summarizeFilters(j: Json): string {
   const s = searchFromFilters(j);
   const parts: string[] = [];
   parts.push(s.regions.length ? s.regions.join(", ") : "All of Italy");
-  if (s.maxPrice > 0) parts.push(`under ${eur.format(s.maxPrice)}`);
+  if (s.minPrice > 0 && s.maxPrice > 0) parts.push(`${eur.format(s.minPrice)} to ${eur.format(s.maxPrice)}`);
+  else if (s.maxPrice > 0) parts.push(`under ${eur.format(s.maxPrice)}`);
+  else if (s.minPrice > 0) parts.push(`over ${eur.format(s.minPrice)}`);
   if (s.types.length)
     parts.push(s.types.map((t) => PLURAL[t] ?? (TYPE_LABELS[t] ?? t).toLowerCase()).join(", "));
   if (s.minSurface > 0) parts.push(`${s.minSurface} m² or more`);

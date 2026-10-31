@@ -1,6 +1,6 @@
 /** Argos: turns what a buyer says ("something in Puglia under 40k, I can do some work") into search filters.
  * Rules, not AI: it runs in the browser, costs nothing and is instant. The AI only writes Argos's reply. */
-import { DEFAULT_FILTERS, fetchFeed, type FeedFilters, type FeedRow } from "./feed";
+import { budgetBand, DEFAULT_FILTERS, fetchFeed, type FeedFilters, type FeedRow } from "./feed";
 
 const REGIONS: [string, RegExp][] = [
   ["Sicilia", /sicil|сицил/i],
@@ -43,6 +43,8 @@ export type ArgosSearch = {
   notYet: string[];
   oneEuroOnly: boolean;
   courtOnly: boolean;
+  /** Conditions to rank first (not filter: most notices don't state one). */
+  prefer?: string[];
 };
 
 function amount(raw: string, unit: string | undefined): number | null {
@@ -69,8 +71,12 @@ export function parseRequest(text: string, previous?: ArgosSearch): ArgosSearch 
     if (v != null && v >= 1000 && v <= 5_000_000 && (best == null || v > best)) best = v;
   }
   if (best) {
-    f.maxPrice = Math.round(best);
-    understood.push(`up to €${f.maxPrice.toLocaleString("en-GB")}`);
+    // "around 40k" is a band either side; "under 50k" is a band below it, not everything down to a €4k field.
+    const around = /around|about|roughly|circa|около|примерно|в районе/i.test(t);
+    const b = around ? { minPrice: Math.round((best * 0.75) / 5000) * 5000, maxPrice: Math.round((best * 1.15) / 5000) * 5000 } : budgetBand(Math.round(best));
+    f.minPrice = b.minPrice;
+    f.maxPrice = b.maxPrice;
+    understood.push(f.minPrice ? `€${f.minPrice.toLocaleString("en-GB")} to €${f.maxPrice.toLocaleString("en-GB")}` : `up to €${f.maxPrice.toLocaleString("en-GB")}`);
   }
 
   const regions = REGIONS.filter(([, rx]) => rx.test(t)).map(([r]) => r);
@@ -98,9 +104,10 @@ export function parseRequest(text: string, previous?: ArgosSearch): ArgosSearch 
   if (/\bsea\b|coast|beach|mare\b|море|побереж|пляж/i.test(t)) notYet.push("by the sea");
   if (/garden|giardino|сад/i.test(t)) notYet.push("a garden");
   if (/view|vista|вид/i.test(t)) notYet.push("a view");
-  if (/ready|move.?in|no work|без ремонта|готов/i.test(t)) understood.push("ready to live in, if possible");
-  if (/renovat|project|some work|wreck|ristruttur|ремонт/i.test(t)) understood.push("happy to renovate");
-  return { filters: f, understood, notYet, oneEuroOnly, courtOnly };
+  let prefer: string[] = [];
+  if (/ready|move.?in|no work|без ремонта|готов/i.test(t)) { understood.push("ready to live in, if possible"); prefer = ["ready"]; }
+  else if (/renovat|project|some work|bit of work|love|wreck|ristruttur|ремонт|любв/i.test(t)) { understood.push("happy to do some work"); prefer = ["needs_work", "ready"]; }
+  return { filters: f, understood, notYet, oneEuroOnly, courtOnly, prefer };
 }
 
 /** Runs the search on our own data (no AI, no cost). Relaxes type, then region, if nothing matches. */
@@ -109,12 +116,18 @@ export async function runSearch(s: ArgosSearch): Promise<{ rows: FeedRow[]; tota
     let r = rows;
     if (s.oneEuroOnly) r = r.filter((x) => x.sale_type === "one_euro");
     else if (s.courtOnly) r = r.filter((x) => x.sale_type === "auction_judicial" || x.sale_type === "auction_notary");
-    // Real photos first: people choose with their eyes.
-    return [...r].sort((a, b) => Number(!!b.hero_image_path) - Number(!!a.hero_image_path) || (b.score ?? 0) - (a.score ?? 0));
+    // Real photos first (people choose with their eyes), then the condition they asked for, then the deal.
+    const fit = (x: FeedRow) => (s.prefer?.length && x.condition && s.prefer.includes(x.condition) ? 1 : 0);
+    return [...r].sort((a, b) => Number(!!b.has_real_photo) - Number(!!a.has_real_photo) || fit(b) - fit(a) || (b.score ?? 0) - (a.score ?? 0));
   };
   const first = await fetchFeed(s.filters, "best");
   let rows = pick(first.rows);
   if (rows.length) return { rows: rows.slice(0, 30), total: s.oneEuroOnly || s.courtOnly ? rows.length : first.total, relaxed: null };
+  if (s.filters.minPrice) {
+    const r = await fetchFeed({ ...s.filters, minPrice: 0 }, "best");
+    rows = pick(r.rows);
+    if (rows.length) return { rows: rows.slice(0, 30), total: rows.length, relaxed: "anything under your budget" };
+  }
   if (s.filters.types.length) {
     const r = await fetchFeed({ ...s.filters, types: [] }, "best");
     rows = pick(r.rows);
@@ -130,7 +143,7 @@ export async function runSearch(s: ArgosSearch): Promise<{ rows: FeedRow[]; tota
 
 /** The reply when the AI is unavailable: short, honest, in Argos's voice. */
 export function fallbackReply(s: ArgosSearch, n: number, relaxed: string | null, rows: FeedRow[], lang: "en" | "ru" = "en"): string {
-  const photo = rows.some((r) => r.hero_image_path);
+  const photo = rows.some((r) => r.has_real_photo);
   if (lang === "ru") {
     if (!n) return "Под это пока ничего нет. Чуть расширьте бюджет или регион, и я поищу снова.";
     const lead = relaxed ? "Точного совпадения нет, поэтому я расширил поиск. " : "";

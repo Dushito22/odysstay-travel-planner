@@ -8,7 +8,12 @@ describe("parseRequest", () => {
     expect(s.filters.maxPrice).toBe(40000);
     expect(s.filters.regions).toEqual(["Puglia"]);
     expect(s.filters.types).toContain("house");
-    expect(s.understood).toContain("happy to renovate");
+    expect(s.understood).toContain("happy to do some work");
+  });
+  it("turns a ceiling into a band, so 'under 50k' is not a €4k field", () => {
+    expect(parseRequest("a stone house under €50k, some work is fine").filters).toMatchObject({ minPrice: 30000, maxPrice: 50000 });
+    expect(parseRequest("around 40k in Abruzzo").filters).toMatchObject({ minPrice: 30000, maxPrice: 45000 });
+    expect(parseRequest("under 15k").filters).toMatchObject({ minPrice: 0, maxPrice: 15000 });
   });
   it("reads euro amounts with separators and Russian", () => {
     expect(parseRequest("budget €50,000 Sicily").filters.maxPrice).toBe(50000);

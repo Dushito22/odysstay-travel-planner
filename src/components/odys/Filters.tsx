@@ -46,11 +46,17 @@ export function FilterPanel({ value: v, onChange }: Props) {
           ))}
         </div>
       </Group>
-      <Group title={t("Max price")}>
-        <Input
-          type="number" inputMode="numeric" min={0} step={5000} placeholder={t("Any price")}
-          value={v.maxPrice || ""} onChange={(e) => set({ maxPrice: Math.max(0, Number(e.target.value) || 0) })}
-        />
+      <Group title={t("Price")}>
+        <div className="grid grid-cols-2 gap-2">
+          <Input
+            type="number" inputMode="numeric" min={0} step={5000} placeholder={t("From")} aria-label={t("From")}
+            value={v.minPrice || ""} onChange={(e) => set({ minPrice: Math.max(0, Number(e.target.value) || 0) })}
+          />
+          <Input
+            type="number" inputMode="numeric" min={0} step={5000} placeholder={t("To")} aria-label={t("To")}
+            value={v.maxPrice || ""} onChange={(e) => set({ maxPrice: Math.max(0, Number(e.target.value) || 0) })}
+          />
+        </div>
       </Group>
       <Group title={t("Property type")}>
         <div className="flex flex-wrap gap-1.5">
@@ -117,7 +123,9 @@ export function FilterChips({ value: v, onChange, onReset }: Props & { onReset: 
   ];
   v.condition.forEach((k) => chips.push({ label: t(CONDITION_LABELS[k] ?? k), clear: () => set({ condition: v.condition.filter((x) => x !== k) }) }));
   if (v.realPhotos) chips.push({ label: t("Real photos only"), clear: () => set({ realPhotos: false }) });
-  if (v.maxPrice) chips.push({ label: `Up to ${formatEur(v.maxPrice)}`, clear: () => set({ maxPrice: 0 }) });
+  if (v.minPrice && v.maxPrice) chips.push({ label: `${formatEur(v.minPrice)} – ${formatEur(v.maxPrice)}`, clear: () => set({ minPrice: 0, maxPrice: 0 }) });
+  else if (v.maxPrice) chips.push({ label: `${t("Up to")} ${formatEur(v.maxPrice)}`, clear: () => set({ maxPrice: 0 }) });
+  else if (v.minPrice) chips.push({ label: `${t("From")} ${formatEur(v.minPrice)}`, clear: () => set({ minPrice: 0 }) });
   if (v.minSurface) chips.push({ label: `From ${v.minSurface} m²`, clear: () => set({ minSurface: 0 }) });
   if (v.minScore) chips.push({ label: `Score ${v.minScore}+`, clear: () => set({ minScore: 0 }) });
   if (v.minDiscount) chips.push({ label: `${v.minDiscount}%+ below appraisal`, clear: () => set({ minDiscount: 0 }) });

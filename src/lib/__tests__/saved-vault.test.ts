@@ -38,6 +38,7 @@ describe("saved search summaries", () => {
       sort: "best",
       regions: ["Lazio"],
       types: [],
+      minPrice: 0,
       maxPrice: 0,
       minSurface: 0,
       minScore: 0,
