@@ -39,3 +39,7 @@ from public.listings l
 left join public.documents d on d.id = l.document_id;
 grant select on public.listing_feed to anon, authenticated;
 analyze public.listings;
+
+-- The open feed in display order, so the first screen reads a few index entries instead of the whole table.
+create index if not exists listings_open_feed_idx on public.listings (has_real_photo desc, score desc nulls last)
+  where not is_scrap and not is_demo and status not in ('closed', 'withdrawn');
