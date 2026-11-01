@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { LangToggle } from "@/components/odys/LangToggle";
 import { useLang, type Lang } from "@/lib/i18n";
 import { useSignedIn } from "@/lib/signed-in";
-import { exampleFactQuery, sendMagicLink, sourceCountsQuery, topListingsQuery } from "@/lib/public";
+import { exampleFactQuery, sourceCountsQuery, topListingsQuery } from "@/lib/public";
 import { cn } from "@/lib/utils";
 
 const TITLE = "Odysstay | Describe your dream house";
@@ -763,6 +763,7 @@ function Faq() {
 
 function Final() {
   const [c] = useCopy();
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "busy" | "sent">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -771,8 +772,8 @@ function Final() {
     setState("busy");
     setError(null);
     try {
-      await sendMagicLink(email);
-      setState("sent");
+      // Sign-in emails are rate limited; the sign-in page takes the email and a password instead.
+      void navigate({ to: "/login", search: { email: email.trim() } });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send the link. Please try again.");
       setState("idle");
