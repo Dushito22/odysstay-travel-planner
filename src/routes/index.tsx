@@ -817,6 +817,7 @@ function Footer() {
         </div>
         <nav className="flex flex-wrap gap-x-7 gap-y-3 md:justify-end">
           <Link to="/argos" search={{ q: "", voice: false }} className={link}>Argos</Link>
+          <a href="https://t.me/odysstay_bot" target="_blank" rel="noreferrer" className={link}>Telegram</a>
           <Link to="/explore" className={link}>{c.nav.browse}</Link>
           <Link to="/pricing" className={link}>{c.nav.pricing}</Link>
           <Link to="/privacy" className={link}>Privacy</Link>
