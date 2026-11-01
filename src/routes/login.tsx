@@ -58,6 +58,24 @@ function Login() {
     return () => data.subscription.unsubscribe();
   }, [navigate, redirect]);
 
+  // The Google button appears by itself once Google sign-in is switched on in Supabase.
+  const [google, setGoogle] = useState(false);
+  useEffect(() => {
+    const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+    const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+    if (!url || !key) return;
+    fetch(`${url}/auth/v1/settings`, { headers: { apikey: key } })
+      .then((r) => (r.ok ? r.json() : null)).then((j) => setGoogle(!!j?.external?.google)).catch(() => {});
+  }, []);
+  async function withGoogle() {
+    setError(null);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/login${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ""}` },
+    });
+    if (error) setError(error.message);
+  }
+
   /** One form for both: sign in, or create the account if this email is new. No email has to arrive. */
   async function submitPassword(e: FormEvent) {
     e.preventDefault();
@@ -128,6 +146,15 @@ function Login() {
           <form onSubmit={submitPassword}>
             <h1 className="text-3xl">{t("Sign in to Odysstay")}</h1>
             <p className="mt-2 text-sm text-muted-foreground">{ru ? "Новый email? Аккаунт создастся сразу." : "New here? The same form creates your account."}</p>
+            {google && (
+              <>
+                <Button type="button" variant="outline" className="mt-6 w-full" onClick={() => void withGoogle()}>
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden><path fill="#4285F4" d="M22.6 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6c-.3 1.4-1.1 2.5-2.2 3.3v2.7h3.6c2.1-1.9 3.2-4.8 3.2-8.1z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.4-2.7l-3.6-2.7c-1 .7-2.3 1.1-3.8 1.1-2.9 0-5.4-2-6.3-4.6H2v2.8C3.8 20.6 7.6 23 12 23z"/><path fill="#FBBC05" d="M5.7 14.1c-.2-.7-.4-1.4-.4-2.1s.1-1.4.4-2.1V7.1H2C1.3 8.6.9 10.2.9 12s.4 3.4 1.1 4.9l3.7-2.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2C17.5 2.1 15 1 12 1 7.6 1 3.8 3.4 2 7.1l3.7 2.8C6.6 7.4 9.1 5.4 12 5.4z"/></svg>
+                  {ru ? "Войти через Google" : "Continue with Google"}
+                </Button>
+                <p className="my-4 text-center text-xs text-muted-foreground">{ru ? "или" : "or"}</p>
+              </>
+            )}
             <div className="mt-6 space-y-2">
               <Label htmlFor="email">{t("Email")}</Label>
               <Input id="email" type="email" required autoComplete="email" value={email}
