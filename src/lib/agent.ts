@@ -22,21 +22,33 @@ export type AgentMessage = {
   created_at: string;
 };
 
-export const RENDER_STYLES = [
-  {
-    value: "Restored, original character",
-    hint: "Original stone, beams and tiles brought back to life",
-  },
+export const INTERIOR_STYLES = [
+  { value: "Restored, original character", hint: "Original stone, beams and tiles brought back to life" },
   { value: "Modern Mediterranean", hint: "Lime plaster, clean lines, warm light" },
   { value: "Coastal white and blue", hint: "Whitewash, blue shutters, linen, sea light" },
   { value: "Warm Tuscan", hint: "Ochre walls, terracotta floors, olive wood" },
   { value: "Boutique hotel luxury", hint: "Stone, brass, deep colours, statement lighting" },
   { value: "Japandi calm", hint: "Oak, paper lamps, low furniture, quiet tones" },
   { value: "Minimal Scandinavian", hint: "Pale wood, white walls, very little clutter" },
-  { value: "Rustic farmhouse", hint: "Terracotta, timber, kitchen garden" },
+  { value: "Rustic farmhouse", hint: "Terracotta, timber, open kitchen, copper pots" },
   { value: "Industrial loft", hint: "Exposed brick and steel, big open space" },
   { value: "Custom", hint: "Describe exactly what you want" },
 ] as const;
+
+export const EXTERIOR_STYLES = [
+  { value: "Restored stone and shutters", hint: "Bare stone cleaned, green shutters, terracotta roof" },
+  { value: "Lime-washed Mediterranean", hint: "Soft pastel plaster, pergola, bougainvillea" },
+  { value: "Tuscan country estate", hint: "Ochre walls, cypresses, gravel drive, lavender" },
+  { value: "Puglia white", hint: "Whitewashed walls, blue doors, olive trees, dry-stone walls" },
+  { value: "Garden and pool", hint: "Lawn, pool, stone terrace, olive trees" },
+  { value: "Alpine chalet", hint: "Wooden balconies, stone base, flower boxes" },
+  { value: "Contemporary facade", hint: "Smooth plaster, large steel windows, clean landscaping" },
+  { value: "Boutique hotel terrace", hint: "Lit terrace, loungers, lush planting at dusk" },
+  { value: "Seaside village", hint: "Coloured facade, wrought-iron balconies, potted lemons" },
+  { value: "Custom", hint: "Describe exactly what you want" },
+] as const;
+
+export const RENDER_STYLES = INTERIOR_STYLES;
 
 export const STARTER_QUESTIONS = [
   "What are the main risks here?",

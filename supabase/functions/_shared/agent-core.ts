@@ -350,18 +350,29 @@ export function buildDraftContext(input: {
   ].join("\n");
 }
 
-export const RENDER_STYLES = [
-  "Restored, original character",
-  "Modern Mediterranean",
-  "Coastal white and blue",
-  "Warm Tuscan",
-  "Boutique hotel luxury",
-  "Japandi calm",
-  "Minimal Scandinavian",
-  "Rustic farmhouse",
-  "Industrial loft",
-  "Custom",
-] as const;
+/** Every style with what it means, so the image model gets concrete materials, not just a name. */
+export const RENDER_STYLE_HINTS: Record<string, string> = {
+  "Restored, original character": "Original stone, beams and tiles brought back to life",
+  "Modern Mediterranean": "Lime plaster, clean lines, warm light",
+  "Coastal white and blue": "Whitewash, blue shutters, linen, sea light",
+  "Warm Tuscan": "Ochre walls, terracotta floors, olive wood",
+  "Boutique hotel luxury": "Stone, brass, deep colours, statement lighting",
+  "Japandi calm": "Oak, paper lamps, low furniture, quiet tones",
+  "Minimal Scandinavian": "Pale wood, white walls, very little clutter",
+  "Rustic farmhouse": "Terracotta, timber, open kitchen, copper pots",
+  "Industrial loft": "Exposed brick and steel, big open space",
+  "Restored stone and shutters": "Bare stone cleaned, green shutters, terracotta roof",
+  "Lime-washed Mediterranean": "Soft pastel plaster, pergola, bougainvillea",
+  "Tuscan country estate": "Ochre walls, cypresses, gravel drive, lavender",
+  "Puglia white": "Whitewashed walls, blue doors, olive trees, dry-stone walls",
+  "Garden and pool": "Lawn, pool, stone terrace, olive trees",
+  "Alpine chalet": "Wooden balconies, stone base, flower boxes",
+  "Contemporary facade": "Smooth plaster, large steel windows, clean landscaping",
+  "Boutique hotel terrace": "Lit terrace, loungers, lush planting at dusk",
+  "Seaside village": "Coloured facade, wrought-iron balconies, potted lemons",
+  "Custom": "Describe exactly what you want",
+};
+export const RENDER_STYLES = Object.keys(RENDER_STYLE_HINTS);
 
 const TYPE_WORDS: Record<string, string> = {
   house: "a village house",
@@ -383,7 +394,7 @@ export function renderPrompt(
   view: "interior" | "exterior" = "exterior",
 ): string {
   const want = wish?.trim() ? ` The buyer describes what they want: "${wish.trim().replace(/"/g, "'")}". Follow it as closely as the building allows.` : "";
-  const look = style === "Custom" ? "the buyer's own" : `a "${style}"`;
+  const look = style === "Custom" ? "the buyer's own" : `a "${style}" (${(RENDER_STYLE_HINTS[style] ?? "").toLowerCase()})`;
   if (edit) {
     return view === "interior"
       ? `Show this same room after a careful renovation in ${look} style.${want} Keep the walls, doors, windows, ceiling height, beams and room shape exactly. Remove clutter, debris and old furniture, and furnish it simply in that style. Change only finishes, materials, colours, furniture and light. Bright natural daylight. Photorealistic. Concept illustration, not a real photo.`
