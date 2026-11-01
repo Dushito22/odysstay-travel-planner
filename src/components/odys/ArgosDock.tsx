@@ -1,4 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { telegramStatusQuery, useConnectTelegram } from "@/components/odys/TelegramConnect";
+import { useSignedIn } from "@/lib/signed-in";
 import { MessageCircle, Phone, PhoneOff, Volume2, VolumeX, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -237,7 +240,7 @@ export function ArgosDock() {
             <div>
               <p className="font-display text-[22px] italic leading-none text-azure">Argos</p>
               <p className="mt-1 text-[12px] font-light text-muted-foreground">
-                {t.sub} · <a href="https://t.me/odysstay_bot" target="_blank" rel="noreferrer" className="text-azure hover:underline">Telegram</a>
+                {t.sub} · <TelegramLink />
               </p>
             </div>
             <div className="flex items-center gap-1">
@@ -345,4 +348,16 @@ export function ArgosDock() {
       )}
     </>
   );
+}
+
+/** Signed in and not yet linked: connect, so Telegram chats land in the account. Otherwise a plain link to the bot. */
+function TelegramLink() {
+  const ru = useLang() === "ru";
+  const signedIn = useSignedIn();
+  const status = useQuery({ ...telegramStatusQuery, enabled: !!signedIn });
+  const connect = useConnectTelegram();
+  if (signedIn && status.data && !status.data.connected) {
+    return <button type="button" onClick={() => connect.mutate()} className="text-azure hover:underline">{ru ? "Подключить Telegram" : "Connect Telegram"}</button>;
+  }
+  return <a href="https://t.me/odysstay_bot" target="_blank" rel="noreferrer" className="text-azure hover:underline">Telegram</a>;
 }

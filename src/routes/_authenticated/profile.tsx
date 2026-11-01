@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { profileQuery, saveProfile } from "@/lib/profile";
+import { TelegramConnect } from "@/components/odys/TelegramConnect";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({ meta: [{ title: "Profile | Odysstay" }] }),
@@ -77,6 +78,7 @@ function ProfilePage() {
     <>
       <PageHeader title="Profile" intro="What you tell us shapes the opportunities we show you." />
       <div className="space-y-6">
+        <Section title="Argos on Telegram"><TelegramConnect /></Section>
         <Section title="About you">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">

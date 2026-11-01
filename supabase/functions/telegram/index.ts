@@ -124,18 +124,52 @@ async function sendVoice(admin: ReturnType<typeof adminClient>, chatId: number, 
   return false;
 }
 
+/** What the buyer told us on the site, so Argos doesn't ask again. */
+async function aboutBuyer(admin: ReturnType<typeof adminClient>, userId: string) {
+  const { data: p } = await admin.from("profiles").select("full_name, home_country, intent, budget_max_eur, renovation_budget_eur, preferred_regions, property_types")
+    .eq("id", userId).maybeSingle();
+  if (!p) return "";
+  const lines = [
+    p.full_name && `Name: ${p.full_name}`, p.home_country && `Lives in: ${p.home_country}`, p.intent && `The house is for: ${p.intent}`,
+    p.budget_max_eur && `Purchase budget up to €${p.budget_max_eur}`, p.renovation_budget_eur && `Renovation budget up to €${p.renovation_budget_eur}`,
+    p.preferred_regions?.length && `Regions they like: ${p.preferred_regions.join(", ")}`, p.property_types?.length && `Property types: ${p.property_types.join(", ")}`,
+  ].filter(Boolean);
+  return lines.length ? `\n\nWHAT THIS BUYER TOLD US ON THE SITE (use it, don't ask again; they can change it on their profile):\n${lines.join("\n")}` : "";
+}
+
+/** Saves the exchange to the user's account, next to their web conversations with Argos. */
+async function keep(admin: ReturnType<typeof adminClient>, userId: string, said: string, reply: string) {
+  let { data: conv } = await admin.from("agent_conversations").select("id").eq("user_id", userId).eq("channel", "telegram")
+    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (!conv) {
+    const { data } = await admin.from("agent_conversations").insert({ user_id: userId, country: "IT", channel: "telegram" }).select("id").single();
+    conv = data;
+  }
+  if (!conv) return;
+  await admin.from("agent_messages").insert([
+    { conversation_id: conv.id, role: "user", content: said },
+    { conversation_id: conv.id, role: "assistant", content: reply },
+  ]);
+}
+
 const T = {
   en: {
     hello: "Ciao, I'm Argos, your agent for finding and buying a home in Italy. Tell me where you'd like to wake up, your budget and how much work you'll take on. Write or send me a voice note, I answer in your language.",
     voiceOn: "Voice replies on. I'll answer with voice notes.", voiceOff: "Voice replies off. I'll write.",
     busy: "I've talked a lot today. Let's continue tomorrow, or on the website.", error: "Something went wrong on my side. Try again in a minute.",
     deaf: "I couldn't make out that voice note. Could you say it again, or write it?", open: "Open",
+    linked: "Connected to your Odysstay account. I know your budget and the places you like, and everything we say here is saved to your account.",
+    linkOld: "That link has expired. Press Connect Telegram on your Odysstay profile again.",
+    connect: `To keep this conversation with your account, press Connect Telegram on ${SITE}/profile.`,
   },
   ru: {
     hello: "Ciao, я Argos, ваш агент по поиску и покупке дома в Италии. Расскажите, где хотите просыпаться, какой бюджет и сколько ремонта готовы взять на себя. Пишите или присылайте голосовые, отвечаю на вашем языке.",
     voiceOn: "Голосовые ответы включены.", voiceOff: "Голосовые ответы выключены, буду писать.",
     busy: "Сегодня мы много поговорили. Продолжим завтра или на сайте.", error: "У меня что-то сломалось. Попробуйте через минуту.",
     deaf: "Не разобрал голосовое. Повторите, пожалуйста, или напишите.", open: "Открыть",
+    linked: "Готово, Telegram подключён к вашему аккаунту Odysstay. Я знаю ваш бюджет и любимые места, а весь наш разговор сохраняется в аккаунте.",
+    linkOld: "Ссылка устарела. Нажмите «Подключить Telegram» в профиле Odysstay ещё раз.",
+    connect: `Чтобы разговор сохранялся в вашем аккаунте, нажмите «Подключить Telegram» на ${SITE}/profile.`,
   },
 };
 
@@ -154,15 +188,35 @@ Deno.serve(async (req) => {
   const history: Hist = Array.isArray(chat?.history) ? chat.history : [];
   const day = new Date().toISOString().slice(0, 10);
   const count = chat?.day === day ? (chat?.n ?? 0) : 0;
+  let userId: string | null = chat?.user_id ?? null;
   const save = (h: Hist) => admin.from("telegram_chats").upsert({
-    chat_id: chatId, lang, voice: voiceMode, history: h.slice(-12), day, n: count + 1,
+    chat_id: chatId, user_id: userId, lang, voice: voiceMode, history: h.slice(-12), day, n: count + 1,
     username: msg.from?.username ?? null, updated_at: new Date().toISOString(),
   });
   const t = T[lang === "ru" ? "ru" : "en"];
 
   try {
     const text: string = typeof msg.text === "string" ? msg.text.trim() : "";
-    if (text.startsWith("/start")) { await tg("sendMessage", { chat_id: chatId, text: t.hello }); await save(history); return new Response("ok"); }
+    if (text.startsWith("/start")) {
+      // "/start link_<code>" comes from the Connect Telegram button on the site.
+      const code = text.match(/^\/start\s+link_([a-z0-9]{8,40})$/i)?.[1];
+      if (code) {
+        const { data: link } = await admin.from("telegram_links").select("user_id, created_at").eq("code", code).maybeSingle();
+        const fresh = link && Date.now() - new Date(link.created_at).getTime() < 60 * 60 * 1000;
+        await admin.from("telegram_links").delete().eq("code", code);
+        if (link && fresh) {
+          userId = link.user_id;
+          await save(history);
+          await tg("sendMessage", { chat_id: chatId, text: t.linked });
+          return new Response("ok");
+        }
+        await tg("sendMessage", { chat_id: chatId, text: t.linkOld });
+        return new Response("ok");
+      }
+      await tg("sendMessage", { chat_id: chatId, text: userId ? t.hello : `${t.hello}\n\n${t.connect}` });
+      await save(history);
+      return new Response("ok");
+    }
     if (text === "/voice") {
       voiceMode = !voiceMode;
       await tg("sendMessage", { chat_id: chatId, text: voiceMode ? t.voiceOn : t.voiceOff });
@@ -185,7 +239,8 @@ Deno.serve(async (req) => {
     const voiceOut = spoke || voiceMode;
     const convo: unknown[] = [...history, { role: "user", content: `${said}\n\n(VOICE: ${voiceOut ? "on" : "off"})` }];
     let rows: Row[] = [];
-    let res = await claude(SYSTEM, convo);
+    const system = SYSTEM + (userId ? await aboutBuyer(admin, userId) : "");
+    let res = await claude(system, convo);
     for (let i = 0; i < 2 && res.stop_reason === "tool_use"; i++) {
       const use = res.content.find((c) => c.type === "tool_use")!;
       rows = await search(admin, use.input ?? {});
@@ -195,7 +250,7 @@ Deno.serve(async (req) => {
       }));
       convo.push({ role: "assistant", content: res.content });
       convo.push({ role: "user", content: [{ type: "tool_result", tool_use_id: use.id, content: JSON.stringify(results) }] });
-      res = await claude(SYSTEM, convo);
+      res = await claude(system, convo);
     }
     const reply = res.content.filter((c) => c.type === "text").map((c) => c.text ?? "").join("").replace(/\s*—\s*/g, ", ").trim() || t.error;
 
@@ -209,6 +264,7 @@ Deno.serve(async (req) => {
       await tg("sendMessage", { chat_id: chatId, text: voiced ? (lang === "ru" ? "Вот они:" : "Here they are:") : reply, ...(buttons.length ? { reply_markup: { inline_keyboard: buttons } } : {}) });
     }
     await save([...history, { role: "user", content: said }, { role: "assistant", content: reply }]);
+    if (userId) await keep(admin, userId, said, reply);
   } catch (e) {
     console.error(e);
     await tg("sendMessage", { chat_id: chatId, text: t.error });
