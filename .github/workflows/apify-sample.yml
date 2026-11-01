@@ -1,0 +1,28 @@
+name: Apify sample
+
+# Diagnostic: saves two items from the latest Immobiliare scraper run to the samples-data branch,
+# so the parser can read every field the scraper returns.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sample:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+        run: |
+          mkdir samples
+          curl -sS "https://api.apify.com/v2/acts/memo23~immobiliare-scraper/runs/last/dataset/items?limit=3&clean=true&format=json&token=$APIFY_TOKEN" -o samples/apify.json
+          wc -c samples/apify.json
+      - name: Push
+        run: |
+          cd samples
+          git init -q && git checkout -q -b samples-data
+          git -c user.name=bot -c user.email=bot@users.noreply.github.com add -A
+          git -c user.name=bot -c user.email=bot@users.noreply.github.com commit -qm "apify sample"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" samples-data
