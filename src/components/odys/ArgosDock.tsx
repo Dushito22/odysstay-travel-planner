@@ -236,7 +236,9 @@ export function ArgosDock() {
           <header className="flex items-center justify-between gap-3 border-b border-foreground/10 px-4 py-3">
             <div>
               <p className="font-display text-[22px] italic leading-none text-azure">Argos</p>
-              <p className="mt-1 text-[12px] font-light text-muted-foreground">{t.sub}</p>
+              <p className="mt-1 text-[12px] font-light text-muted-foreground">
+                {t.sub} · <a href="https://t.me/odysstay_bot" target="_blank" rel="noreferrer" className="text-azure hover:underline">Telegram</a>
+              </p>
             </div>
             <div className="flex items-center gap-1">
               <div className="flex rounded-full bg-muted p-0.5 text-[13px]">
