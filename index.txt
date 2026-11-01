@@ -1,0 +1,6 @@
+1 403 https://www.immobiliare.it/api-next/search-list/listings/?fkRegione=abr&idContratto=1&idCategoria=1&prezzoMassimo=50000&__lang=it&pag=1
+2 403 https://www.immobiliare.it/vendita-case/abruzzo/?prezzoMassimo=50000
+3 403 https://hades.subito.it/v1/search/items?c=7&t=s&r=1&lim=5
+4 200 https://www.gate-away.com/properties/abruzzo
+5 403 https://www.casa.it/vendita/residenziale/abruzzo/?prezzoMax=50000
+6 403 https://www.idealista.it/vendita-case/abruzzo/con-prezzo_50000/
