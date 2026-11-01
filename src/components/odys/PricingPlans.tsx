@@ -3,6 +3,7 @@ import { Check } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { PurchaseServiceCard } from "@/components/odys/PurchaseService";
 import { supabase } from "@/integrations/supabase/client";
 import { useLang } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -119,6 +120,7 @@ export function PricingPlans({ className }: { className?: string }) {
           );
         })}
       </div>
+      <PurchaseServiceCard className="mt-4" />
       <p className="mx-auto mt-6 max-w-2xl text-center text-sm text-muted-foreground">
         {ru
           ? "Оплата откроется скоро: запишитесь, и мы сообщим первыми. Сборы коммуны, нотариуса и геометра вы платите им напрямую, Odysstay не держит ваши деньги."
