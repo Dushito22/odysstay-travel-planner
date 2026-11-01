@@ -1,12 +1,14 @@
 """Deal score, 0 to 100, with the reasons shown to the user. Uses verified listing columns only.
 
-Ranks on absolute price, price per m², how far below the court's own appraisal you can buy,
-ownership vs concession, vacancy, previous failed auctions and red flags.
+Four parts: location (closeness to famous towns, provincial towns, big cities and airports), the property
+(condition, type, photos, size, vacancy), the price and deal (price, price per m², discount to the court's
+appraisal, ownership), minus red flags.
 """
 from __future__ import annotations
 
 from datetime import date
 
+from .places import AIRPORTS, BIG, CITIES, GEMS, nearest
 from .supa import Supa
 
 RESIDENTIAL = {"house", "apartment", "rural_house", "building", "mixed"}
@@ -15,78 +17,150 @@ RESIDENTIAL = {"house", "apartment", "rural_house", "building", "mixed"}
 FLAG_POINTS = {"high": 8, "medium": 4, "low": 1}
 
 
-def score_listing(l: dict, red_flags: int | dict[str, int], today: date | None = None) -> tuple[float, list[str], str]:
-    """red_flags: count by severity, e.g. {"high": 1, "medium": 2}. A bare int counts as medium."""
-    today = today or date.today()
-    reasons: list[str] = []
-    s = 15.0  # raw points, scaled at the end; the very best deals land in the low 90s
-    price, sqm = l.get("price_eur"), l.get("surface_sqm")
+def _location(l: dict, reasons: list[str]) -> float:
+    lat, lng = l.get("lat"), l.get("lng")
+    if lat is None or lng is None:
+        reasons.append("+0 exact location not known")
+        return 12.0
+    pts = 0.0
+    gem, gd, why = nearest(lat, lng, GEMS)
+    for limit, p in ((12, 12), (25, 9), (45, 6), (70, 3)):
+        if gd <= limit:
+            pts += p
+            reasons.append(f"+{p} {gem} is {gd:.0f} km away ({_WHY.get(why, why)})")
+            break
+    city, cd, _ = nearest(lat, lng, CITIES)
+    for limit, p in ((12, 8), (25, 6), (45, 3), (60, 1)):
+        if cd <= limit:
+            pts += p
+            reasons.append(f"+{p} {city} (shops, hospital, station) is {cd:.0f} km away")
+            break
+    else:
+        pts -= 4
+        reasons.append(f"-4 remote: nearest provincial town is {cd:.0f} km away")
+    big, bd, _ = nearest(lat, lng, [c for c in CITIES if c[0] in BIG])
+    for limit, p in ((45, 5), (90, 3), (140, 1)):
+        if bd <= limit:
+            pts += p
+            reasons.append(f"+{p} {big} within {bd:.0f} km for culture and work")
+            break
+    ap, ad, _ = nearest(lat, lng, AIRPORTS)
+    for limit, p in ((45, 7), (90, 5), (150, 3), (220, 1)):
+        if ad <= limit:
+            pts += p
+            reasons.append(f"+{p} {ap} airport {ad:.0f} km away")
+            break
+    return max(0.0, min(35.0, pts))
 
+
+_WHY = {"lake": "lake", "mountains": "mountains", "coast": "sea", "history": "historic town", "wine": "wine country"}
+
+
+def _property(l: dict, reasons: list[str]) -> float:
+    pts = 0.0
+    cond = l.get("condition")
+    ptype = l.get("property_type")
+    sqm = l.get("surface_sqm")
+    if cond == "ready":
+        pts += 8
+        reasons.append("+8 ready to live in")
+    elif cond == "needs_work":
+        pts += 5
+        reasons.append("+5 needs work, but not a ruin")
+    elif cond == "ruin":
+        pts += 1
+        reasons.append("+1 ruin: a full rebuild")
+    else:
+        pts += 4
+    kind = {"house": 6, "rural_house": 6, "building": 5, "apartment": 4, "mixed": 4, "other": 1, "commercial": 1, "garage": 0, "land": 0}
+    k = kind.get(ptype or "", 2)
+    pts += k
+    if k >= 4:
+        reasons.append(f"+{k} {'a house' if k == 6 else 'a building you can live in'}")
+    if l.get("photo_urls"):
+        pts += 5
+        reasons.append("+5 official photos published")
+    if sqm and ptype != "land":
+        for limit, p in ((120, 3), (70, 2), (40, 1)):
+            if sqm >= limit:
+                pts += p
+                reasons.append(f"+{p} {sqm:,.0f} m² of space")
+                break
+    if l.get("occupancy") == "free":
+        pts += 3
+        reasons.append("+3 vacant")
+    elif l.get("occupancy") == "occupied":
+        pts -= 12
+        reasons.append("-12 occupied")
+    if l.get("previous_auction_failed"):
+        pts += 3
+        reasons.append("+3 unsold before: fewer rivals, motivated seller")
+    return max(0.0, min(25.0, pts))
+
+
+def _price(l: dict, reasons: list[str]) -> float:
+    pts = 0.0
+    price, sqm = l.get("price_eur"), l.get("surface_sqm")
     if price is not None:
-        for limit, pts in ((20000, 30), (50000, 24), (100000, 15), (200000, 6)):
+        for limit, p in ((30000, 12), (60000, 10), (100000, 7), (200000, 3)):
             if price <= limit:
-                s += pts
-                reasons.append(f"+{pts} base price €{price:,.0f}")
+                pts += p
+                reasons.append(f"+{p} price €{price:,.0f}")
                 break
         else:
-            s -= 10
-            reasons.append(f"-10 base price €{price:,.0f}")
+            reasons.append(f"+0 price €{price:,.0f}")
     else:
-        s -= 10
-        reasons.append("-10 no price stated")
-
+        pts -= 5
+        reasons.append("-5 no price stated")
     if price and sqm and sqm > 10 and l.get("property_type") != "land":
         ppsqm = price / sqm
-        for limit, pts in ((300, 18), (600, 12), (1000, 5)):
+        for limit, p in ((300, 8), (600, 6), (1000, 3)):
             if ppsqm <= limit:
-                s += pts
-                reasons.append(f"+{pts} €{ppsqm:,.0f}/m²")
+                pts += p
+                reasons.append(f"+{p} €{ppsqm:,.0f}/m²")
                 break
-
     disc = l.get("discount_pct")
     if disc is not None:
-        for limit, pts in ((60, 22), (45, 15), (30, 9), (15, 4)):
+        for limit, p in ((60, 6), (45, 4), (30, 3), (15, 1)):
             if disc >= limit:
-                s += pts
-                reasons.append(f"+{pts} minimum offer {disc:.0f}% below the court appraisal")
+                pts += p
+                reasons.append(f"+{p} minimum offer {disc:.0f}% below the court appraisal")
                 break
-
     st = l.get("sale_type")
     if st in ("sale", "one_euro"):
-        s += 8
-        reasons.append("+8 you own it outright")
+        pts += 4
+        reasons.append("+4 you own it outright")
     elif st == "auction_judicial":
-        s += 6
-        reasons.append("+6 court sale: mortgages and liens are cancelled on transfer")
+        pts += 3
+        reasons.append("+3 court sale: mortgages and liens are cancelled on transfer")
     elif st == "auction_notary":
-        s += 6
-        reasons.append("+6 notary sale: the notary has checked the title and documents")
+        pts += 3
+        reasons.append("+3 notary sale: the notary has checked the title and documents")
     elif st == "concession":
-        s -= 30
+        pts -= 30
         reasons.append("-30 concession: use, not ownership")
     elif st == "lease":
-        s -= 40
+        pts -= 40
         reasons.append("-40 lease only")
+    return min(30.0, pts)
 
-    if l.get("property_type") in RESIDENTIAL:
-        s += 5
-        reasons.append("+5 a building you can live in or restore")
-    if l.get("previous_auction_failed"):
-        s += 10
-        reasons.append("+10 unsold before: fewer rivals, motivated seller")
-    if l.get("occupancy") == "free":
-        s += 5
-        reasons.append("+5 vacant")
-    elif l.get("occupancy") == "occupied":
-        s -= 15
-        reasons.append("-15 occupied")
-    if l.get("photo_urls"):
-        s += 6
-        reasons.append("+6 official photos published")
+
+# A plot, a garage or a shop can be a good price but is never a good home, so it cannot outscore one.
+CAPS = {"land": 48, "garage": 40, "commercial": 58, "other": 50}
+
+
+def score_listing(l: dict, red_flags: int | dict[str, int], today: date | None = None) -> tuple[float, list[str], str]:
+    """red_flags: count by severity, e.g. {"high": 1, "medium": 2}. A bare int counts as medium.
+    Four parts: where it is (35), the property itself (25), the price and deal (30), minus red flags."""
+    today = today or date.today()
+    reasons: list[str] = []
+    s = _location(l, reasons) + _property(l, reasons) + _price(l, reasons)
+    disc = l.get("discount_pct")
+    price, sqm = l.get("price_eur"), l.get("surface_sqm")
     sev = {"medium": red_flags} if isinstance(red_flags, int) else dict(red_flags)
     n_flags = sum(sev.values())
     if n_flags:
-        pen = min(24, sum(FLAG_POINTS.get(k, 4) * v for k, v in sev.items()))
+        pen = min(18, sum(FLAG_POINTS.get(k, 4) * v for k, v in sev.items()))
         detail = ", ".join(f"{sev[k]} {k}" for k in ("high", "medium", "low") if sev.get(k))
         s -= pen
         reasons.append(f"-{pen} {n_flags} red flag{'s' if n_flags > 1 else ''} ({detail})")
@@ -101,20 +175,27 @@ def score_listing(l: dict, red_flags: int | dict[str, int], today: date | None =
             status = "closing_soon"
     if l.get("status") == "withdrawn":
         status = "withdrawn"
-    # The points above can reach about 117, so the best deals all used to read 100. Scale them to fit,
-    # then add small continuous terms (depth of discount, price per m²) so equal-looking deals still rank apart.
-    s = s * 0.78
+    # The parts add up to 90. Stretch to 100 with a gentle curve so the spread reads naturally, then
+    # add tiny continuous terms so equal-looking deals still rank apart.
+    s = max(0.0, s) / 90.0
+    s = 100.0 * s ** 0.8
     if disc is not None:
-        s += min(70.0, max(0.0, float(disc))) * 0.08
+        s += min(70.0, max(0.0, float(disc))) * 0.04
     if price and sqm and sqm > 10 and l.get("property_type") != "land":
-        s += max(0.0, 4.0 - (price / sqm) / 250)
+        s += max(0.0, 2.0 - (price / sqm) / 500)
+    cap = CAPS.get(l.get("property_type") or "")
+    if cap is None and l.get("condition") == "ruin":
+        cap = 72
+    if cap is not None and s > cap:
+        reasons.append(f"cap {cap}: {'a plot' if l.get('property_type') == 'land' else 'not a home'} scores lower than a house" if l.get("property_type") in CAPS else f"cap {cap}: a ruin needs a full rebuild")
+        s = cap
     if status in ("closed", "withdrawn"):
         s = 0.0
-    return max(0.0, min(99.0, round(s))), reasons, status
+    return max(0.0, min(97.0, round(s))), reasons, status
 
 
 def run(db: Supa, log=print) -> int:
-    listings = db.select("listings", {"select": "id,price_eur,surface_sqm,property_type,sale_type,discount_pct,"
+    listings = db.select("listings", {"select": "id,price_eur,surface_sqm,property_type,sale_type,discount_pct,lat,lng,condition,"
                                       "previous_auction_failed,occupancy,deadline_at,auction_at,status,score,score_reasons,photo_urls",
                                       "is_demo": "eq.false", "status": "neq.withdrawn", "order": "id"})
     flags: dict[str, dict[str, int]] = {}
