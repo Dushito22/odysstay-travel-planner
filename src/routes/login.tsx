@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { useLang } from "@/lib/i18n";
 import { useT } from "@/lib/tr";
 
 function safePath(p: unknown): string | null {
@@ -15,16 +16,17 @@ function safePath(p: unknown): string | null {
 }
 
 export const Route = createFileRoute("/login")({
-  validateSearch: (s: Record<string, unknown>): { redirect?: string } => {
+  validateSearch: (s: Record<string, unknown>): { redirect?: string; email?: string } => {
     const r = safePath(s["redirect"]);
-    return r ? { redirect: r } : {};
+    const e = typeof s["email"] === "string" ? s["email"].slice(0, 200) : "";
+    return { ...(r ? { redirect: r } : {}), ...(e ? { email: e } : {}) };
   },
   head: () => ({
     meta: [
       { title: "Sign in | Odysstay" },
-      { name: "description", content: "Sign in to Odysstay with a one-time email link." },
+      { name: "description", content: "Sign in to Odysstay." },
       { property: "og:title", content: "Sign in | Odysstay" },
-      { property: "og:description", content: "Sign in to Odysstay with a one-time email link." },
+      { property: "og:description", content: "Sign in to Odysstay." },
     ],
   }),
   component: Login,
@@ -33,8 +35,11 @@ export const Route = createFileRoute("/login")({
 function Login() {
   const t = useT();
   const navigate = useNavigate();
-  const { redirect } = Route.useSearch();
-  const [email, setEmail] = useState("");
+  const { redirect, email: prefill } = Route.useSearch();
+  const ru = useLang() === "ru";
+  const [email, setEmail] = useState(prefill ?? "");
+  const [password, setPassword] = useState("");
+  const [linkMode, setLinkMode] = useState(false);
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +57,25 @@ function Login() {
     });
     return () => data.subscription.unsubscribe();
   }, [navigate, redirect]);
+
+  /** One form for both: sign in, or create the account if this email is new. No email has to arrive. */
+  async function submitPassword(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    const mail = email.trim().toLowerCase();
+    const signIn = await supabase.auth.signInWithPassword({ email: mail, password });
+    if (!signIn.error) { setBusy(false); return; }
+    if (!/invalid login credentials/i.test(signIn.error.message)) { setBusy(false); setError(signIn.error.message); return; }
+    if (password.length < 8) { setBusy(false); setError(ru ? "Пароль: не меньше 8 символов." : "Use at least 8 characters for the password."); return; }
+    const up = await supabase.auth.signUp({ email: mail, password });
+    setBusy(false);
+    if (up.error) { setError(up.error.message); return; }
+    // An existing account answers sign-up with no identities: the password was simply wrong.
+    if (!up.data.session && (up.data.user?.identities?.length ?? 0) === 0) {
+      setError(ru ? "Неверный пароль для этого email. Или войдите по ссылке ниже." : "Wrong password for this email. Or sign in with a link below.");
+    }
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -83,8 +107,10 @@ function Login() {
             </button>
           </div>
         ) : (
+          linkMode ? (
           <form onSubmit={submit}>
-            <h1 className="text-3xl">{t("Sign in to Odysstay")}</h1>
+            <h1 className="text-3xl">{ru ? "Вход по ссылке" : "Sign in with a link"}</h1>
+            <p className="mt-2 text-sm text-muted-foreground">{ru ? "Для тех, кто забыл пароль или вошёл раньше по ссылке." : "If you forgot your password or signed up with a link before."}</p>
             <div className="mt-6 space-y-2">
               <Label htmlFor="email">{t("Email")}</Label>
               <Input id="email" type="email" required autoComplete="email" value={email}
@@ -94,7 +120,33 @@ function Login() {
             <Button type="submit" className="mt-6 w-full" disabled={busy}>
               {busy ? "…" : t("Email me a link")}
             </Button>
+            <button type="button" onClick={() => { setLinkMode(false); setError(null); }} className="mt-4 w-full text-center text-sm text-brand hover:underline">
+              {ru ? "Назад к паролю" : "Back to password"}
+            </button>
           </form>
+          ) : (
+          <form onSubmit={submitPassword}>
+            <h1 className="text-3xl">{t("Sign in to Odysstay")}</h1>
+            <p className="mt-2 text-sm text-muted-foreground">{ru ? "Новый email? Аккаунт создастся сразу." : "New here? The same form creates your account."}</p>
+            <div className="mt-6 space-y-2">
+              <Label htmlFor="email">{t("Email")}</Label>
+              <Input id="email" type="email" required autoComplete="email" value={email}
+                onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+            </div>
+            <div className="mt-4 space-y-2">
+              <Label htmlFor="password">{ru ? "Пароль" : "Password"}</Label>
+              <Input id="password" type="password" required minLength={6} autoComplete="current-password" value={password}
+                onChange={(e) => setPassword(e.target.value)} placeholder={ru ? "Не меньше 8 символов" : "At least 8 characters"} />
+            </div>
+            {error && <p className="mt-3 text-sm text-warning">{error}</p>}
+            <Button type="submit" className="mt-6 w-full" disabled={busy}>
+              {busy ? "…" : ru ? "Продолжить" : "Continue"}
+            </Button>
+            <button type="button" onClick={() => { setLinkMode(true); setError(null); }} className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-brand">
+              {ru ? "Забыли пароль? Войти по ссылке на email" : "Forgot it? Sign in with an email link"}
+            </button>
+          </form>
+          )
         )}
       </div>
     </div>

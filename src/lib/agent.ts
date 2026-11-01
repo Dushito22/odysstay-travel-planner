@@ -131,9 +131,9 @@ export function draftMessage(input: {
   );
 }
 
-export function generateRender(listingId: string, style: string, photo?: string, wish?: string) {
+export function generateRender(listingId: string, style: string, photo?: string, wish?: string, view: "interior" | "exterior" = "interior") {
   return callFunction<{ image: Database["public"]["Tables"]["listing_images"]["Row"] }>("generate-render", {
-    listing_id: listingId, style, ...(photo ? { photo } : {}), ...(wish?.trim() ? { wish: wish.trim() } : {}),
+    listing_id: listingId, style, view, ...(photo ? { photo } : {}), ...(wish?.trim() ? { wish: wish.trim() } : {}),
   });
 }
 

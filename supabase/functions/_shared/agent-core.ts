@@ -380,11 +380,14 @@ export function renderPrompt(
   style: string,
   edit: boolean,
   wish?: string | null,
+  view: "interior" | "exterior" = "exterior",
 ): string {
   const want = wish?.trim() ? ` The buyer describes what they want: "${wish.trim().replace(/"/g, "'")}". Follow it as closely as the building allows.` : "";
   const look = style === "Custom" ? "the buyer's own" : `a "${style}"`;
   if (edit) {
-    return `Show this same place after a careful renovation in ${look} style.${want} If it is an exterior, keep the structure, the number and position of windows and doors, the roofline and the setting exactly. If it is an interior, keep the walls, openings, ceiling height and room shape exactly, remove clutter and debris, and furnish it simply. Change only finishes, materials, colours, light and landscaping. Photorealistic. Concept illustration, not a real photo.`;
+    return view === "interior"
+      ? `Show this same room after a careful renovation in ${look} style.${want} Keep the walls, doors, windows, ceiling height, beams and room shape exactly. Remove clutter, debris and old furniture, and furnish it simply in that style. Change only finishes, materials, colours, furniture and light. Bright natural daylight. Photorealistic. Concept illustration, not a real photo.`
+      : `Show the outside of this same building after a careful renovation in ${look} style.${want} Keep the structure, the number and position of windows and doors, the roofline and the setting exactly. Change only facades, finishes, shutters, colours, light and landscaping (garden, terrace, paths). Photorealistic. Concept illustration, not a real photo.`;
   }
   const what = TYPE_WORDS[listing.property_type ?? "other"] ?? "a property";
   const size = listing.surface_sqm
@@ -394,5 +397,6 @@ export function renderPrompt(
     ? ` with about ${Math.round(listing.land_sqm)} square metres of land`
     : "";
   const place = [listing.comune, listing.region].filter(Boolean).join(", ");
+  if (view === "interior") return `Interior of ${what}${size}${place ? ` in ${place}, Italy` : " in Italy"}, a main living room renovated in ${look} style.${want} Natural daylight, realistic proportions, no people, no text. Concept illustration, not a real photo.`;
   return `Exterior view of ${what}${size}${land}${place ? ` in ${place}, Italy, in the local traditional architecture of that area` : " in Italy"}, renovated in ${look} style.${want} Natural daylight, realistic proportions, no people, no text. Concept illustration, not a real photo.`;
 }

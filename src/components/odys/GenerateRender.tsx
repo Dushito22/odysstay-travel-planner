@@ -35,6 +35,7 @@ export function GenerateRender({
   const [style, setStyle] = useState<string>(RENDER_STYLES[0].value);
   const [busy, setBusy] = useState(false);
   const [wish, setWish] = useState("");
+  const [view, setView] = useState<"interior" | "exterior">("interior");
   const [limit, setLimit] = useState<string | null>(null);
   const lang = useLang();
   const qc = useQueryClient();
@@ -44,7 +45,7 @@ export function GenerateRender({
     setBusy(true);
     setLimit(null);
     try {
-      const { image } = await generateRender(listingId, style, photo, wish);
+      const { image } = await generateRender(listingId, style, photo, wish, view);
       await qc.invalidateQueries({ queryKey: ["listing-images", listingId] });
       await qc.invalidateQueries({ queryKey: ["feed"] });
       toast.success("Illustration ready");
@@ -78,35 +79,50 @@ export function GenerateRender({
                 : "We restyle the real photo and keep the building's shape, windows and setting. Every image is labelled as an illustration."}
             </SheetDescription>
           </SheetHeader>
-          <div className="mt-6 px-4">
+          <div className="mt-5 px-4">
+            <div className="inline-flex rounded-full bg-muted p-1 text-sm">
+              {(["interior", "exterior"] as const).map((v) => (
+                <button key={v} type="button" onClick={() => setView(v)}
+                  className={cn("rounded-full px-4 py-1 transition-colors", view === v ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+                  {v === "interior" ? (lang === "ru" ? "Интерьер" : "Interior") : (lang === "ru" ? "Снаружи" : "Exterior")}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {lang === "ru"
+                ? view === "interior" ? "Выберите в галерее фото комнаты, его и перерисуем." : "Выберите в галерее фото дома снаружи, его и перерисуем."
+                : view === "interior" ? "Pick a photo of a room in the gallery; that is the one we restyle." : "Pick a photo of the outside in the gallery; that is the one we restyle."}
+            </p>
+          </div>
+          <div className="mt-4 px-4">
             <label htmlFor="render-wish" className="text-sm font-medium">{t("Describe what you want (optional)")}</label>
             <textarea
               id="render-wish"
               value={wish}
               onChange={(e) => setWish(e.target.value)}
               maxLength={500}
-              rows={3}
-              placeholder="For example: open-plan kitchen, big windows to the garden, pool, light stone floors, olive trees"
+              rows={2}
+              placeholder={view === "interior" ? "For example: open-plan kitchen, light stone floors, linen curtains" : "For example: pool, olive trees, terracotta terrace, green shutters"}
               className="glass mt-2 w-full resize-none rounded-2xl p-3 text-sm outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-2 px-4">
+          <div className="mt-3 grid grid-cols-2 gap-1.5 px-4">
             {RENDER_STYLES.map((s) => (
               <button
                 key={s.value}
                 type="button"
                 onClick={() => setStyle(s.value)}
                 className={cn(
-                  "w-full rounded-2xl border p-3 text-left transition-colors",
+                  "w-full rounded-xl border px-3 py-2 text-left transition-colors",
                   style === s.value ? "border-transparent bg-sea text-white" : "glass hover:border-brand/40",
                 )}
               >
-                <p className="font-medium">{s.value}</p>
-                <p className={cn("mt-0.5 text-xs", style === s.value ? "text-white/85" : "text-muted-foreground")}>{s.hint}</p>
+                <p className="text-[13px] font-medium leading-tight">{s.value}</p>
+                <p className={cn("mt-0.5 line-clamp-1 text-[11px]", style === s.value ? "text-white/80" : "text-muted-foreground")}>{s.hint}</p>
               </button>
             ))}
           </div>
-          <div className="mt-6 space-y-3 px-4 pb-6">
+          <div className="mt-4 space-y-3 px-4 pb-6">
             <p className="text-center text-[13px] font-light text-foreground/60">{t("Free accounts can create one illustration. Pro is unlimited.")}</p>
             {limit && (
               <div className="rounded-2xl bg-caution-soft p-4 text-sm text-caution">

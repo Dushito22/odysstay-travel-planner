@@ -99,7 +99,8 @@ serve(async (req, body) => {
   }
 
   let b64: string | undefined;
-  const prompt = renderPrompt(listing, style, !!file, wish);
+  const view = body["view"] === "interior" ? "interior" : "exterior";
+  const prompt = renderPrompt(listing, style, !!file, wish, view);
   if (!file) throw new HttpError(502, "Could not read the listing photo. Please try another one.");
   const ext = file.type === "image/jpeg" ? "jpg" : "png";
   const image = new File([file], `original.${ext}`, { type: file.type || "image/png" });
