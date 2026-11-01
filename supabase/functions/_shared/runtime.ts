@@ -114,7 +114,9 @@ export async function callClaude(
     body: JSON.stringify({
       // The small model: answers are grounded in the listing's verified facts, so it does not need the big one.
       model: Deno.env.get("ANTHROPIC_MODEL") || "claude-haiku-5-5",
-      max_tokens: maxTokens,
+      // Headroom: the model can spend tokens reasoning before it writes, and a reply cut off at the limit
+      // comes back empty. Prompts keep the answers short; this is only the ceiling.
+      max_tokens: maxTokens + 2000,
       system,
       messages,
     }),

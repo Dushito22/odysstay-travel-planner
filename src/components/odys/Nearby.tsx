@@ -16,9 +16,13 @@ async function fetchOsm(lat: number, lng: number) {
     nwr["shop"~"^(supermarket|convenience|bakery)$"](around:10000,${lat},${lng});
     nwr["railway"="station"](around:25000,${lat},${lng});
   );out center 300;`;
-  const r = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: new URLSearchParams({ data: q }) });
-  if (!r.ok) throw new Error(`overpass ${r.status}`);
-  const els: OsmEl[] = (await r.json()).elements ?? [];
+  // The public Overpass servers are often busy: ask all three, take the first good answer.
+  const one = async (host: string) => {
+    const r = await fetch(`${host}/api/interpreter`, { method: "POST", body: new URLSearchParams({ data: q }), signal: AbortSignal.timeout(15000) });
+    if (!r.ok) throw new Error(`overpass ${r.status}`);
+    return ((await r.json()).elements ?? []) as OsmEl[];
+  };
+  const els = await Promise.any(["https://overpass-api.de", "https://overpass.kumi.systems", "https://overpass.private.coffee"].map(one));
   const pos = (e: OsmEl) => (e.lat != null && e.lon != null ? { lat: e.lat, lon: e.lon } : e.center ?? null);
   const closest = (pred: (t: Record<string, string>) => boolean) => {
     let best: { km: number; name: string | undefined } | null = null;
