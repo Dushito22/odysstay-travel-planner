@@ -12,7 +12,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { generateRender, RENDER_STYLES } from "@/lib/agent";
+import { EXTERIOR_STYLES, generateRender, INTERIOR_STYLES } from "@/lib/agent";
 import { useLang } from "@/lib/i18n";
 import { useT } from "@/lib/tr";
 import { cn } from "@/lib/utils";
@@ -32,7 +32,7 @@ export function GenerateRender({
 }) {
   const t = useT();
   const [open, setOpen] = useState(false);
-  const [style, setStyle] = useState<string>(RENDER_STYLES[0].value);
+  const [style, setStyle] = useState<string>(INTERIOR_STYLES[0].value);
   const [busy, setBusy] = useState(false);
   const [wish, setWish] = useState("");
   const [view, setView] = useState<"interior" | "exterior">("interior");
@@ -82,7 +82,7 @@ export function GenerateRender({
           <div className="mt-5 px-4">
             <div className="inline-flex rounded-full bg-muted p-1 text-sm">
               {(["interior", "exterior"] as const).map((v) => (
-                <button key={v} type="button" onClick={() => setView(v)}
+                <button key={v} type="button" onClick={() => { setView(v); setStyle((v === "interior" ? INTERIOR_STYLES : EXTERIOR_STYLES)[0].value); }}
                   className={cn("rounded-full px-4 py-1 transition-colors", view === v ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground")}>
                   {v === "interior" ? (lang === "ru" ? "Интерьер" : "Interior") : (lang === "ru" ? "Снаружи" : "Exterior")}
                 </button>
@@ -107,7 +107,7 @@ export function GenerateRender({
             />
           </div>
           <div className="mt-3 grid grid-cols-2 gap-1.5 px-4">
-            {RENDER_STYLES.map((s) => (
+            {(view === "interior" ? INTERIOR_STYLES : EXTERIOR_STYLES).map((s) => (
               <button
                 key={s.value}
                 type="button"
