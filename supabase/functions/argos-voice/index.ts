@@ -10,9 +10,14 @@ const FREE_DAY = num("VOICE_FREE_DAY", 1500);
 const PRO_DAY = num("VOICE_PRO_DAY", 12000);
 /** Everyone together, per day. ElevenLabs Flash costs 0.5 credit a character, so 2,000 a day fits 30,000 credits a month. */
 const ALL_DAY = num("VOICE_ALL_DAY", 2000);
-/** George: warm, calm, middle-aged, multilingual. Override with ELEVENLABS_VOICE_ID. */
-const VOICE = Deno.env.get("ELEVENLABS_VOICE_ID") || "JBFqnCBsd6RMkjVDRZzb";
-const MODEL = Deno.env.get("ELEVENLABS_MODEL") || "eleven_flash_v2_5";
+/** One voice per language, so Russian sounds Russian and Italian sounds Italian. Each falls back to
+ * ELEVENLABS_VOICE_ID, then to George (warm, calm, multilingual). */
+const GEORGE = "JBFqnCBsd6RMkjVDRZzb";
+const voiceFor = (lang: string) =>
+  Deno.env.get(`ELEVENLABS_VOICE_${lang.toUpperCase()}`) || Deno.env.get("ELEVENLABS_VOICE_ID") || GEORGE;
+/** Eleven v4 Turbo: expressive, about 100 ms, same price as Flash. Flash v2.5 is the fallback. */
+const MODEL = Deno.env.get("ELEVENLABS_MODEL") || "eleven_v4_turbo";
+const FALLBACK_MODEL = "eleven_flash_v2_5";
 
 async function sha(s: string) {
   const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
@@ -60,16 +65,21 @@ serve(async (req, body) => {
   const { data: all } = await admin.from("voice_usage").select("chars").eq("day", day);
   if ((all ?? []).reduce((a, r) => a + (r.chars ?? 0), 0) + text.length > ALL_DAY) throw new HttpError(429, "voice-busy");
 
-  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE}?output_format=mp3_44100_64`, {
+  const say = (model: string) => fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceFor(lang)}?output_format=mp3_44100_64`, {
     method: "POST",
     headers: { "xi-api-key": key, "content-type": "application/json", accept: "audio/mpeg" },
     body: JSON.stringify({
       text,
-      model_id: MODEL,
+      model_id: model,
       language_code: lang,
       voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.15, use_speaker_boost: true, speed: 1.0 },
     }),
   });
+  let res = await say(MODEL);
+  if (!res.ok && res.status !== 401 && res.status !== 429 && MODEL !== FALLBACK_MODEL) {
+    console.error("elevenlabs", MODEL, res.status, await res.text());
+    res = await say(FALLBACK_MODEL);
+  }
   if (!res.ok) {
     console.error("elevenlabs", res.status, await res.text());
     throw new HttpError(502, "voice-failed");

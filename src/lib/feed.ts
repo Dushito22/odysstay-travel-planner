@@ -34,7 +34,7 @@ export const DEFAULT_FILTERS: FeedFilters = {
 };
 
 export const SORTS = [
-  { value: "best", label: "Best deals" },
+  { value: "best", label: "Best value" },
   { value: "cheapest", label: "Cheapest" },
   { value: "closing", label: "Closing soon" },
   { value: "discount", label: "Furthest below appraisal" },

@@ -47,12 +47,19 @@ function DiscoverPage() {
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
           <p className="type-label text-foreground/55">{t("Discover")}</p>
-          <h1 className="mt-4 type-h2">{ru ? <>Дома в Италии на продажу: <em className="font-display italic text-azure">самые выгодные сначала</em>.</> : <>Every open house in Italy, <em className="font-display italic text-azure">best first</em>.</>}</h1>
+          <h1 className="mt-4 type-h2">{ru ? <>Дома в Италии на продажу, <em className="font-display italic text-azure">самые выгодные сначала</em>.</> : <>Every house for sale in Italy, <em className="font-display italic text-azure">best value first</em>.</>}</h1>
           <p className="mt-3 type-body text-foreground/60 tnum">
             {isLoading ? (ru ? "Загружаем свежие объявления…" : "Reading today's notices…") : total > rows.length
               ? (ru ? `Всего на продажу: ${total.toLocaleString("ru-RU")}. Показываем ${rows.length} самых выгодных, остальное можно отфильтровать.` : `${total.toLocaleString("en-GB")} open across Italy. Showing the best ${rows.length}, narrow it down with filters.`)
               : (ru ? `Объектов на продажу по всей Италии: ${rows.length.toLocaleString("ru-RU")}` : `${rows.length.toLocaleString("en-GB")} ${rows.length === 1 ? "house" : "houses"} open across Italy`)}
           </p>
+          {sort === "best" && (
+            <p className="mt-1 max-w-2xl text-[13px] font-light text-foreground/50">
+              {ru
+                ? "Как мы ранжируем: оценка сделки Argos учитывает цену против оценки суда или местной цены за м², состояние, сроки и найденные риски. Дома с настоящими фото идут первыми."
+                : "How we rank: Argos's deal score weighs the price against the court valuation or local prices per m², the condition, the deadline and any red flags. Houses with real photos come first."}
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <MobileFilters value={search} onChange={patch} />

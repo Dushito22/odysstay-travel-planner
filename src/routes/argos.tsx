@@ -33,7 +33,7 @@ const T = {
     hello: "Ciao, I'm Argos. Tell me where you'd like to wake up, what you want to spend and how much work you'll take on. I'll find it and do the Italian.",
     speaks: "Argos speaks", quiet: "Argos is quiet", looking: "Argos is looking…", more: "Tell me more…",
     note: "Argos is an AI agent. Facts come from the official notices, never from guesses.",
-    found: "What Argos found", waiting: "Waiting for your dream", open: (n: number) => `${n.toLocaleString("en-GB")} open, best first`,
+    found: "What Argos found", waiting: "Waiting for your dream", open: (n: number) => `${n.toLocaleString("en-GB")} open, best value first`,
     none: "Nothing open yet", empty: "Say it, and houses appear here.", cant: "can't filter yet",
     intro: "Court sales, notary sales, €1 towns and private auctions across Italy, read every day. Tell Argos what you want and the right ones show up here.",
   },
