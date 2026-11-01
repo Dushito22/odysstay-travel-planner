@@ -16,7 +16,7 @@ jobs:
     steps:
       - name: Configure
         run: |
-          [ -n "$TOKEN" ] && [ -n "$SECRET" ] || { echo "::error::Add TELEGRAM_BOT_TOKEN and TELEGRAM_WEBHOOK_SECRET as repository secrets"; exit 1; }
+          [ -n "$TOKEN" ] && [ -n "$SECRET" ] || { echo "::warning::Add TELEGRAM_BOT_TOKEN and TELEGRAM_WEBHOOK_SECRET as repository secrets"; exit 0; }
           api() { curl -sS -X POST "https://api.telegram.org/bot$TOKEN/$1" -H 'content-type: application/json' -d "$2"; echo; }
           api setWebhook "{\"url\":\"$HOOK\",\"secret_token\":\"$SECRET\",\"allowed_updates\":[\"message\"],\"drop_pending_updates\":true}"
           api setMyCommands '{"commands":[{"command":"start","description":"Meet Argos"},{"command":"voice","description":"Voice replies on or off"}]}'
