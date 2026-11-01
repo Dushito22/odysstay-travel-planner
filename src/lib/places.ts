@@ -75,3 +75,52 @@ const RU_PLACES: Record<string, string> = {
   "Milan Linate": "Милан (Линате)", "Milan Bergamo": "Милан (Бергамо)",
 };
 export const ruPlace = (name: string) => RU_PLACES[name] ?? name;
+
+/** Towns, shores and mountains people come to Italy for. Used to say what is within reach of a house. */
+export type Gem = { name: string; lat: number; lng: number; kind: "lake" | "coast" | "mountains" | "history" | "wine" };
+export const GEMS: Gem[] = ([
+  ["Sirmione, Lake Garda", 45.49, 10.61, "lake"], ["Salo, Lake Garda", 45.61, 10.52, "lake"], ["Malcesine, Lake Garda", 45.77, 10.81, "lake"],
+  ["Riva del Garda", 45.89, 10.84, "lake"], ["Bardolino, Lake Garda", 45.55, 10.72, "lake"], ["Bellagio, Lake Como", 45.99, 9.26, "lake"],
+  ["Varenna, Lake Como", 46.01, 9.28, "lake"], ["Menaggio, Lake Como", 46.02, 9.24, "lake"], ["Stresa, Lake Maggiore", 45.88, 8.53, "lake"],
+  ["Orta San Giulio", 45.8, 8.41, "lake"], ["Iseo, Lake Iseo", 45.66, 10.05, "lake"], ["Cortina d'Ampezzo", 46.54, 12.14, "mountains"],
+  ["Ortisei, Dolomites", 46.57, 11.67, "mountains"], ["Corvara, Dolomites", 46.55, 11.88, "mountains"], ["Madonna di Campiglio", 46.23, 10.83, "mountains"],
+  ["Courmayeur", 45.8, 6.97, "mountains"], ["Cervinia", 45.94, 7.63, "mountains"], ["Bormio", 46.47, 10.37, "mountains"],
+  ["Sestriere", 44.96, 6.88, "mountains"], ["Cinque Terre", 44.15, 9.65, "coast"], ["Portofino", 44.3, 9.21, "coast"],
+  ["Camogli", 44.35, 9.15, "coast"], ["Rapallo", 44.35, 9.23, "coast"], ["Alassio", 44.0, 8.17, "coast"],
+  ["Sanremo", 43.82, 7.78, "coast"], ["Siena", 43.32, 11.33, "history"], ["San Gimignano", 43.47, 11.04, "history"],
+  ["Montepulciano", 43.1, 11.78, "history"], ["Montalcino", 43.06, 11.49, "wine"], ["Pienza", 43.08, 11.68, "history"],
+  ["Cortona", 43.28, 11.99, "history"], ["Greve in Chianti", 43.58, 11.31, "wine"], ["Lucca", 43.84, 10.5, "history"],
+  ["Assisi", 43.07, 12.62, "history"], ["Orvieto", 42.72, 12.11, "history"], ["Spoleto", 42.74, 12.74, "history"],
+  ["Todi", 42.78, 12.41, "history"], ["Gubbio", 43.35, 12.58, "history"], ["Urbino", 43.73, 12.64, "history"],
+  ["Sirolo, Conero coast", 43.52, 13.62, "coast"], ["Tivoli", 41.96, 12.8, "history"], ["Sperlonga", 41.26, 13.43, "coast"],
+  ["Gaeta", 41.21, 13.57, "coast"], ["Amalfi", 40.63, 14.6, "coast"], ["Positano", 40.63, 14.49, "coast"],
+  ["Sorrento", 40.63, 14.38, "coast"], ["Capri", 40.55, 14.24, "coast"], ["Ischia", 40.73, 13.9, "coast"],
+  ["Paestum", 40.42, 15.0, "history"], ["Palinuro, Cilento", 40.03, 15.28, "coast"], ["Maratea", 39.99, 15.71, "coast"],
+  ["Matera", 40.67, 16.6, "history"], ["Ostuni", 40.73, 17.58, "history"], ["Alberobello", 40.78, 17.24, "history"],
+  ["Polignano a Mare", 40.99, 17.22, "coast"], ["Monopoli", 40.95, 17.3, "coast"], ["Martina Franca", 40.7, 17.34, "history"],
+  ["Cisternino", 40.74, 17.42, "history"], ["Gallipoli", 40.06, 17.99, "coast"], ["Otranto", 40.15, 18.49, "coast"],
+  ["Santa Maria di Leuca", 39.8, 18.36, "coast"], ["Vieste, Gargano", 41.88, 16.18, "coast"], ["Peschici, Gargano", 41.94, 16.02, "coast"],
+  ["Termoli", 42.0, 14.99, "coast"], ["Vasto", 42.12, 14.71, "coast"], ["Scanno", 41.9, 13.88, "mountains"],
+  ["Roccaraso", 41.85, 14.08, "mountains"], ["Tropea", 38.68, 15.9, "coast"], ["Scilla", 38.25, 15.72, "coast"],
+  ["Pizzo", 38.73, 16.16, "coast"], ["Taormina", 37.85, 15.29, "coast"], ["Cefalu", 38.04, 14.02, "coast"],
+  ["Noto", 36.89, 15.07, "history"], ["Modica", 36.86, 14.76, "history"], ["Scicli", 36.79, 14.7, "history"],
+  ["Ortigia, Syracuse", 37.06, 15.29, "coast"], ["Marzamemi", 36.74, 15.12, "coast"], ["San Vito Lo Capo", 38.17, 12.74, "coast"],
+  ["Erice", 38.04, 12.59, "history"], ["Favignana", 37.93, 12.33, "coast"], ["Lipari", 38.47, 14.95, "coast"],
+  ["Valley of the Temples", 37.29, 13.59, "history"], ["Alghero", 40.56, 8.32, "coast"], ["Porto Cervo", 41.14, 9.53, "coast"],
+  ["Santa Teresa Gallura", 41.24, 9.19, "coast"], ["Villasimius", 39.14, 9.52, "coast"], ["Cala Gonone", 40.28, 9.63, "coast"],
+  ["Stintino", 40.94, 8.22, "coast"], ["Chia", 38.9, 8.88, "coast"], ["Bosa", 40.3, 8.5, "coast"],
+  ["Orosei", 40.38, 9.7, "coast"], ["Asolo", 45.8, 11.91, "history"], ["Valdobbiadene", 45.9, 12.04, "wine"],
+  ["Bassano del Grappa", 45.77, 11.73, "history"], ["Cividale del Friuli", 46.09, 13.43, "history"], ["Alba", 44.7, 8.04, "wine"],
+  ["Barolo", 44.61, 7.94, "wine"], ["Acqui Terme", 44.68, 8.47, "wine"], ["Jesolo", 45.5, 12.64, "coast"],
+  ["Bibione", 45.64, 13.04, "coast"], ["Cesenatico", 44.2, 12.4, "coast"], ["Viareggio", 43.87, 10.25, "coast"],
+  ["Forte dei Marmi", 43.96, 10.17, "coast"], ["Castiglione della Pescaia", 42.76, 10.88, "coast"], ["Porto Ercole", 42.39, 11.21, "coast"],
+  ["San Felice Circeo", 41.23, 13.09, "coast"],
+] as [string, number, number, Gem["kind"]][]).map(([name, lat, lng, kind]) => ({ name, lat, lng, kind }));
+
+export function nearestGems(lat: number, lng: number, maxKm: number, n: number, kinds?: Gem["kind"][]) {
+  return GEMS.filter((g) => !kinds || kinds.includes(g.kind))
+    .map((g) => ({ ...g, km: km(lat, lng, g.lat, g.lng) }))
+    .filter((g) => g.km <= maxKm)
+    .sort((a, b) => a.km - b.km)
+    .slice(0, n);
+}
