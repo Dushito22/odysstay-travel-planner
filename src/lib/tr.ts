@@ -142,7 +142,7 @@ export const RU: Record<string, string> = {
   "Sign in to Odysstay": "Вход в Odysstay", Email: "Эл. почта", "Email me a link": "Отправить ссылку на почту",
   "Check your inbox": "Проверьте почту", "Use a different email": "Использовать другую почту",
   // pricing
-  "Simple pricing": "Простые тарифы", "Free to explore. Pay only when you're working several properties at once.": "Смотреть бесплатно. Платите, только когда ведёте несколько объектов сразу.",
+  "Simple pricing": "Простые тарифы", "Free to look around. Pay when you're shortlisting or buying.": "Смотреть бесплатно. Платите, когда выбираете или покупаете.", "Free to explore. Pay only when you're working several properties at once.": "Смотреть бесплатно. Платите, только когда ведёте несколько объектов сразу.",
   Free: "Бесплатно", Pro: "Pro", "Start free": "Начать бесплатно", "Join the Pro waitlist": "Встать в очередь на Pro",
   "Explore Italy's hidden market and work one property properly.": "Изучайте скрытый рынок Италии и доведите до конца один объект.",
   "For buyers working several properties at once.": "Для покупателей, ведущих несколько объектов сразу.",

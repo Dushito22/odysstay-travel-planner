@@ -5,6 +5,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 
 import { ArgosComposer } from "@/components/odys/ArgosComposer";
 import { ListingCard, ListingCardSkeleton } from "@/components/odys/ListingCard";
+import { PricingPlans } from "@/components/odys/PricingPlans";
 import { SourceQuote, Wordmark } from "@/components/odys/primitives";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -269,6 +270,7 @@ function Index() {
       <Houses />
       <Proof />
       {DEMO_CONTENT && <Voices />}
+      <PricingSection />
       <Faq />
       <Final />
       <Footer />
@@ -734,6 +736,21 @@ function Voices() {
             </figure>
           ))}
         </div>
+      </Wrap>
+    </section>
+  );
+}
+
+function PricingSection() {
+  const ru = useLang() === "ru";
+  return (
+    <section id="pricing" className={cn("scroll-mt-16 border-t border-foreground/10", SECTION)}>
+      <Wrap>
+        <div className="mx-auto max-w-2xl text-center">
+          <H2 className="mx-auto">{ru ? <>Простые <Em>тарифы</Em></> : <>Simple <Em>pricing</Em></>}</H2>
+          <p className="mx-auto mt-5 max-w-lg type-body text-foreground/62">{ru ? "Смотреть бесплатно. Платите, когда выбираете или покупаете." : "Free to look around. Pay when you're shortlisting or buying."}</p>
+        </div>
+        <PricingPlans className="mt-12" />
       </Wrap>
     </section>
   );
