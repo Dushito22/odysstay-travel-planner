@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { Coffee, ExternalLink, Landmark, Plane, ShoppingBasket, TrainFront, Umbrella, Car } from "lucide-react";
+import { Coffee, ExternalLink, Landmark, Plane, ShoppingBasket, TrainFront, Umbrella, Car, Snowflake, Sun, CloudRain, Compass, MessageCircle } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { openArgos } from "@/components/odys/ArgosDock";
 import { callFunction } from "@/lib/agent";
 import { useLang } from "@/lib/i18n";
-import { AIRPORTS, CITIES, driveMinutes, formatDrive, km, nearest, ruPlace } from "@/lib/places";
+import { AIRPORTS, CITIES, driveMinutes, formatDrive, km, nearest, nearestGems, ruPlace } from "@/lib/places";
 
 type OsmEl = { lat?: number; lon?: number; center?: { lat: number; lon: number }; tags?: Record<string, string> };
 
@@ -43,6 +44,46 @@ async function fetchOsm(lat: number, lng: number) {
     eating,
   };
 }
+
+
+type Climate = { janLow: number; janHigh: number; julLow: number; julHigh: number; rainYear: number; wettest: string; driest: string };
+
+const MONTHS_EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const MONTHS_RU = ["январь", "февраль", "март", "апрель", "май", "июнь", "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"];
+const KEYS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+
+/** 30-year monthly averages for the exact spot, from NASA POWER (public, free, no key). */
+async function fetchClimate(lat: number, lng: number): Promise<Climate> {
+  const u = `https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=T2M_MAX,T2M_MIN,PRECTOTCORR&community=RE&longitude=${lng.toFixed(3)}&latitude=${lat.toFixed(3)}&format=JSON`;
+  const r = await fetch(u, { signal: AbortSignal.timeout(20000) });
+  if (!r.ok) throw new Error(`climate ${r.status}`);
+  const p = (await r.json()).properties?.parameter;
+  const hi = p?.T2M_MAX, lo = p?.T2M_MIN, rain = p?.PRECTOTCORR;
+  if (!hi || !lo || !rain || hi.JAN == null || hi.JAN < -90) throw new Error("climate empty");
+  const perMonth = KEYS.map((k, i) => ({ i, mm: rain[k] * [31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][i]! }));
+  const wet = perMonth.reduce((a, b) => (b.mm > a.mm ? b : a));
+  const dry = perMonth.reduce((a, b) => (b.mm < a.mm ? b : a));
+  return {
+    janLow: lo.JAN, janHigh: hi.JAN, julLow: lo.JUL, julHigh: hi.JUL,
+    rainYear: Math.round(perMonth.reduce((a, b) => a + b.mm, 0) / 10) * 10,
+    wettest: String(wet.i), driest: String(dry.i),
+  };
+}
+
+/** What the numbers mean for someone living there, said once, plainly. Nothing here is guessed. */
+function climateNotes(c: Climate, ru: boolean) {
+  const out: string[] = [];
+  if (c.janLow <= 0) out.push(ru ? "Зимой бывают настоящие морозы: нужна хорошая печь или отопление." : "Real winters: frost is common, so heating matters more than the view.");
+  else if (c.janLow >= 6) out.push(ru ? "Зимы мягкие, заморозки редки." : "Winters are mild and frost is rare.");
+  if (c.julHigh >= 32) out.push(ru ? "Лето жаркое: толстые каменные стены и тень здесь не роскошь." : "Hot summers: thick stone walls and shade earn their keep.");
+  else if (c.julHigh <= 26) out.push(ru ? "Лето прохладное, жары почти нет." : "Summers stay comfortable, with little scorching heat.");
+  if (c.rainYear < 550) out.push(ru ? "Сухой климат: полив сада придётся планировать." : "A dry climate, so plan for watering the garden.");
+  else if (c.rainYear > 1100) out.push(ru ? "Дождливо: проверьте крышу и сырость стен." : "A wet place: check the roof and the damp.");
+  return out.slice(0, 2);
+}
+
+const ASK_EN = ["Is there fibre internet at this address?", "What are the yearly taxes and rubbish fees here?", "Is the road open and ploughed in winter?", "What is the seismic and flood risk here?"];
+const ASK_RU = ["Есть ли здесь оптоволоконный интернет?", "Какие здесь ежегодные налоги и сбор за мусор?", "Расчищают ли дорогу зимой?", "Какая здесь сейсмическая и паводковая опасность?"];
 
 type Near = { km: number; name?: string } | null;
 type Brief = { brief: string | null; facts: Partial<Record<"beach" | "shop" | "bakery" | "station" | "hospital" | "pharmacy" | "school", Near>> & { eating?: number }; sources: { title: string; url: string | null }[] };
@@ -113,6 +154,7 @@ export function Nearby({ lat, lng, comune, listingId }: { lat: number; lng: numb
   const airport = nearest(lat, lng, AIRPORTS, 1)[0]!;
   const rome = km(lat, lng, 41.9028, 12.4964);
   const osm = useQuery({ queryKey: ["nearby-osm", lat, lng], queryFn: () => fetchOsm(lat, lng), staleTime: Infinity, retry: 1 });
+  const climate = useQuery({ queryKey: ["nearby-climate", lat.toFixed(2), lng.toFixed(2)], queryFn: () => fetchClimate(lat, lng), staleTime: Infinity, retry: 1 });
   const wiki = useQuery({ queryKey: ["nearby-wiki", lat, lng, comune, ru], queryFn: () => fetchWiki(lat, lng, comune, ru), staleTime: Infinity, retry: 1 });
   const lang = ru ? "ru" : "en";
   const brief = useQuery({
@@ -171,28 +213,72 @@ export function Nearby({ lat, lng, comune, listingId }: { lat: number; lng: numb
 
       <div className="glass rounded-2xl p-5">
         <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">{ru ? "Повседневная жизнь" : "Day to day"}</p>
-        {(osm.isLoading || brief.isLoading) && !o ? (
-          <div className="space-y-3">{[0, 1, 2, 3].map((i) => <div key={i} className="h-6 animate-pulse rounded bg-muted" />)}</div>
-        ) : o ? (
-          <ul className="space-y-3">
-            <Row icon={<Umbrella className="h-4 w-4" />}>
-              {o.beach ? (ru ? <>Ближайший пляж: <strong>{kmText(o.beach.km, true)}</strong>{o.beach.name ? ` (${o.beach.name})` : ""}</> : <>Nearest beach <strong>{kmText(o.beach.km)}</strong>{o.beach.name ? ` (${o.beach.name})` : ""}</>) : ru ? "Пляжей в радиусе 40 км нет" : "No beach within 40 km"}
-            </Row>
+        <ul className="space-y-3">
+          {climate.data && (
+            <>
+              <Row icon={<Snowflake className="h-4 w-4" />}>
+                {ru ? <>Январь: от <strong>{Math.round(climate.data.janLow)}°</strong> до <strong>{Math.round(climate.data.janHigh)}°</strong></> : <>January runs <strong>{Math.round(climate.data.janLow)}°</strong> to <strong>{Math.round(climate.data.janHigh)}°C</strong></>}
+              </Row>
+              <Row icon={<Sun className="h-4 w-4" />}>
+                {ru ? <>Июль: от <strong>{Math.round(climate.data.julLow)}°</strong> до <strong>{Math.round(climate.data.julHigh)}°</strong></> : <>July runs <strong>{Math.round(climate.data.julLow)}°</strong> to <strong>{Math.round(climate.data.julHigh)}°C</strong></>}
+              </Row>
+              <Row icon={<CloudRain className="h-4 w-4" />}>
+                {ru
+                  ? <>Около <strong>{climate.data.rainYear} мм</strong> осадков в год, больше всего в {MONTHS_RU[Number(climate.data.wettest)]}е, меньше всего в {MONTHS_RU[Number(climate.data.driest)]}е</>
+                  : <>About <strong>{climate.data.rainYear} mm</strong> of rain a year, wettest in {MONTHS_EN[Number(climate.data.wettest)]}, driest in {MONTHS_EN[Number(climate.data.driest)]}</>}
+              </Row>
+            </>
+          )}
+          {(() => {
+            const shores = nearestGems(lat, lng, 60, 1, ["coast", "lake"])[0];
+            const other = nearestGems(lat, lng, 45, 2, ["history", "wine", "mountains"]);
+            return (
+              <>
+                <Row icon={<Umbrella className="h-4 w-4" />}>
+                  {shores
+                    ? ru ? <>Ближайшее море или озеро: <strong>{shores.name}</strong>, {Math.round(shores.km)} км</> : <>Nearest sea or lake: <strong>{shores.name}</strong>, {Math.round(shores.km)} km</>
+                    : o?.beach
+                      ? ru ? <>Ближайший пляж: <strong>{kmText(o.beach.km, true)}</strong></> : <>Nearest beach <strong>{kmText(o.beach.km)}</strong></>
+                      : ru ? "До моря и озёр далеко: это жизнь вдали от пляжей" : "Far from the sea and lakes: this is inland life"}
+                </Row>
+                {other.map((g) => (
+                  <Row key={g.name} icon={<Compass className="h-4 w-4" />}>
+                    <strong>{g.name}</strong> <span className="text-muted-foreground">({Math.round(g.km)} {ru ? "км" : "km"})</span>
+                  </Row>
+                ))}
+              </>
+            );
+          })()}
+          {o && o.eating > 0 && (
             <Row icon={<Coffee className="h-4 w-4" />}>
-              {o.eating ? (ru ? <>Ресторанов, кафе и баров в радиусе 3 км: <strong>{o.eating}</strong></> : <><strong>{o.eating}</strong> restaurants, cafes and bars within 3 km</>) : ru ? "В радиусе 3 км нет ни ресторанов, ни кафе: место очень тихое" : "No restaurants or cafes mapped within 3 km: very quiet"}
+              {ru ? <>Ресторанов, кафе и баров в радиусе 3 км: <strong>{o.eating}</strong></> : <><strong>{o.eating}</strong> restaurants, cafes and bars within 3 km</>}
             </Row>
+          )}
+          {o?.shop && (
             <Row icon={<ShoppingBasket className="h-4 w-4" />}>
-              {o.shop ? (ru ? <>Продуктовый магазин: <strong>{kmText(o.shop.km, true)}</strong></> : <>Grocery shop <strong>{kmText(o.shop.km)}</strong> away</>) : ru ? "Продуктовых магазинов в радиусе 10 км нет" : "No grocery shop mapped within 10 km"}
+              {ru ? <>Продуктовый магазин: <strong>{kmText(o.shop.km, true)}</strong></> : <>Grocery shop <strong>{kmText(o.shop.km)}</strong> away</>}
               {o.bakery && o.bakery.km < 5 ? <>, {ru ? "пекарня" : "bakery"} {kmText(o.bakery.km, ru)}</> : null}
             </Row>
+          )}
+          {o?.station && (
             <Row icon={<TrainFront className="h-4 w-4" />}>
-              {o.station ? (ru ? <>Железнодорожная станция: <strong>{kmText(o.station.km, true)}</strong>{o.station.name ? ` (${o.station.name})` : ""}</> : <>Train station <strong>{kmText(o.station.km)}</strong>{o.station.name ? ` (${o.station.name})` : ""}</>) : ru ? "Станций в радиусе 25 км нет" : "No train station within 25 km"}
+              {ru ? <>Железнодорожная станция: <strong>{kmText(o.station.km, true)}</strong></> : <>Train station <strong>{kmText(o.station.km)}</strong></>}
             </Row>
-          </ul>
-        ) : (
-          <p className="text-sm text-muted-foreground">{ru ? "Сведения о местной жизни сейчас недоступны." : "Local details are unavailable right now."}</p>
-        )}
-        <p className="mt-3 text-xs text-muted-foreground">{ru ? "Данные OpenStreetMap. Расстояния по прямой." : "From OpenStreetMap. Straight-line distances."}</p>
+          )}
+        </ul>
+        {climate.data && climateNotes(climate.data, ru).map((t) => (
+          <p key={t} className="mt-3 text-[15px] font-light leading-relaxed text-foreground/80">{t}</p>
+        ))}
+        <div className="mt-4 border-t pt-4">
+          <p className="mb-2 flex items-center gap-1.5 font-display text-[17px] italic text-azure"><MessageCircle className="h-4 w-4" />{ru ? "Argos выяснит для вас" : "Argos can find out"}</p>
+          <div className="flex flex-wrap gap-2">
+            {(ru ? ASK_RU : ASK_EN).map((q) => (
+              <button key={q} type="button" onClick={() => openArgos({ text: q })}
+                className="rounded-full border bg-card px-3 py-1 text-left text-sm hover:border-brand/40 hover:text-brand">{q}</button>
+            ))}
+          </div>
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">{ru ? "Климат: NASA POWER, среднее за 30 лет. Расстояния по прямой." : "Climate: NASA POWER, 30-year average. Straight-line distances."}</p>
       </div>
 
       {((wiki.data?.intro && !brief.data?.brief) || (wiki.data?.sights.length ?? 0) > 0) && (
