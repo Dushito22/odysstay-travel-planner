@@ -53,7 +53,7 @@ async function claude(system: string, messages: unknown[]) {
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": Deno.env.get("ANTHROPIC_API_KEY") ?? "", "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({ model: MODEL, max_tokens: 500, system, tools: TOOLS, messages }),
+    body: JSON.stringify({ model: MODEL, max_tokens: 2500, system, tools: TOOLS, messages }),
   });
   if (!r.ok) throw new Error(`anthropic ${r.status} ${(await r.text()).slice(0, 200)}`);
   return await r.json() as { content: { type: string; text?: string; id?: string; name?: string; input?: Row }[]; stop_reason: string };

@@ -121,7 +121,7 @@ serve(async (_req, body) => {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": Deno.env.get("ANTHROPIC_API_KEY") ?? "", "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: Deno.env.get("ANTHROPIC_MODEL") || "claude-haiku-5-5", max_tokens: 700, system: SYSTEM, messages: [{ role: "user", content }] }),
+      body: JSON.stringify({ model: Deno.env.get("ANTHROPIC_MODEL") || "claude-haiku-5-5", max_tokens: 2500, system: SYSTEM, messages: [{ role: "user", content }] }),
     });
     const j = await r.json().catch(() => ({}));
     brief = ((j.content ?? []) as { type: string; text?: string }[]).filter((c) => c.type === "text").map((c) => c.text ?? "").join("").replace(/\s*—\s*/g, ", ").trim();
