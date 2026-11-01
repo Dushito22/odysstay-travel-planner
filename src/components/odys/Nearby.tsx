@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Coffee, ExternalLink, Landmark, Plane, ShoppingBasket, TrainFront, Umbrella, Car } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { callFunction } from "@/lib/agent";
 import { useLang } from "@/lib/i18n";
 import { AIRPORTS, CITIES, driveMinutes, formatDrive, km, nearest, ruPlace } from "@/lib/places";
 
@@ -38,6 +39,9 @@ async function fetchOsm(lat: number, lng: number) {
     eating,
   };
 }
+
+type Near = { km: number; name?: string } | null;
+type Brief = { brief: string; facts: Partial<Record<"beach" | "shop" | "bakery" | "station" | "hospital" | "pharmacy" | "school", Near>> & { eating?: number }; sources: { title: string; url: string | null }[] };
 
 type WikiPlace = { pageid: number; title: string; dist: number };
 
@@ -95,7 +99,7 @@ function Row({ icon, children }: { icon: ReactNode; children: ReactNode }) {
 
 const kmText = (d: number, ru = false) => (d < 1 ? `${Math.round(d * 1000)} ${ru ? "м" : "m"}` : `${d < 10 ? d.toFixed(1) : Math.round(d)} ${ru ? "км" : "km"}`);
 
-export function Nearby({ lat, lng, comune }: { lat: number; lng: number; comune: string | null }) {
+export function Nearby({ lat, lng, comune, listingId }: { lat: number; lng: number; comune: string | null; listingId?: string }) {
   const ru = useLang() === "ru";
   const fd = (m: number) => formatDrive(m, ru);
   const pn = (n: string) => (ru ? ruPlace(n) : n);
@@ -106,10 +110,42 @@ export function Nearby({ lat, lng, comune }: { lat: number; lng: number; comune:
   const rome = km(lat, lng, 41.9028, 12.4964);
   const osm = useQuery({ queryKey: ["nearby-osm", lat, lng], queryFn: () => fetchOsm(lat, lng), staleTime: Infinity, retry: 1 });
   const wiki = useQuery({ queryKey: ["nearby-wiki", lat, lng, comune, ru], queryFn: () => fetchWiki(lat, lng, comune, ru), staleTime: Infinity, retry: 1 });
-  const o = osm.data;
+  const lang = ru ? "ru" : "en";
+  const brief = useQuery({
+    queryKey: ["area-brief", listingId, lang],
+    enabled: !!listingId,
+    queryFn: () => callFunction<Brief>("area-brief", { listing_id: listingId, lang }),
+    staleTime: Infinity, retry: 1,
+  });
+  // The browser's own OpenStreetMap request is often rate limited; the server-side facts fill in.
+  const bf = brief.data?.facts;
+  const o = osm.data ?? (bf && Object.keys(bf).length ? {
+    beach: bf.beach ?? null, shop: bf.shop ?? null, bakery: bf.bakery ?? null, station: bf.station ?? null, eating: bf.eating ?? 0,
+  } : undefined);
 
   return (
     <div className="mt-6 grid gap-4 md:grid-cols-2">
+      {(brief.isLoading || brief.data) && (
+        <div className="grain rounded-2xl bg-gradient-to-b from-[oklch(0.93_0.02_240)] to-[oklch(0.965_0.01_235)] p-6 md:col-span-2">
+          <p className="font-display text-[19px] italic text-azure">{ru ? "Argos о месте" : "Argos on the area"}</p>
+          {brief.isLoading ? (
+            <div className="mt-3 space-y-2">{[0, 1, 2].map((i) => <div key={i} className="h-4 animate-pulse rounded bg-foreground/10" />)}</div>
+          ) : (
+            <>
+              <p className="mt-2 text-[17px] font-light leading-relaxed text-foreground/85">{brief.data!.brief}</p>
+              {brief.data!.sources.length > 0 && (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {ru ? "Источники: " : "Sources: "}
+                  {brief.data!.sources.map((s, i) => (
+                    <span key={s.title}>{i > 0 && ", "}{s.url ? <a href={s.url} target="_blank" rel="noreferrer" className="hover:underline">{s.title}</a> : s.title}</span>
+                  ))}
+                  {ru ? ", OpenStreetMap." : ", OpenStreetMap."}
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      )}
       <div className="glass rounded-2xl p-5">
         <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">{ru ? "Как добираться" : "Getting around"}</p>
         <ul className="space-y-3">
@@ -131,7 +167,7 @@ export function Nearby({ lat, lng, comune }: { lat: number; lng: number; comune:
 
       <div className="glass rounded-2xl p-5">
         <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">{ru ? "Повседневная жизнь" : "Day to day"}</p>
-        {osm.isLoading ? (
+        {osm.isLoading && !o ? (
           <div className="space-y-3">{[0, 1, 2, 3].map((i) => <div key={i} className="h-6 animate-pulse rounded bg-muted" />)}</div>
         ) : o ? (
           <ul className="space-y-3">
@@ -155,9 +191,9 @@ export function Nearby({ lat, lng, comune }: { lat: number; lng: number; comune:
         <p className="mt-3 text-xs text-muted-foreground">{ru ? "Данные OpenStreetMap. Расстояния по прямой." : "From OpenStreetMap. Straight-line distances."}</p>
       </div>
 
-      {(wiki.data?.intro || (wiki.data?.sights.length ?? 0) > 0) && (
+      {((wiki.data?.intro && !brief.data) || (wiki.data?.sights.length ?? 0) > 0) && (
         <div className="glass rounded-2xl p-5 md:col-span-2">
-          {wiki.data?.intro && (
+          {wiki.data?.intro && !brief.data && (
             <>
               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">{ru ? "О городе: " : "About "}{wiki.data.intro.title}</p>
               <p className="leading-relaxed">{wiki.data.intro.extract}</p>

@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { showDemo, type FeedRow } from "./feed";
 
-/** Highest-scoring open listings, for the landing page and the signed-out preview. */
+/** The landing page and the signed-out preview: houses people can picture, so real photos lead
+ * (court scans and plots of land make a poor first impression), then the best score. */
 export const topListingsQuery = (limit: number, withPhotos = false) =>
   queryOptions({
     queryKey: ["top-listings", limit, withPhotos],
@@ -14,9 +15,12 @@ export const topListingsQuery = (limit: number, withPhotos = false) =>
         .select("*")
         .not("status", "in", "(closed,withdrawn)")
         .not("sale_type", "in", "(concession,lease)")
+        .in("property_type", ["house", "rural_house", "apartment", "building"])
+        .eq("is_scrap", false)
+        .order("has_real_photo", { ascending: false, nullsFirst: false })
         .order("score", { ascending: false, nullsFirst: false })
         .limit(limit);
-      if (withPhotos) q = q.not("hero_image_path", "is", null);
+      if (withPhotos) q = q.eq("has_real_photo", true);
       if (!showDemo) q = q.eq("is_demo", false);
       const { data, error } = await q;
       if (error) throw error;

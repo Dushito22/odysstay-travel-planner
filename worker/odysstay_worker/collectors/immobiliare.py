@@ -35,6 +35,126 @@ TYPE_RULES = [
 ]
 
 
+# What the ad's "Caratteristiche" table says, in English. Labels we already hold elsewhere (price, surface) are skipped.
+LABELS = {
+    "Tipologia": ("ownership", "Type and ownership"), "Stato": ("condition", "Condition"),
+    "Disponibilità": ("availability", "Availability"), "Piano": ("floor", "Floor"), "Locali": ("rooms", "Rooms"),
+    "Camere da letto": ("bedrooms", "Bedrooms"), "Cucina": ("kitchen", "Kitchen"), "Bagni": ("bathrooms", "Bathrooms"),
+    "Balcone": ("balcony", "Balcony"), "Terrazzo": ("terrace", "Terrace"), "Giardino": ("garden", "Garden"),
+    "Cantina": ("cellar", "Cellar"), "Anno di costruzione": ("year_built", "Year built"),
+    "Piani edificio": ("building_floors", "Floors in the building"), "Ascensore": ("lift", "Lift"),
+    "Accesso disabili": ("step_free", "Step-free access"), "Riscaldamento": ("heating", "Heating"),
+    "Climatizzazione": ("air_conditioning", "Air conditioning"), "Posti auto": ("parking", "Parking"),
+    "Arredato": ("furnished", "Furnished"), "Spese condominio": ("condo_fees", "Building fees"),
+}
+WORDS = [  # longest first; applied to values
+    ("Ottimo / Ristrutturato", "Excellent, renovated"), ("Buono / Abitabile", "Good, ready to live in"),
+    ("Nuovo / In costruzione", "New or being built"), ("Da ristrutturare", "Needs renovation"),
+    ("libero al rogito", "vacant at completion"), ("Intera proprietà", "full ownership"), ("Nuda proprietà", "bare ownership (someone else keeps the right to live there)"),
+    ("Cucina abitabile", "eat-in kitchen"), ("Cucina angolo cottura", "kitchenette"), ("Cucina a vista", "open kitchen"),
+    ("Cucina semi abitabile", "semi eat-in kitchen"), ("Cucinotto", "small kitchen"),
+    ("Nessun giardino", "no garden"), ("Giardino privato", "private garden"), ("Giardino comune", "shared garden"),
+    ("nessuna spesa condominiale", "none"), ("Piano terra", "ground floor"), ("Piano rialzato", "raised ground floor"),
+    ("alimentato a metano", "methane gas"), ("alimentato a gasolio", "diesel"), ("alimentato a GPL", "LPG"),
+    ("alimentato a legna", "wood"), ("alimentato a pellet", "pellets"), ("alimentazione elettrica", "electric"),
+    ("alimentato a pompa di calore", "heat pump"), ("a radiatori", "radiators"), ("a pavimento", "underfloor"),
+    ("a stufa", "stove"), ("Autonomo", "Independent"), ("Centralizzato", "Central"), ("Assente", "None"),
+    ("Terratetto plurifamiliare", "Terraced house"), ("Terratetto unifamiliare", "Detached terraced house"),
+    ("Casa indipendente", "Detached house"), ("Appartamento", "Apartment"), ("Villa unifamiliare", "Detached villa"),
+    ("Rustico", "Rustic house"), ("Casale", "Farmhouse"), ("Classe immobile economica", "basic building"),
+    ("Classe immobile media", "standard building"), ("Classe immobile signorile", "upmarket building"),
+    ("libero", "vacant"), ("occupato", "occupied"), ("piani", "floors"), ("Sì", "Yes"), ("da ", "from "), (" a ", " to "),
+    ("Arredato", "Furnished"), ("Non arredato", "Unfurnished"), ("Parzialmente Arredato", "Partly furnished"),
+    ("in box privato", "private garage"), ("in parcheggio/garage comune", "shared car park"),
+]
+AMENITIES = {
+    "balcone": "balcony", "cantina": "cellar", "mansarda": "attic", "porta blindata": "security door",
+    "infissi esterni in doppio vetro / legno": "double-glazed wooden windows", "infissi esterni in doppio vetro / pvc": "double-glazed PVC windows",
+    "infissi esterni in doppio vetro / metallo": "double-glazed metal windows", "infissi esterni in vetro / legno": "wooden windows",
+    "infissi esterni in vetro / metallo": "metal-framed windows", "infissi esterni in triplo vetro / pvc": "triple-glazed windows",
+    "esposizione esterna": "faces outward", "esposizione doppia": "dual aspect", "esposizione interna": "faces the courtyard",
+    "impianto tv centralizzato": "shared TV aerial", "impianto tv singolo": "own TV aerial", "giardino comune": "shared garden",
+    "giardino privato": "private garden", "caminetto": "fireplace", "piscina": "pool", "terrazza": "terrace", "taverna": "basement den",
+    "arredato": "furnished", "parzialmente arredato": "partly furnished", "cancello elettrico": "electric gate",
+    "videocitofono": "video entry phone", "impianto di allarme": "alarm", "fibra ottica": "fibre broadband",
+    "portiere intera giornata": "full-day concierge", "portiere mezza giornata": "part-day concierge", "idromassaggio": "hot tub",
+    "armadio a muro": "built-in wardrobe", "campo da tennis": "tennis court", "cablato": "wired for data", "impianto tv con parabola satellitare": "satellite dish",
+    "box privato": "private garage", "posto auto": "parking space",
+}
+STATUS = {"Ottimo / Ristrutturato": "ready", "Buono / Abitabile": "ready", "Nuovo / In costruzione": "ready", "Da ristrutturare": "needs_work"}
+RUIN = re.compile(r"rudere|ruderi|diroccat|crollat|collabent|inagibil|da demolire|al grezzo", re.I)
+AUCTION = re.compile(r"\basta\b|\baste\b|tribunale|\bR\.?G\.?E\b|\bPVP\b|vendita giudiziaria|esecuzione immobiliare", re.I)
+INDICATIVE = re.compile(r"immagini[^.]{0,80}(indicativ|non rappresent)|foto[^.]{0,60}(indicativ|non rappresent)|a scopo illustrativ", re.I)
+
+
+def english(v: str) -> str:
+    out = v
+    for it, en in WORDS:
+        out = out.replace(it, en)
+    return out.replace(" | ", ", ")
+
+
+def feature_facts(it: dict) -> list[dict]:
+    facts = []
+    for group in it.get("mainData") or []:
+        for row in group.get("rows") or []:
+            lab, val = row.get("label"), str(row.get("value") or "").strip()
+            if lab not in LABELS or not val:
+                continue
+            key, label_en = LABELS[lab]
+            num = float(val) if re.fullmatch(r"\d+", val) else None
+            facts.append({"key": key, "label_en": label_en, "value_text": english(val), "value_num": num,
+                          "quote": f"{lab}: {val}", "quote_en": f"{label_en}: {english(val)}", "verified": True})
+    e = it.get("_enhanced") or {}
+    if e.get("energyClass"):
+        facts.append({"key": "energy_class", "label_en": "Energy class", "value_text": f"{e['energyClass']}" + (f" ({str(e['energyConsumption']).replace(' anno', ' a year')})" if e.get("energyConsumption") else ""),
+                      "value_num": None, "quote": f"Classe energetica: {e['energyClass']}", "quote_en": f"Energy class {e['energyClass']} (A4 best, G worst)", "verified": True})
+    tags = [t for t in (e.get("amenities") or []) if isinstance(t, str)]
+    if tags:
+        en = ", ".join(AMENITIES.get(t.lower().strip(), t) for t in tags)
+        facts.append({"key": "features", "label_en": "Features", "value_text": en[:1].upper() + en[1:], "value_num": None,
+                      "quote": ", ".join(tags), "quote_en": en, "verified": True})
+    return facts
+
+
+def flags_for(desc: str, e: dict) -> list[dict]:
+    out = []
+    m = AUCTION.search(desc)
+    if e.get("isAuction") or m:
+        q = desc[max(0, (m.start() if m else 0) - 60):(m.end() if m else 0) + 140].strip()
+        out.append({"severity": "high", "origin": "listing", "quote": q or "Asta", "quote_en": None,
+                    "flag_en": "This is a court auction advertised by a private consultant, not a normal sale. The price is the auction base, the consultant charges a fee, and other people can bid. Argos can find the official court listing for you."})
+    m = INDICATIVE.search(desc)
+    if m:
+        out.append({"severity": "medium", "origin": "listing", "quote": desc[max(0, m.start() - 20):m.end() + 80].strip(), "quote_en": None,
+                    "flag_en": "The advertiser says the photos are only indicative and may not show this property."})
+    if e.get("isNudaProprieta"):
+        out.append({"severity": "high", "origin": "listing", "quote": "Nuda proprietà", "quote_en": None,
+                    "flag_en": "Bare ownership only: someone else keeps the right to live there, usually for life."})
+    return out
+
+
+def summary(kind: str, typology: str, sqm, e: dict, cond: str | None, city: str | None) -> str:
+    bits = [f"{english(typology) if typology else kind.replace('_', ' ').capitalize()}"]
+    if sqm:
+        bits[0] += f" of {sqm:.0f} m²"
+    if city:
+        bits[0] += f" in {city}"
+    extra = []
+    if e.get("rooms"):
+        extra.append(f"{e['rooms']} rooms")
+    if e.get("bathrooms"):
+        extra.append(f"{e['bathrooms']} {'bathroom' if str(e['bathrooms']) == '1' else 'bathrooms'}")
+    if e.get("yearBuilt"):
+        extra.append(f"built in {e['yearBuilt']}")
+    s = bits[0] + (", " + ", ".join(extra) if extra else "") + "."
+    if e.get("condition"):
+        s += f" Described as {english(e['condition']).lower()}."
+    if (e.get("gardenType") or "").lower().startswith("giardino privato"):
+        s += " Private garden."
+    return s
+
+
 def pick_regions(n: int = 2, today: date | None = None) -> list[tuple[str, str]]:
     d = (today or date.today()).toordinal()
     start = (d * n) % len(REGIONS)
@@ -66,7 +186,8 @@ def to_row(it: dict, region_hint: str) -> dict | None:
     except ValueError:
         sqm = None
     photos = [u for u in (e.get("photoUrlsHd") or e.get("photoUrls") or
-                          [_g(m, "hd") or _g(m, "sd") for m in (_g(it, "media", "images", default=[]) or [])]) if isinstance(u, str) and u.startswith("https://")][:12]
+                          [_g(m, "hd") or _g(m, "sd") for m in (_g(it, "media", "images", default=[]) or [])]) if isinstance(u, str) and u.startswith("https://")][:15]
+    plans = [u for u in (e.get("floorplanUrlsHd") or []) if isinstance(u, str) and u.startswith("https://")][:3]
     title = (it.get("title") or "").strip()
     desc = (e.get("descriptionText") or _g(it, "description", "content") or "").strip()
     kind = next((k for k, rx in TYPE_RULES if rx.search(f"{title} {_g(it, 'typology', 'name', default='')}")), "house")
@@ -76,6 +197,13 @@ def to_row(it: dict, region_hint: str) -> dict | None:
     lat, lng = e.get("latitude") or _g(it, "geography", "geolocation", "latitude"), e.get("longitude") or _g(it, "geography", "geolocation", "longitude")
     agency = _g(it, "author", "name") or _g(it, "contacts", "agencyName")
     rooms = e.get("rooms") or _g(it, "topology", "rooms")
+    status = e.get("condition") or ""
+    cond = "ruin" if RUIN.search(desc) else STATUS.get(status)
+    avail = (e.get("availability") or "").lower()
+    occupancy = "free" if avail.startswith("libero") else "occupied" if avail.startswith("occupat") else "unknown"
+    auction = bool(e.get("isAuction") or AUCTION.search(desc))
+    phones = [p for p in (e.get("contactPhones") or []) if isinstance(p, str)] or [p.get("num") for p in (_g(it, "contacts", "phones", default=[]) or []) if isinstance(p, dict) and p.get("num")]
+    typology = e.get("propertyType") or _g(it, "topology", "typology", "name") or ""
     return {
         "document": {"source_id": "immobiliare", "url": url, "part": "", "status": "extracted", "language": "it",
                      "title": title or f"Immobiliare.it {rid}", "text_content": desc[:20000], "meta": {"apify": ACTOR, "rooms": rooms}},
@@ -83,12 +211,13 @@ def to_row(it: dict, region_hint: str) -> dict | None:
             "external_id": f"immobiliare:{rid}", "country": "IT", "region": region, "province": prov, "comune": city,
             "address": e.get("address") or _g(it, "geography", "street"), "lat": lat, "lng": lng,
             "title_en": title or f"{'Apartment' if kind == 'apartment' else 'House'} in {city or 'Italy'}",
-            "summary_en": desc[:600] or None, "property_type": kind, "sale_type": "sale", "price_eur": price,
+            "summary_en": summary(kind, typology, sqm, e, cond, city), "condition": cond,
+            "property_type": kind, "sale_type": "sale", "price_eur": price,
             "surface_sqm": sqm if sqm and 15 <= sqm <= 3000 and kind != "land" else None,
-            "land_sqm": sqm if kind == "land" else None, "occupancy": "unknown", "status": "active",
-            "sale_mode": "Private sale through an agency or owner",
-            "contacts": [{"role": "Listing on Immobiliare.it", "name": agency, "url": url}], "attachments": [],
-            "photo_urls": photos, "hero_image_path": photos[0] if photos else None, "is_demo": False,
+            "land_sqm": sqm if kind == "land" else None, "occupancy": occupancy, "status": "active",
+            "sale_mode": "Court auction advertised by a private consultant" if auction else "Private sale through an agency or owner",
+            "contacts": [{"role": "Listing on Immobiliare.it", "name": agency, "url": url, **({"phone": phones[0]} if phones else {})}], "attachments": [],
+            "photo_urls": photos + plans, "hero_image_path": photos[0] if photos else None, "is_demo": False,
         },
         "facts": [f for f in (
             {"key": "price_eur", "label_en": "Asking price", "value_text": f"€{price:,.0f}", "value_num": price,
@@ -96,8 +225,9 @@ def to_row(it: dict, region_hint: str) -> dict | None:
             {"key": "surface_sqm", "label_en": "Surface", "value_text": f"{sqm:.0f} m²", "value_num": sqm,
              "quote": f"{sqm:.0f} m²", "quote_en": f"{sqm:.0f} m²", "verified": True} if sqm else None,
             {"key": "description", "label_en": "Description", "value_text": desc[:400], "value_num": None,
-             "quote": desc[:1000], "quote_en": "Description from the listing, in Italian", "verified": True} if desc else None,
-        ) if f],
+             "quote": desc[:4000], "quote_en": "Description from the listing, in Italian", "verified": True} if desc else None,
+        ) if f] + feature_facts(it),
+        "flags": flags_for(desc, e),
     }
 
 
@@ -120,7 +250,7 @@ def run_actor(token: str, start_urls: list[str], max_items: int, log=print) -> l
 
 
 def collect(db: Supa, regions: int | None = None, max_price: int | None = None, per_region: int | None = None, log=print) -> dict:
-    regions = regions or int(os.environ.get("IMMOBILIARE_REGIONS") or 2)
+    regions = regions or int(os.environ.get("IMMOBILIARE_REGIONS") or 1)
     max_price = max_price or int(os.environ.get("IMMOBILIARE_MAX_PRICE") or 100000)
     per_region = per_region or int(os.environ.get("IMMOBILIARE_PER_REGION") or 100)
     token = os.environ.get("APIFY_TOKEN")
@@ -156,5 +286,9 @@ def collect(db: Supa, regions: int | None = None, max_price: int | None = None, 
                 facts = [{"listing_id": lid[b["listing"]["external_id"]], **f} for b in batch for f in b["facts"] if b["listing"]["external_id"] in lid]
                 if facts:
                     db.insert("listing_facts", facts, returning=False)
+                db.delete("listing_red_flags", {"listing_id": in_(list(lid.values())), "origin": "eq.listing"})
+                flags = [{"listing_id": lid[b["listing"]["external_id"]], **f} for b in batch for f in b["flags"] if b["listing"]["external_id"] in lid]
+                if flags:
+                    db.insert("listing_red_flags", flags, returning=False)
             saved += len(lid)
     return {"regions": [r for r, _ in picked], "bands": bands, "results": seen, "saved": saved}

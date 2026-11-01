@@ -256,10 +256,17 @@ function ListingPage() {
                 byKey["appraisal_eur"] ? ["Court appraisal", <Appraisal key="a" fact={byKey["appraisal_eur"]} discount={l.discount_pct} sourceUrl={src} />] : null,
                 ["Surface", <FactValue key="s" fact={byKey["surface_sqm"] ?? byKey["perizia_surface_sqm"] ?? byKey["land_sqm"]} sourceUrl={src} />],
                 byKey["condition"] ? ["Condition", <FactValue key="c" fact={byKey["condition"]} sourceUrl={src} />] : null,
+                byKey["rooms"] ? ["Rooms", <FactValue key="ro" fact={byKey["rooms"]} sourceUrl={src} />] : null,
+                byKey["bedrooms"] ? ["Bedrooms", <FactValue key="be" fact={byKey["bedrooms"]} sourceUrl={src} />] : null,
+                byKey["bathrooms"] ? ["Bathrooms", <FactValue key="ba" fact={byKey["bathrooms"]} sourceUrl={src} />] : null,
+                byKey["year_built"] ? ["Year built", <FactValue key="yb" fact={byKey["year_built"]} sourceUrl={src} />] : null,
+                byKey["energy_class"] ? ["Energy class", <FactValue key="ec" fact={byKey["energy_class"]} sourceUrl={src} />] : null,
+                byKey["floor"] ? ["Floor", <FactValue key="fl" fact={byKey["floor"]} sourceUrl={src} />] : null,
+                byKey["availability"] ? ["Availability", <FactValue key="av" fact={byKey["availability"]} sourceUrl={src} />] : null,
                 ["Price per m²", <PricePerSqm key="m" facts={byKey} />],
-                ["Deposit", <FactValue key="d" fact={byKey["deposit_eur"] ?? byKey["deposit"]} sourceUrl={src} />],
+                l.sale_type !== "sale" || byKey["deposit_eur"] || byKey["deposit"] ? ["Deposit", <FactValue key="d" fact={byKey["deposit_eur"] ?? byKey["deposit"]} sourceUrl={src} />] : null,
                 byKey["auction_date"] ? ["Sale date", <FactValue key="sd" fact={byKey["auction_date"]} sourceUrl={src} />] : null,
-                ["Offer deadline", <FactValue key="dl" fact={byKey["deadline"]} sourceUrl={src} />],
+                l.sale_type !== "sale" || byKey["deadline"] ? ["Offer deadline", <FactValue key="dl" fact={byKey["deadline"]} sourceUrl={src} />] : null,
               ].filter(Boolean) as [string, ReactNode][]).map(([label, node], i, all) => (
                 <div key={label} className={cn("bg-card p-5", fillClass(i, all.length))}>
                   <dt className="text-xs font-normal uppercase tracking-wide text-muted-foreground">{t(label)}</dt>
@@ -285,7 +292,7 @@ function ListingPage() {
             ) : <p className="text-sm text-muted-foreground">No coordinates in the notice.</p>}
             {l.lat != null && l.lng != null && (
               <ClientOnly fallback={null}>
-                <Nearby lat={l.lat} lng={l.lng} comune={l.comune} />
+                <Nearby lat={l.lat} lng={l.lng} comune={l.comune} listingId={l.id!} />
               </ClientOnly>
             )}
           </Section>
@@ -304,7 +311,7 @@ function ListingPage() {
               <dl className="divide-y rounded-2xl border bg-card">
                 {facts.filter((f) => f.key !== "description").map((f) => (
                   <div key={f.id} className="grid gap-1 p-4 sm:grid-cols-[220px_1fr] sm:gap-6">
-                    <dt className="text-sm text-muted-foreground">{f.label_en}</dt>
+                    <dt className="text-sm text-muted-foreground">{t(f.label_en)}</dt>
                     <dd className="font-medium"><FactValue fact={f} sourceUrl={src} /></dd>
                   </div>
                 ))}
@@ -638,17 +645,24 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
       return pickEstimates(data, userId);
     },
   });
+  const r = useLang() === "ru";
+  // The tier follows what the listing says about its state: a habitable flat is not costed as a ruin.
   const condition = data.facts.find((f) => f.key === "condition")?.value_text ?? "";
   const [scenario, setScenario] = useState(
-    condition.startsWith("Good") ? "light" : condition.startsWith("Poor") || condition.startsWith("Derelict") ? "full" : "standard",
+    l.condition === "ready" ? "refresh" : l.condition === "ruin" ? "full" : l.condition === "needs_work" ? "standard"
+      : condition.startsWith("Good") ? "light" : condition.startsWith("Poor") || condition.startsWith("Derelict") ? "full" : "standard",
   );
   const sel: CostEstimate | undefined = estimates.find((e) => e.scenario === scenario) ?? estimates[0];
+  const TIER: Record<string, [string, string]> = {
+    refresh: ["Move in", "Заехать"], light: ["Light", "Косметика"], standard: ["Partial", "Частичный"], full: ["Complete", "Капитальный"],
+  };
+  const tier = (s: string) => TIER[s]?.[r ? 1 : 0] ?? s;
   const price = l.min_offer_eur ?? l.price_eur;
   const priceLabel = l.min_offer_eur != null ? "Minimum offer" : "Base price";
 
   return (
     <>
-      <Section title="Renovation" kicker="Estimated ranges">
+      <Section title="Renovation" kicker="Approximate ranges">
         {isLoading ? <div className="h-40 animate-pulse rounded-2xl bg-muted" /> : !estimates.length ? (
           <p className="max-w-2xl rounded-2xl border bg-card p-5 text-muted-foreground">
             {l.property_type === "land" || l.property_type === "garage"
@@ -660,9 +674,9 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
             <div className="mb-5 inline-flex rounded-full border bg-card p-1">
               {estimates.map((e) => (
                 <button key={e.id} onClick={() => setScenario(e.scenario)}
-                  className={cn("rounded-full px-4 py-1.5 text-sm font-normal capitalize transition-colors",
+                  className={cn("rounded-full px-4 py-1.5 text-sm font-normal transition-colors",
                     sel?.id === e.id ? "bg-sea text-white" : "text-muted-foreground hover:text-foreground")}>
-                  {e.scenario}
+                  {tier(e.scenario)}
                 </button>
               ))}
             </div>
@@ -693,7 +707,12 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
                 )}
               </div>
             )}
-            <p className="mt-3 text-sm text-muted-foreground">Ranges, not quotes. Real costs depend on a survey.</p>
+            <div className="mt-4 rounded-[12px] bg-azure-soft/50 p-4 text-[15px] font-light leading-relaxed">
+              <span className="font-display italic text-azure">Argos · </span>
+              {r
+                ? "Это примерные цифры, не смета. Когда дойдёт до дела, я соберу настоящие предложения от местных строителей, сравню их и буду торговаться за лучшую цену для вас. И за сам дом тоже."
+                : "These are approximate, not quotes. When it's real, I'll get quotes from local builders, compare them and push for the best price on your behalf. Same for the house itself."}
+            </div>
           </>
         )}
       </Section>
@@ -701,7 +720,7 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
       <Section title="Total cost picture">
         <div className="rounded-2xl border bg-card p-6">
           <Row label={priceLabel}>{price != null ? <Money value={price} /> : <NotStated />}</Row>
-          <Row label={sel ? `Renovation, ${sel.scenario}` : "Renovation"}>{sel ? <span className="tnum">{range(sel.low_eur, sel.high_eur)}</span> : <span className="text-muted-foreground">No estimate yet</span>}</Row>
+          <Row label={sel ? `Renovation, ${tier(sel.scenario).toLowerCase()}` : "Renovation"}>{sel ? <span className="tnum">{range(sel.low_eur, sel.high_eur)}</span> : <span className="text-muted-foreground">No estimate yet</span>}</Row>
           <div className="my-3 border-t" />
           <Row label="Total" strong>
             {price != null && sel ? <span className="tnum">{range(price + sel.low_eur, price + sel.high_eur)}</span> : <span className="text-sm font-normal text-muted-foreground">Needs a price and an estimate</span>}

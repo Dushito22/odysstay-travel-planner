@@ -42,19 +42,71 @@ export function listen(lang: string, onText: (t: string) => void, onDone: (t: st
   return () => rec.stop();
 }
 
-/** Reads text aloud in the chosen language, picking the best installed voice for it. */
-export function speak(text: string, lang: string) {
-  if (!canSpeak()) return;
-  const synth = window.speechSynthesis;
-  synth.cancel();
-  const clean = text.replace(/\[[^\]]+\]/g, "").replace(/[*_#>`]/g, "").replace(/€\s?([\d.,]+)/g, "$1 euros");
-  const u = new SpeechSynthesisUtterance(clean);
-  u.lang = lang;
-  const voices = synth.getVoices().filter((v) => v.lang.toLowerCase().startsWith(lang.slice(0, 2).toLowerCase()));
-  const best = voices.find((v) => /premium|enhanced|natural|neural|google/i.test(v.name)) ?? voices[0];
-  if (best) u.voice = best;
-  u.rate = 1.02;
-  synth.speak(u);
+/** The browser's own voice: the fallback when Argos's real voice is unavailable or used up. */
+function speakBrowser(text: string, lang: string): Promise<void> {
+  return new Promise((done) => {
+    if (!canSpeak()) { done(); return; }
+    const synth = window.speechSynthesis;
+    synth.cancel();
+    const clean = text.replace(/\[[^\]]+\]/g, "").replace(/[*_#>`]/g, "").replace(/€\s?([\d.,]+)/g, "$1 euros");
+    const u = new SpeechSynthesisUtterance(clean);
+    u.lang = lang;
+    const voices = synth.getVoices().filter((v) => v.lang.toLowerCase().startsWith(lang.slice(0, 2).toLowerCase()));
+    const best = voices.find((v) => /premium|enhanced|natural|neural|google/i.test(v.name)) ?? voices[0];
+    if (best) u.voice = best;
+    u.rate = 1.02;
+    u.onend = () => done();
+    u.onerror = () => done();
+    synth.speak(u);
+  });
 }
 
-export const stopSpeaking = () => { if (canSpeak()) window.speechSynthesis.cancel(); };
+let audio: HTMLAudioElement | null = null;
+let generation = 0;
+
+export type VoiceResult = "voice" | "browser" | "limit" | "limit-anon" | "stopped";
+
+/** Says a reply in Argos's own voice (ElevenLabs). Resolves when he has finished speaking.
+ * Falls back to the browser voice when the voice service is off, busy or the daily allowance is used. */
+export async function speak(text: string, lang: string): Promise<VoiceResult> {
+  stopSpeaking();
+  const mine = ++generation;
+  const short = lang.slice(0, 2).toLowerCase();
+  try {
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data, error } = await supabase.functions.invoke("argos-voice", { body: { text, lang: short } });
+    if (mine !== generation) return "stopped";
+    if (error) {
+      let code = "";
+      const ctx = (error as { context?: unknown }).context;
+      if (ctx instanceof Response) { try { code = ((await ctx.clone().json()) as { error?: string }).error ?? ""; } catch { /* not JSON */ } }
+      if (code === "voice-limit-anon") return "limit-anon";
+      await speakBrowser(text, lang);
+      return code === "voice-limit" ? "limit" : "browser";
+    }
+    const blob = data instanceof Blob ? data : new Blob([data as ArrayBuffer], { type: "audio/mpeg" });
+    const url = URL.createObjectURL(new Blob([blob], { type: "audio/mpeg" }));
+    await new Promise<void>((done) => {
+      audio = new Audio(url);
+      audio.onended = () => done();
+      audio.onerror = () => done();
+      audio.onpause = () => done();
+      audio.play().catch(() => done());
+    });
+    URL.revokeObjectURL(url);
+    return mine === generation ? "voice" : "stopped";
+  } catch {
+    if (mine !== generation) return "stopped";
+    await speakBrowser(text, lang);
+    return "browser";
+  }
+}
+
+export const stopSpeaking = () => {
+  generation++;
+  if (audio) { audio.pause(); audio = null; }
+  if (canSpeak()) window.speechSynthesis.cancel();
+};
+
+/** Argos can always speak: his own voice, or the browser's. */
+export const canVoice = () => typeof window !== "undefined" && ("Audio" in window || canSpeak());

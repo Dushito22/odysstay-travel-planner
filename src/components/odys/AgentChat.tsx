@@ -168,7 +168,7 @@ export function AgentChat({
       });
       setConvId(r.conversation_id);
       setMessages((m) => [...m, r.message]);
-      if (readAloud) speak(stripMarkers(r.message.content), lang);
+      if (readAloud) void speak(stripMarkers(r.message.content), lang);
       setActions(r.actions);
       void qc.invalidateQueries({ queryKey: ["agent-conversation", listingId, dealId] });
     } catch (e) {
