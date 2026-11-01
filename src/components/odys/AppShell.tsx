@@ -1,6 +1,6 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bookmark, Compass, FolderLock, Handshake, Inbox, LogOut, Map, Sparkles, User } from "lucide-react";
+import { Bookmark, Compass, FolderLock, Shield, Handshake, Inbox, LogOut, Map, Sparkles, User } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { inboxCountQuery } from "@/lib/deal";
@@ -30,6 +30,14 @@ export function AppShell() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const isAdmin = useQuery({
+    queryKey: ["is-admin"],
+    staleTime: 30 * 60_000,
+    queryFn: async () => {
+      const { data } = await supabase.rpc("is_admin" as never);
+      return data === true;
+    },
+  }).data === true;
   const inboxCount = useQuery({ ...inboxCountQuery, refetchInterval: 60_000 }).data ?? 0;
   useInboxRealtime();
 
@@ -82,6 +90,15 @@ export function AppShell() {
           >
             <FolderLock className="h-4 w-4" /> {t("Documents")}
           </Link>
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className="flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-[15px] text-muted-foreground hover:bg-muted hover:text-foreground"
+              activeProps={{ className: "!bg-azure-soft !text-foreground" }}
+            >
+              <Shield className="h-4 w-4" /> Admin
+            </Link>
+          )}
           <button
             onClick={signOut}
             className="flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-left text-[15px] text-muted-foreground hover:bg-muted hover:text-foreground"

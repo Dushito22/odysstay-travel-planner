@@ -19,6 +19,7 @@ import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as StyleguideRouteImport } from './routes/styleguide'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedDiscoverRouteImport } from './routes/_authenticated/discover'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
 import { Route as AuthenticatedMapRouteImport } from './routes/_authenticated/map'
@@ -78,6 +79,11 @@ const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDiscoverRoute = AuthenticatedDiscoverRouteImport.update({
   id: '/discover',
@@ -140,6 +146,7 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/styleguide': typeof StyleguideRoute
   '/terms': typeof TermsRoute
+  '/admin': typeof AuthenticatedAdminRoute
   '/discover': typeof AuthenticatedDiscoverRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/map': typeof AuthenticatedMapRoute
@@ -161,6 +168,7 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/styleguide': typeof StyleguideRoute
   '/terms': typeof TermsRoute
+  '/admin': typeof AuthenticatedAdminRoute
   '/discover': typeof AuthenticatedDiscoverRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/map': typeof AuthenticatedMapRoute
@@ -184,6 +192,7 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/styleguide': typeof StyleguideRoute
   '/terms': typeof TermsRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/discover': typeof AuthenticatedDiscoverRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/map': typeof AuthenticatedMapRoute
@@ -207,6 +216,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/styleguide'
     | '/terms'
+    | '/admin'
     | '/discover'
     | '/inbox'
     | '/map'
@@ -228,6 +238,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/styleguide'
     | '/terms'
+    | '/admin'
     | '/discover'
     | '/inbox'
     | '/map'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/styleguide'
     | '/terms'
+    | '/_authenticated/admin'
     | '/_authenticated/discover'
     | '/_authenticated/inbox'
     | '/_authenticated/map'
@@ -348,6 +360,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/discover': {
       id: '/_authenticated/discover'
       path: '/discover'
@@ -422,6 +441,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedDiscoverRoute: typeof AuthenticatedDiscoverRoute
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
   AuthenticatedMapRoute: typeof AuthenticatedMapRoute
@@ -434,6 +454,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedDiscoverRoute: AuthenticatedDiscoverRoute,
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
   AuthenticatedMapRoute: AuthenticatedMapRoute,

@@ -30,7 +30,7 @@ const PLANS: Plan[] = [
     ],
   },
   {
-    id: "explorer", name: { en: "Explorer", ru: "Explorer" }, monthly: 19,
+    id: "explorer", name: { en: "Explorer", ru: "Исследователь" }, monthly: 19,
     blurb: { en: "For when you're shortlisting.", ru: "Когда вы уже выбираете." },
     features: [
       { en: "Everything in Free", ru: "Всё из бесплатного" },
@@ -41,10 +41,10 @@ const PLANS: Plan[] = [
     ],
   },
   {
-    id: "buyer", name: { en: "Buyer", ru: "Buyer" }, monthly: 39, featured: true,
+    id: "buyer", name: { en: "Buyer", ru: "Покупатель" }, monthly: 39, featured: true,
     blurb: { en: "For when you're buying.", ru: "Когда вы покупаете." },
     features: [
-      { en: "Everything in Explorer", ru: "Всё из Explorer" },
+      { en: "Everything in Explorer", ru: "Всё из тарифа «Исследователь»" },
       { en: "Unlimited deals, messages and follow-ups", ru: "Безлимит сделок, писем и напоминаний" },
       { en: "2 hours of calls with Argos a month", ru: "2 часа звонков с Argos в месяц" },
       { en: "Court reports read for you: occupants, debts, risks", ru: "Отчёты суда прочитаны за вас: жильцы, долги, риски" },
