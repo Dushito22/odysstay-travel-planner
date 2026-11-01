@@ -48,7 +48,7 @@ export const RU: Record<string, string> = {
   "State of the property": "Состояние объекта", "Brave souls only": "Для смелых", "Needs some love": "Ждёт заботливых рук", "Just add you": "Осталось только вам заехать",
   "Real photos only": "Только с настоящими фото", "Hide court-scan photos": "Скрыть сканы из суда",
   "Any price": "Любая цена", "Any size": "Любая площадь", "Min score": "Мин. оценка",
-  "Best deals": "Лучшие предложения", Cheapest: "Подешевле", "Closing soon": "Скоро закроются", "Furthest below appraisal": "Сильнее всего ниже оценки", Newest: "Новые", "For you": "Для вас", "Deal score ": "Оценка ",
+  "Best value": "Лучшие предложения", Cheapest: "Подешевле", "Closing soon": "Скоро закроются", "Furthest below appraisal": "Сильнее всего ниже оценки", Newest: "Новые", "For you": "Для вас", "Deal score ": "Оценка ",
   Sale: "Продажа", Concession: "Концессия", Lease: "Аренда", "One-euro scheme": "Дом за €1", "Court auction": "Судебные торги",
   "Notary auction": "Торги у нотариуса", "Other sale": "Другая продажа", House: "Дом", Apartment: "Квартира", Building: "Здание",
   "Rural house": "Загородный дом", Land: "Земля", Commercial: "Коммерческая", Garage: "Гараж", Mixed: "Смешанный", Other: "Другое",

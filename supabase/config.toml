@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.area-brief]
 verify_jwt = false
+
+[functions.telegram]
+verify_jwt = false

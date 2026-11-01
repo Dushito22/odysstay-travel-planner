@@ -1,0 +1,29 @@
+name: Telegram setup
+
+# Points the Telegram bot at the Argos webhook and sets its commands and descriptions.
+# Run once after adding TELEGRAM_BOT_TOKEN and TELEGRAM_WEBHOOK_SECRET as repository secrets
+# (the same two values must also be Supabase Edge Function secrets).
+on:
+  workflow_dispatch:
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    env:
+      TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+      HOOK: https://nryhvtxprjiylajolcef.supabase.co/functions/v1/telegram
+    steps:
+      - name: Configure
+        run: |
+          [ -n "$TOKEN" ] && [ -n "$SECRET" ] || { echo "::error::Add TELEGRAM_BOT_TOKEN and TELEGRAM_WEBHOOK_SECRET as repository secrets"; exit 1; }
+          api() { curl -sS -X POST "https://api.telegram.org/bot$TOKEN/$1" -H 'content-type: application/json' -d "$2"; echo; }
+          api setWebhook "{\"url\":\"$HOOK\",\"secret_token\":\"$SECRET\",\"allowed_updates\":[\"message\"],\"drop_pending_updates\":true}"
+          api setMyCommands '{"commands":[{"command":"start","description":"Meet Argos"},{"command":"voice","description":"Voice replies on or off"}]}'
+          api setMyCommands '{"language_code":"ru","commands":[{"command":"start","description":"Познакомиться с Argos"},{"command":"voice","description":"Голосовые ответы вкл/выкл"}]}'
+          api setMyDescription '{"description":"Argos finds homes in Italy for you: court auctions, private sales and €1 houses, explained in your language. Write or send a voice note."}'
+          api setMyDescription '{"language_code":"ru","description":"Argos найдёт вам дом в Италии: судебные аукционы, частные продажи и дома за €1, всё объяснит на вашем языке. Пишите или присылайте голосовые."}'
+          api setMyShortDescription '{"short_description":"Your AI agent for buying a home in Italy"}'
+          api setMyShortDescription '{"language_code":"ru","short_description":"Ваш ИИ-агент по покупке дома в Италии"}'
+          N=$(curl -sS "https://api.telegram.org/bot$TOKEN/getWebhookInfo"); echo "$N"
+          echo "::notice title=Webhook::$(echo "$N" | head -c 600)"
