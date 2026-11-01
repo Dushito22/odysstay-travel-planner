@@ -1,0 +1,29 @@
+name: Auth config
+
+# Shows the sign-in settings that matter and, if given, applies a JSON patch to them. Safe to re-run.
+
+on:
+  workflow_dispatch:
+    inputs:
+      patch:
+        description: "JSON to PATCH into the auth config, e.g. {\"mailer_autoconfirm\": true}"
+        default: "{}"
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply and show
+        env:
+          T: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PATCH: ${{ github.event.inputs.patch }}
+        run: |
+          set +e
+          API=https://api.supabase.com/v1/projects/nryhvtxprjiylajolcef/config/auth
+          if [ "$PATCH" != "{}" ]; then
+            code=$(curl -sS -o p.json -w "%{http_code}" -X PATCH $API -H "Authorization: Bearer $T" -H "Content-Type: application/json" --data "$PATCH")
+            echo "::notice title=Patch::HTTP $code"
+          fi
+          curl -sS -H "Authorization: Bearer $T" $API -o cur.json
+          echo "::notice title=Auth::$(jq -c '{external_google_enabled, external_email_enabled, mailer_autoconfirm, password_min_length, smtp_host, rate_limit_email_sent, rate_limit_otp, site_url}' cur.json)"
+          exit 0
