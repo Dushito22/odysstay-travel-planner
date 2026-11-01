@@ -50,7 +50,7 @@ export function useDealRealtime(dealId: string) {
   useEffect(() => {
     const refresh = () => void invalidateDealKeys(qc, dealId);
     const channel = supabase
-      .channel(`deal-${dealId}`)
+      .channel(`deal-${dealId}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "deal_tasks", filter: `deal_id=eq.${dealId}` },
@@ -95,7 +95,7 @@ export function useInboxRealtime() {
       void qc.invalidateQueries({ queryKey: ["deals-attention"] });
     };
     const channel = supabase
-      .channel("inbox")
+      .channel(`inbox-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "deal_tasks" }, refresh)
       .subscribe();

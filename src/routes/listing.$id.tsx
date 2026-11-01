@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useSignedIn } from "@/lib/signed-in";
 import {
   ClientOnly, createFileRoute, Link, useNavigate, useRouter, type ErrorComponentProps,
 } from "@tanstack/react-router";
@@ -86,11 +87,12 @@ function BackToResults() {
 }
 
 function Shell({ children }: { children: ReactNode }) {
+  const signedIn = useSignedIn();
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
-          <Link to="/"><Wordmark size="sm" /></Link>
+          <Link to={signedIn ? "/discover" : "/"}><Wordmark size="sm" /></Link>
           <div className="flex items-center gap-4">
             <LangToggle />
             <BackToResults />
@@ -298,7 +300,7 @@ function ListingPage() {
           </Section>
 
           <Section title="In plain words">
-            {l.summary_en ? <p className="max-w-2xl text-lg leading-relaxed">{l.summary_en}</p> : <NotStated />}
+            {l.summary_en && !looksItalian(l.summary_en) ? <p className="max-w-2xl text-lg leading-relaxed">{l.summary_en}</p> : !byKey["description"] ? <NotStated /> : null}
             {byKey["description"] && (
               <div className="mt-5">
                 <Description listingId={l.id!} italian={byKey["description"].quote ?? byKey["description"].value_text ?? ""} signedIn={!!userId} />
@@ -839,4 +841,10 @@ function HowBuying({ saleType }: { saleType: string | null }) {
       <p className="mt-4 text-sm text-muted-foreground">General guide only. The notice sets the exact rules and dates.</p>
     </Section>
   );
+}
+
+/** Some agency listings carry their Italian blurb as the summary; the translation box below covers those. */
+function looksItalian(t: string) {
+  const hits = (t.toLowerCase().match(/\b(il|della|delle|degli|con|che|una|sono|nel|alla|immobile|vendita|piano|zona)\b/g) ?? []).length;
+  return hits >= 4;
 }

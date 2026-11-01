@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { Coffee, ExternalLink, Landmark, Plane, ShoppingBasket, TrainFront, Umbrella, Car, Snowflake, Sun, CloudRain, Compass, MessageCircle } from "lucide-react";
+import { Coffee, ExternalLink, Landmark, Plane, ShoppingBasket, TrainFront, Umbrella, Car, Sun, CloudRain, Compass } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { ArgosComposer } from "@/components/odys/ArgosComposer";
 import { openArgos } from "@/components/odys/ArgosDock";
 import { callFunction } from "@/lib/agent";
-import { useLang } from "@/lib/i18n";
+import { speechLang, useLang } from "@/lib/i18n";
 import { AIRPORTS, CITIES, driveMinutes, formatDrive, km, nearest, nearestGems, ruPlace } from "@/lib/places";
 
 type OsmEl = { lat?: number; lon?: number; center?: { lat: number; lon: number }; tags?: Record<string, string> };
@@ -46,44 +47,52 @@ async function fetchOsm(lat: number, lng: number) {
 }
 
 
-type Climate = { janLow: number; janHigh: number; julLow: number; julHigh: number; rainYear: number; wettest: string; driest: string };
+type Climate = { winterDay: number; winterNight: number; summerDay: number; summerNight: number; rainYear: number; wettest: number };
 
 const MONTHS_EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const MONTHS_RU = ["январь", "февраль", "март", "апрель", "май", "июнь", "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"];
+const MONTHS_RU = ["январе", "феврале", "марте", "апреле", "мае", "июне", "июле", "августе", "сентябре", "октябре", "ноябре", "декабре"];
 const KEYS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+const DAYS = [31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
-/** 30-year monthly averages for the exact spot, from NASA POWER (public, free, no key). */
+/** 30-year monthly averages for the exact spot, from NASA POWER (public, free, no key).
+ * Typical day and night come from the mean temperature and the average daily swing. */
 async function fetchClimate(lat: number, lng: number): Promise<Climate> {
-  const u = `https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=T2M_MAX,T2M_MIN,PRECTOTCORR&community=RE&longitude=${lng.toFixed(3)}&latitude=${lat.toFixed(3)}&format=JSON`;
+  const u = `https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=T2M,T2M_RANGE,PRECTOTCORR&community=RE&longitude=${lng.toFixed(3)}&latitude=${lat.toFixed(3)}&format=JSON`;
   const r = await fetch(u, { signal: AbortSignal.timeout(20000) });
   if (!r.ok) throw new Error(`climate ${r.status}`);
   const p = (await r.json()).properties?.parameter;
-  const hi = p?.T2M_MAX, lo = p?.T2M_MIN, rain = p?.PRECTOTCORR;
-  if (!hi || !lo || !rain || hi.JAN == null || hi.JAN < -90) throw new Error("climate empty");
-  const perMonth = KEYS.map((k, i) => ({ i, mm: rain[k] * [31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][i]! }));
-  const wet = perMonth.reduce((a, b) => (b.mm > a.mm ? b : a));
-  const dry = perMonth.reduce((a, b) => (b.mm < a.mm ? b : a));
+  const t = p?.T2M, rg = p?.T2M_RANGE, rain = p?.PRECTOTCORR;
+  if (!t || !rg || !rain || t.JAN == null || t.JAN < -90) throw new Error("climate empty");
+  const mm = KEYS.map((k, i) => rain[k] * DAYS[i]!);
   return {
-    janLow: lo.JAN, janHigh: hi.JAN, julLow: lo.JUL, julHigh: hi.JUL,
-    rainYear: Math.round(perMonth.reduce((a, b) => a + b.mm, 0) / 10) * 10,
-    wettest: String(wet.i), driest: String(dry.i),
+    winterDay: t.JAN + rg.JAN / 2, winterNight: t.JAN - rg.JAN / 2,
+    summerDay: t.JUL + rg.JUL / 2, summerNight: t.JUL - rg.JUL / 2,
+    rainYear: Math.round(mm.reduce((x, y) => x + y, 0) / 10) * 10,
+    wettest: mm.indexOf(Math.max(...mm)),
   };
 }
 
-/** What the numbers mean for someone living there, said once, plainly. Nothing here is guessed. */
-function climateNotes(c: Climate, ru: boolean) {
-  const out: string[] = [];
-  if (c.janLow <= 0) out.push(ru ? "Зимой бывают настоящие морозы: нужна хорошая печь или отопление." : "Real winters: frost is common, so heating matters more than the view.");
-  else if (c.janLow >= 6) out.push(ru ? "Зимы мягкие, заморозки редки." : "Winters are mild and frost is rare.");
-  if (c.julHigh >= 32) out.push(ru ? "Лето жаркое: толстые каменные стены и тень здесь не роскошь." : "Hot summers: thick stone walls and shade earn their keep.");
-  else if (c.julHigh <= 26) out.push(ru ? "Лето прохладное, жары почти нет." : "Summers stay comfortable, with little scorching heat.");
-  if (c.rainYear < 550) out.push(ru ? "Сухой климат: полив сада придётся планировать." : "A dry climate, so plan for watering the garden.");
-  else if (c.rainYear > 1100) out.push(ru ? "Дождливо: проверьте крышу и сырость стен." : "A wet place: check the roof and the damp.");
-  return out.slice(0, 2);
+/** One plain line on what the climate means for living there. Only from the numbers. */
+function climateNote(c: Climate, ru: boolean) {
+  if (c.winterNight <= -1) return ru ? "Настоящая зима: ночью мороз, отопление важнее вида из окна." : "Real winters: frosty nights, so heating matters more than the view.";
+  if (c.summerDay >= 32) return ru ? "Жаркое лето: толстые каменные стены и тень здесь не роскошь." : "Hot summers: thick stone walls and shade earn their keep.";
+  if (c.winterNight >= 6) return ru ? "Мягкая зима, заморозков почти не бывает." : "Mild winters, frost is rare.";
+  if (c.rainYear > 1100) return ru ? "Дождливо: проверьте крышу и сырость стен." : "A wet place: check the roof and the damp.";
+  if (c.rainYear < 550) return ru ? "Сухо: полив сада придётся планировать." : "Dry: plan for watering the garden.";
+  return null;
 }
 
-const ASK_EN = ["Is there fibre internet at this address?", "What are the yearly taxes and rubbish fees here?", "Is the road open and ploughed in winter?", "What is the seismic and flood risk here?"];
-const ASK_RU = ["Есть ли здесь оптоволоконный интернет?", "Какие здесь ежегодные налоги и сбор за мусор?", "Расчищают ли дорогу зимой?", "Какая здесь сейсмическая и паводковая опасность?"];
+/** Two questions worth asking about this exact place, from what we know about it. */
+function questionsFor(o: { cityKm: number; shore: { name: string; km: number } | undefined; gem: { name: string; km: number } | undefined; climate: Climate | undefined }, ru: boolean) {
+  const q: string[] = [];
+  if (o.climate && o.climate.winterNight <= 0) q.push(ru ? "Сколько стоит отопление здесь зимой?" : "What does heating cost here in winter?");
+  if (o.cityKm > 30) q.push(ru ? "Где ближайший врач и больница?" : "Where are the nearest doctor and hospital?");
+  if (o.shore && o.shore.km < 25) q.push(ru ? `Насколько людно в ${o.shore.name} летом?` : `How busy does ${o.shore.name} get in summer?`);
+  else if (o.gem && o.gem.km < 30) q.push(ru ? `Стоит ли сдавать дом туристам рядом с ${o.gem.name}?` : `Could I rent it to visitors, with ${o.gem.name} nearby?`);
+  q.push(ru ? "Есть ли здесь быстрый интернет?" : "Is there fast internet here?");
+  q.push(ru ? "Какие здесь налоги и сбор за мусор?" : "What are the yearly taxes and rubbish fees?");
+  return q.slice(0, 3);
+}
 
 type Near = { km: number; name?: string } | null;
 type Brief = { brief: string | null; facts: Partial<Record<"beach" | "shop" | "bakery" | "station" | "hospital" | "pharmacy" | "school", Near>> & { eating?: number }; sources: { title: string; url: string | null }[] };
@@ -213,72 +222,64 @@ export function Nearby({ lat, lng, comune, listingId }: { lat: number; lng: numb
 
       <div className="glass rounded-2xl p-5">
         <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">{ru ? "Повседневная жизнь" : "Day to day"}</p>
-        <ul className="space-y-3">
-          {climate.data && (
+        {(() => {
+          const c = climate.data;
+          const shore = nearestGems(lat, lng, 60, 1, ["coast", "lake"])[0];
+          const gems = nearestGems(lat, lng, 45, 2, ["history", "wine", "mountains"]);
+          const note = c ? climateNote(c, ru) : null;
+          const r = (n: number) => `${Math.round(n)}°`;
+          const asks = questionsFor({ cityKm: cities[0]?.km ?? 0, shore, gem: gems[0], climate: c }, ru);
+          return (
             <>
-              <Row icon={<Snowflake className="h-4 w-4" />}>
-                {ru ? <>Январь: от <strong>{Math.round(climate.data.janLow)}°</strong> до <strong>{Math.round(climate.data.janHigh)}°</strong></> : <>January runs <strong>{Math.round(climate.data.janLow)}°</strong> to <strong>{Math.round(climate.data.janHigh)}°C</strong></>}
-              </Row>
-              <Row icon={<Sun className="h-4 w-4" />}>
-                {ru ? <>Июль: от <strong>{Math.round(climate.data.julLow)}°</strong> до <strong>{Math.round(climate.data.julHigh)}°</strong></> : <>July runs <strong>{Math.round(climate.data.julLow)}°</strong> to <strong>{Math.round(climate.data.julHigh)}°C</strong></>}
-              </Row>
-              <Row icon={<CloudRain className="h-4 w-4" />}>
-                {ru
-                  ? <>Около <strong>{climate.data.rainYear} мм</strong> осадков в год, больше всего в {MONTHS_RU[Number(climate.data.wettest)]}е, меньше всего в {MONTHS_RU[Number(climate.data.driest)]}е</>
-                  : <>About <strong>{climate.data.rainYear} mm</strong> of rain a year, wettest in {MONTHS_EN[Number(climate.data.wettest)]}, driest in {MONTHS_EN[Number(climate.data.driest)]}</>}
-              </Row>
-            </>
-          )}
-          {(() => {
-            const shores = nearestGems(lat, lng, 60, 1, ["coast", "lake"])[0];
-            const other = nearestGems(lat, lng, 45, 2, ["history", "wine", "mountains"]);
-            return (
-              <>
-                <Row icon={<Umbrella className="h-4 w-4" />}>
-                  {shores
-                    ? ru ? <>Ближайшее море или озеро: <strong>{shores.name}</strong>, {Math.round(shores.km)} км</> : <>Nearest sea or lake: <strong>{shores.name}</strong>, {Math.round(shores.km)} km</>
-                    : o?.beach
-                      ? ru ? <>Ближайший пляж: <strong>{kmText(o.beach.km, true)}</strong></> : <>Nearest beach <strong>{kmText(o.beach.km)}</strong></>
-                      : ru ? "До моря и озёр далеко: это жизнь вдали от пляжей" : "Far from the sea and lakes: this is inland life"}
-                </Row>
-                {other.map((g) => (
-                  <Row key={g.name} icon={<Compass className="h-4 w-4" />}>
-                    <strong>{g.name}</strong> <span className="text-muted-foreground">({Math.round(g.km)} {ru ? "км" : "km"})</span>
+              <ul className="space-y-3">
+                {c && (
+                  <Row icon={<Sun className="h-4 w-4" />}>
+                    {ru
+                      ? <>Зимой днём <strong>{r(c.winterDay)}</strong>, ночью {r(c.winterNight)}. Летом днём <strong>{r(c.summerDay)}</strong>, ночью {r(c.summerNight)}.</>
+                      : <>Winter days <strong>{r(c.winterDay)}</strong>, nights {r(c.winterNight)}. Summer days <strong>{r(c.summerDay)}</strong>, nights {r(c.summerNight)}.</>}
                   </Row>
-                ))}
-              </>
-            );
-          })()}
-          {o && o.eating > 0 && (
-            <Row icon={<Coffee className="h-4 w-4" />}>
-              {ru ? <>Ресторанов, кафе и баров в радиусе 3 км: <strong>{o.eating}</strong></> : <><strong>{o.eating}</strong> restaurants, cafes and bars within 3 km</>}
-            </Row>
-          )}
-          {o?.shop && (
-            <Row icon={<ShoppingBasket className="h-4 w-4" />}>
-              {ru ? <>Продуктовый магазин: <strong>{kmText(o.shop.km, true)}</strong></> : <>Grocery shop <strong>{kmText(o.shop.km)}</strong> away</>}
-              {o.bakery && o.bakery.km < 5 ? <>, {ru ? "пекарня" : "bakery"} {kmText(o.bakery.km, ru)}</> : null}
-            </Row>
-          )}
-          {o?.station && (
-            <Row icon={<TrainFront className="h-4 w-4" />}>
-              {ru ? <>Железнодорожная станция: <strong>{kmText(o.station.km, true)}</strong></> : <>Train station <strong>{kmText(o.station.km)}</strong></>}
-            </Row>
-          )}
-        </ul>
-        {climate.data && climateNotes(climate.data, ru).map((t) => (
-          <p key={t} className="mt-3 text-[15px] font-light leading-relaxed text-foreground/80">{t}</p>
-        ))}
-        <div className="mt-4 border-t pt-4">
-          <p className="mb-2 flex items-center gap-1.5 font-display text-[17px] italic text-azure"><MessageCircle className="h-4 w-4" />{ru ? "Argos выяснит для вас" : "Argos can find out"}</p>
-          <div className="flex flex-wrap gap-2">
-            {(ru ? ASK_RU : ASK_EN).map((q) => (
-              <button key={q} type="button" onClick={() => openArgos({ text: q })}
-                className="rounded-full border bg-card px-3 py-1 text-left text-sm hover:border-brand/40 hover:text-brand">{q}</button>
-            ))}
-          </div>
-        </div>
-        <p className="mt-3 text-xs text-muted-foreground">{ru ? "Климат: NASA POWER, среднее за 30 лет. Расстояния по прямой." : "Climate: NASA POWER, 30-year average. Straight-line distances."}</p>
+                )}
+                {c && (
+                  <Row icon={<CloudRain className="h-4 w-4" />}>
+                    {ru ? <><strong>{c.rainYear} мм</strong> осадков в год, больше всего в {MONTHS_RU[c.wettest]}</> : <><strong>{c.rainYear} mm</strong> of rain a year, most in {MONTHS_EN[c.wettest]}</>}
+                  </Row>
+                )}
+                <Row icon={<Umbrella className="h-4 w-4" />}>
+                  {shore
+                    ? <>{ru ? "Море или озеро: " : "Sea or lake: "}<strong>{shore.name}</strong>, {Math.round(shore.km)} {ru ? "км" : "km"}</>
+                    : o?.beach ? <>{ru ? "Пляж: " : "Beach "}<strong>{kmText(o.beach.km, ru)}</strong></>
+                    : ru ? "Вдали от моря и озёр" : "Inland, far from sea and lakes"}
+                </Row>
+                {gems.length > 0 && (
+                  <Row icon={<Compass className="h-4 w-4" />}>
+                    {gems.map((g, i) => <span key={g.name}>{i > 0 && " · "}<strong>{g.name}</strong> {Math.round(g.km)} {ru ? "км" : "km"}</span>)}
+                  </Row>
+                )}
+                {o && (o.eating > 0 || o.shop || o.station) && (
+                  <Row icon={o.eating > 0 ? <Coffee className="h-4 w-4" /> : o.shop ? <ShoppingBasket className="h-4 w-4" /> : <TrainFront className="h-4 w-4" />}>
+                    {[
+                      o.eating > 0 ? (ru ? `${o.eating} кафе и ресторанов в 3 км` : `${o.eating} cafes and restaurants within 3 km`) : null,
+                      o.shop ? (ru ? `магазин ${kmText(o.shop.km, true)}` : `shop ${kmText(o.shop.km)}`) : null,
+                      o.station ? (ru ? `станция ${kmText(o.station.km, true)}` : `station ${kmText(o.station.km)}`) : null,
+                    ].filter(Boolean).join(" · ")}
+                  </Row>
+                )}
+              </ul>
+              {note && <p className="mt-3 text-[15px] font-light leading-relaxed text-foreground/80">{note}</p>}
+              <div className="mt-4 border-t pt-4">
+                <p className="mb-2 font-display text-[17px] italic text-azure">{ru ? "Спросите Argos о жизни здесь" : "Ask Argos about life here"}</p>
+                <div className="mb-3 flex flex-wrap gap-1.5">
+                  {asks.map((q) => (
+                    <button key={q} type="button" onClick={() => openArgos({ text: q })}
+                      className="rounded-full border bg-card px-2.5 py-1 text-left text-[13px] hover:border-brand/40 hover:text-brand">{q}</button>
+                  ))}
+                </div>
+                <ArgosComposer tone="light" lang={speechLang(ru ? "ru" : "en")} placeholder={ru ? "Школы, врачи, соседи, зима..." : "Schools, doctors, neighbours, winters..."} onSubmit={(t) => openArgos({ text: t })} />
+              </div>
+              <p className="mt-3 text-xs text-muted-foreground">{ru ? "Климат: NASA POWER, среднее за 30 лет. Расстояния по прямой." : "Climate: NASA POWER, 30-year average. Straight-line distances."}</p>
+            </>
+          );
+        })()}
       </div>
 
       {((wiki.data?.intro && !brief.data?.brief) || (wiki.data?.sights.length ?? 0) > 0) && (

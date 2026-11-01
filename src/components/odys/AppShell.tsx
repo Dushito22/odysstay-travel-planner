@@ -45,7 +45,7 @@ export function AppShell() {
   return (
     <div className="min-h-screen md:flex">
       <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r bg-sidebar px-3 py-6 md:flex">
-        <Link to="/" className="px-3" aria-label="odysstay home">
+        <Link to="/discover" className="px-3" aria-label="odysstay home">
           <Wordmark size="md" />
         </Link>
         <Link to="/argos" search={{ q: "", voice: false }}

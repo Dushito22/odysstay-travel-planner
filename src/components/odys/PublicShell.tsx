@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useSignedIn } from "@/lib/signed-in";
 import { useT } from "@/lib/tr";
 import { LangToggle } from "./LangToggle";
 import { LEGAL_LINE, Wordmark } from "./primitives";
@@ -43,11 +44,12 @@ export function PublicFooter() {
 /** Header and footer for public pages (pricing, legal). The landing page has its own hero header. */
 export function PublicShell({ children }: { children: ReactNode }) {
   const t = useT();
+  const signedIn = useSignedIn();
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
-          <Link to="/" aria-label="Odysstay home">
+          <Link to={signedIn ? "/discover" : "/"} aria-label="Odysstay home">
             <Wordmark size="sm" />
           </Link>
           <nav className="flex items-center gap-3">

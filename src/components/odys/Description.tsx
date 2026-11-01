@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 import { ExternalLink, Languages, Lightbulb } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { translateUrl } from "@/components/odys/primitives";
@@ -15,9 +14,8 @@ const LANGS = [{ code: "en", label: "English" }, { code: "ru", label: "Русс�
 type Lang = (typeof LANGS)[number]["code"];
 
 /** The official Italian description, its translation and our plain advice. */
-export function Description({ listingId, italian, signedIn }: { listingId: string; italian: string; signedIn: boolean }) {
+export function Description({ listingId, italian }: { listingId: string; italian: string; signedIn?: boolean }) {
   const qc = useQueryClient();
-  const navigate = useNavigate();
   const lang = useLang();
   const [showItalian, setShowItalian] = useState(false);
   const cached = useQuery({
@@ -34,6 +32,13 @@ export function Description({ listingId, italian, signedIn }: { listingId: strin
     onSuccess: () => qc.invalidateQueries({ queryKey: ["translations", listingId] }),
     onError: (e) => toast.error(e instanceof Error ? e.message : "Translation failed"),
   });
+  // Translate as soon as the page opens in a language that has no translation yet. Once per listing and language.
+  const tried = useRef<string | null>(null);
+  useEffect(() => {
+    if (!cached.isSuccess || tr || make.isPending || tried.current === lang || !italian.trim()) return;
+    tried.current = lang;
+    make.mutate();
+  }, [cached.isSuccess, tr, lang, italian]); // eslint-disable-line react-hooks/exhaustive-deps
   const advice = Array.isArray(tr?.advice) ? (tr!.advice as unknown[]).filter((a): a is string => typeof a === "string") : [];
 
   function pick(l: Lang) {
@@ -75,11 +80,13 @@ export function Description({ listingId, italian, signedIn }: { listingId: strin
       ) : (
         <div>
           <p className="text-muted-foreground">
-            {lang === "ru" ? "Официальное описание опубликовано на итальянском." : "The official description is in Italian."}
+            {make.isPending
+              ? lang === "ru" ? "Argos переводит описание и отмечает, на что обратить внимание..." : "Argos is translating the description and noting what to watch for..."
+              : lang === "ru" ? "Официальное описание опубликовано на итальянском." : "The official description is in Italian."}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Button size="sm" disabled={make.isPending}
-              onClick={() => (signedIn ? make.mutate() : navigate({ to: "/login", search: { redirect: window.location.pathname } }))}>
+              onClick={() => make.mutate()}>
               {make.isPending ? (lang === "ru" ? "Переводим..." : "Translating...") : lang === "ru" ? "Перевести с советами" : "Translate with our advice"}
             </Button>
             <a href={translateUrl(italian)} target="_blank" rel="noreferrer"
