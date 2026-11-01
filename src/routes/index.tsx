@@ -10,6 +10,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { LangToggle } from "@/components/odys/LangToggle";
 import { useLang, type Lang } from "@/lib/i18n";
+import { useSignedIn } from "@/lib/signed-in";
 import { exampleFactQuery, sendMagicLink, sourceCountsQuery, topListingsQuery } from "@/lib/public";
 import { cn } from "@/lib/utils";
 
@@ -247,9 +248,15 @@ const useCopy = (): [Copy, Lang] => {
 
 function Index() {
   const lang = useLang();
+  const navigate = useNavigate();
+  const signedIn = useSignedIn();
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
+  // Signed in, home is your own search. The marketing page stays reachable at /?site.
+  useEffect(() => {
+    if (signedIn && !new URLSearchParams(window.location.search).has("site")) void navigate({ to: "/discover", replace: true });
+  }, [signedIn, navigate]);
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader />
@@ -298,6 +305,8 @@ function ArrowLink({ to, children, search, light = false }: { to: string; childr
 /** Fixed header: transparent over the video, frosted white once you scroll into the page. */
 function SiteHeader() {
   const [c] = useCopy();
+  const signedIn = useSignedIn();
+  const lang = useLang();
   const [solid, setSolid] = useState(false);
   useEffect(() => {
     const on = () => setSolid(window.scrollY > window.innerHeight - 90);
@@ -318,7 +327,7 @@ function SiteHeader() {
         </nav>
         <div className="flex items-center gap-5 justify-self-end">
           <LangToggle light={!solid} />
-          <PillLink to="/login" light={!solid}>{c.nav.signIn}</PillLink>
+          {signedIn ? <PillLink to="/discover" light={!solid}>{lang === "ru" ? "Мой поиск" : "My search"}</PillLink> : <PillLink to="/login" light={!solid}>{c.nav.signIn}</PillLink>}
         </div>
       </div>
     </header>

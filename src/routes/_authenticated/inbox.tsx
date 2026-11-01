@@ -7,7 +7,6 @@ import { PageHeader } from "@/components/odys/AppShell";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { inboxQuery, type InboxItem } from "@/lib/deal";
-import { useInboxRealtime } from "@/lib/use-deal";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/inbox")({
@@ -24,7 +23,6 @@ const KIND = {
 
 function InboxPage() {
   const q = useQuery(inboxQuery);
-  useInboxRealtime();
 
   return (
     <>
