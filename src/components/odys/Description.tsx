@@ -62,7 +62,12 @@ export function Description({ listingId, italian }: { listingId: string; italian
 
       {tr ? (
         <>
-          <p className="max-w-2xl text-lg leading-relaxed">{tr.translation}</p>
+          <div className="max-w-2xl space-y-3 text-[15px] font-light leading-relaxed text-foreground/85">
+            {tr.translation.split(/\n+/).map((line, i) => {
+              const item = line.match(/^\s*[-*•]\s+(.*)$/);
+              return item ? <p key={i} className="flex gap-2 pl-1"><span className="text-azure">·</span><span>{item[1]}</span></p> : <p key={i}>{line}</p>;
+            })}
+          </div>
           {advice.length > 0 && (
             <div className="mt-5 rounded-2xl bg-brand-soft/70 p-4">
               <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-brand">

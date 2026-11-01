@@ -24,7 +24,7 @@ export function Chip({ active, onClick, children }: { active: boolean; onClick: 
 
 export function IntentPicker({ value, onChange }: { value: string | null; onChange: (v: string) => void }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="flex flex-wrap gap-2">
       {INTENTS.map((i) => (
         <button
           key={i.value}
@@ -32,8 +32,8 @@ export function IntentPicker({ value, onChange }: { value: string | null; onChan
           aria-pressed={value === i.value}
           onClick={() => onChange(i.value)}
           className={cn(
-            "rounded-2xl border bg-card p-6 text-left text-lg font-medium tracking-tight transition-all hover:-translate-y-0.5 hover:shadow-hover",
-            value === i.value && "border-foreground ring-1 ring-foreground",
+            "rounded-full border bg-card px-4 py-1.5 text-[15px] font-light transition-colors hover:border-foreground/40",
+            value === i.value && "border-foreground bg-foreground text-background",
           )}
         >
           {i.label}

@@ -4,12 +4,12 @@
 import { adminClient, corsHeaders, HttpError, serve } from "../_shared/runtime.ts";
 
 const num = (name: string, d: number) => Number(Deno.env.get(name) ?? "") || d;
-/** Signed out: about 30 seconds of Argos speaking a day. */
-const ANON_DAY = num("VOICE_ANON_DAY", 450);
-const FREE_DAY = num("VOICE_FREE_DAY", 1500);
-const PRO_DAY = num("VOICE_PRO_DAY", 12000);
-/** Everyone together, per day. ElevenLabs Flash costs 0.5 credit a character, so 2,000 a day fits 30,000 credits a month. */
-const ALL_DAY = num("VOICE_ALL_DAY", 2000);
+/** Signed out: about a minute and a half of Argos speaking a day. Signed in: about five minutes. */
+const ANON_DAY = num("VOICE_ANON_DAY", 1300);
+const FREE_DAY = num("VOICE_FREE_DAY", 4500);
+const PRO_DAY = num("VOICE_PRO_DAY", 15000);
+/** Everyone together, per day. At 0.5 credit a character, 8,000 a day is about 120,000 credits a month at most. */
+const ALL_DAY = num("VOICE_ALL_DAY", 8000);
 /** One voice per language, so Russian sounds Russian and Italian sounds Italian. Each falls back to
  * ELEVENLABS_VOICE_ID, then to George (warm, calm, multilingual). */
 const GEORGE = "JBFqnCBsd6RMkjVDRZzb";
