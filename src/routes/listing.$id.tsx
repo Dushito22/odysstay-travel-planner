@@ -710,8 +710,8 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
             <div className="mt-4 rounded-[12px] bg-azure-soft/50 p-4 text-[15px] font-light leading-relaxed">
               <span className="font-display italic text-azure">Argos · </span>
               {r
-                ? "Это примерные цифры, не смета. Когда дойдёт до дела, я соберу настоящие предложения от местных строителей, сравню их и буду торговаться за лучшую цену для вас. И за сам дом тоже."
-                : "These are approximate, not quotes. When it's real, I'll get quotes from local builders, compare them and push for the best price on your behalf. Same for the house itself."}
+                ? "Это примерный расчёт: цена за м², умноженная на всю площадь, поэтому считайте его потолком. Многим домам нужно гораздо меньше, жилому порой хватает покраски и пары мелочей. Перед решением я проверю реальное состояние по фото, видеозвонку или через местного геометра, соберу предложения строителей и буду торговаться за лучшую цену, и за ремонт, и за сам дом."
+                : "This is a rough guide: a price per m² times the whole surface, so read it as a ceiling. Plenty of houses need far less, and a habitable one can need little more than paint and a few fixes. Before you commit I'll check the real state from photos, a video call or a local surveyor, get quotes from builders and push for the best price, on the works and on the house itself."}
             </div>
           </>
         )}

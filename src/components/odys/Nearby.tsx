@@ -41,7 +41,7 @@ async function fetchOsm(lat: number, lng: number) {
 }
 
 type Near = { km: number; name?: string } | null;
-type Brief = { brief: string; facts: Partial<Record<"beach" | "shop" | "bakery" | "station" | "hospital" | "pharmacy" | "school", Near>> & { eating?: number }; sources: { title: string; url: string | null }[] };
+type Brief = { brief: string | null; facts: Partial<Record<"beach" | "shop" | "bakery" | "station" | "hospital" | "pharmacy" | "school", Near>> & { eating?: number }; sources: { title: string; url: string | null }[] };
 
 type WikiPlace = { pageid: number; title: string; dist: number };
 
@@ -125,7 +125,7 @@ export function Nearby({ lat, lng, comune, listingId }: { lat: number; lng: numb
 
   return (
     <div className="mt-6 grid gap-4 md:grid-cols-2">
-      {(brief.isLoading || brief.data) && (
+      {(brief.isLoading || brief.data?.brief) && (
         <div className="grain rounded-2xl bg-gradient-to-b from-[oklch(0.93_0.02_240)] to-[oklch(0.965_0.01_235)] p-6 md:col-span-2">
           <p className="font-display text-[19px] italic text-azure">{ru ? "Argos о месте" : "Argos on the area"}</p>
           {brief.isLoading ? (
@@ -167,7 +167,7 @@ export function Nearby({ lat, lng, comune, listingId }: { lat: number; lng: numb
 
       <div className="glass rounded-2xl p-5">
         <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">{ru ? "Повседневная жизнь" : "Day to day"}</p>
-        {osm.isLoading && !o ? (
+        {(osm.isLoading || brief.isLoading) && !o ? (
           <div className="space-y-3">{[0, 1, 2, 3].map((i) => <div key={i} className="h-6 animate-pulse rounded bg-muted" />)}</div>
         ) : o ? (
           <ul className="space-y-3">
@@ -191,9 +191,9 @@ export function Nearby({ lat, lng, comune, listingId }: { lat: number; lng: numb
         <p className="mt-3 text-xs text-muted-foreground">{ru ? "Данные OpenStreetMap. Расстояния по прямой." : "From OpenStreetMap. Straight-line distances."}</p>
       </div>
 
-      {((wiki.data?.intro && !brief.data) || (wiki.data?.sights.length ?? 0) > 0) && (
+      {((wiki.data?.intro && !brief.data?.brief) || (wiki.data?.sights.length ?? 0) > 0) && (
         <div className="glass rounded-2xl p-5 md:col-span-2">
-          {wiki.data?.intro && !brief.data && (
+          {wiki.data?.intro && !brief.data?.brief && (
             <>
               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">{ru ? "О городе: " : "About "}{wiki.data.intro.title}</p>
               <p className="leading-relaxed">{wiki.data.intro.extract}</p>

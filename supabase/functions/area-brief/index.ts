@@ -2,7 +2,7 @@
 // Wikipedia and OpenStreetMap facts fetched here. Written once per town and language, cached for everyone.
 // Also returns the everyday-life facts (beach, shops, station), so the page has them when the browser's
 // own OpenStreetMap request fails.
-import { adminClient, callClaude, HttpError, json, serve, uuid } from "../_shared/runtime.ts";
+import { adminClient, HttpError, json, serve, uuid } from "../_shared/runtime.ts";
 
 const NEW_PER_DAY = 400;
 const UA = { "User-Agent": "Odysstay/1.0 (hello@odysstay.com)" };
@@ -24,11 +24,19 @@ async function osmFacts(lat: number, lng: number) {
     nwr["railway"="station"](around:25000,${lat},${lng});
     nwr["amenity"="hospital"](around:30000,${lat},${lng});
   );out center 400;`;
-  for (const host of ["https://overpass-api.de", "https://overpass.kumi.systems", "https://overpass.private.coffee"]) {
-    try {
-      const r = await fetch(`${host}/api/interpreter`, { method: "POST", headers: UA, body: new URLSearchParams({ data: q }), signal: AbortSignal.timeout(20000) });
-      if (!r.ok) continue;
-      const els: Osm[] = (await r.json()).elements ?? [];
+  const one = async (host: string) => {
+    const r = await fetch(`${host}/api/interpreter`, { method: "POST", headers: UA, body: new URLSearchParams({ data: q }), signal: AbortSignal.timeout(14000) });
+    if (!r.ok) throw new Error(`${host} ${r.status}`);
+    return (await r.json()).elements as Osm[];
+  };
+  // All mirrors at once; the first good answer wins, so a slow or rate-limited mirror costs nothing.
+  let els: Osm[];
+  try {
+    els = await Promise.any(["https://overpass-api.de", "https://overpass.kumi.systems", "https://overpass.private.coffee"].map(one));
+  } catch {
+    return null;
+  }
+  {
       const pos = (e: Osm) => (e.lat != null && e.lon != null ? { lat: e.lat, lon: e.lon } : e.center ?? null);
       const near = (pred: (t: Record<string, string>) => boolean) => {
         let best: { km: number; name?: string } | null = null;
@@ -52,7 +60,6 @@ async function osmFacts(lat: number, lng: number) {
         school: near((t) => t["amenity"] === "school"),
         eating: count((t) => /^(restaurant|cafe|bar|pub|ice_cream)$/.test(t["amenity"] ?? ""), 3),
       };
-    } catch { /* try the next mirror */ }
   }
   return null;
 }
@@ -108,12 +115,23 @@ serve(async (_req, body) => {
   const sources = [townEn, townIt, reg].filter((x): x is NonNullable<typeof x> => !!x);
   if (!sources.length && !facts) throw new HttpError(404, "Not enough to say about this town yet");
 
-  const text = await callClaude(SYSTEM, [{
-    role: "user",
-    content: `Language: ${lang === "ru" ? "Russian" : "English"}\nTown: ${comune} (${l.province ?? ""}), region ${region}\n\n<SOURCES>\n${sources.map((s) => `${s.title}: ${s.extract}`).join("\n\n")}\n</SOURCES>\n\n<FACTS>\n${JSON.stringify(facts ?? {})}\n</FACTS>`,
-  }], 600);
-  const brief = text.replace(/\s*—\s*/g, ", ").trim();
-  if (brief.length < 40) throw new HttpError(502, "The brief came back empty");
+  const content = `Language: ${lang === "ru" ? "Russian" : "English"}\nTown: ${comune} (${l.province ?? ""}), region ${region}\n\n<SOURCES>\n${sources.map((s) => `${s.title}: ${s.extract}`).join("\n\n") || "(none)"}\n</SOURCES>\n\n<FACTS>\n${JSON.stringify(facts ?? {})}\n</FACTS>\n\nWrite the brief now.`;
+  let brief = "", why = "";
+  for (let i = 0; i < 2 && brief.length < 40; i++) {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": Deno.env.get("ANTHROPIC_API_KEY") ?? "", "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({ model: Deno.env.get("ANTHROPIC_MODEL") || "claude-haiku-5-5", max_tokens: 700, system: SYSTEM, messages: [{ role: "user", content }] }),
+    });
+    const j = await r.json().catch(() => ({}));
+    brief = ((j.content ?? []) as { type: string; text?: string }[]).filter((c) => c.type === "text").map((c) => c.text ?? "").join("").replace(/\s*—\s*/g, ", ").trim();
+    why = `${r.status} ${j.stop_reason ?? ""} ${JSON.stringify(j.error ?? "").slice(0, 160)}`;
+  }
+  // The everyday facts are useful on their own: return them even when the paragraph didn't come.
+  if (brief.length < 40) {
+    console.error("area-brief empty", why);
+    return json({ brief: null, facts: facts ?? {}, sources: [], why });
+  }
   const src = sources.map((s) => ({ title: s.title, url: s.url ?? null }));
   await admin.from("area_briefs").upsert({ comune, region, lang, brief, facts: facts ?? {}, sources: src });
   return json({ brief, facts: facts ?? {}, sources: src });
