@@ -17,6 +17,9 @@ SOURCE = "Cronoshare, renovation prices per m² in Italy (2026)"
 SOURCE_URL = "https://www.cronoshare.it/quanto-costa/ristrutturare-casa"
 VAT = 0.10
 SCENARIOS = {
+    # A house described as habitable: paint, small repairs, a deep clean, maybe one appliance. Per-job prices
+    # on the same page (painting 8-15 €/m² of wall, about 3x floor area; small plumbing and electrical fixes).
+    "refresh": (25, 70, "Move-in touches: paint, small repairs, a deep clean"),
     "light": (150, 280, "Light: paint, floors over the old ones, new fittings, some electrics"),
     "standard": (300, 500, "Partial: bathroom and kitchen, most systems, some windows"),
     "full": (600, 900, "Complete: floors, all systems, finishes and windows"),
@@ -55,12 +58,13 @@ def run(db: Supa, log=print) -> int:
                                   "is_demo": "eq.false", "status": "not.in.(closed,withdrawn)"})
     rows = [r for r in rows if r.get("property_type") in ESTIMATE_TYPES
             and float(r["surface_sqm"]) <= MAX_FLOOR.get(r["property_type"], 3000)]
-    have = {r["listing_id"] for r in db.select("cost_estimates", {"select": "listing_id", "user_id": "is.null"})}
-    todo = [r for r in rows if r["id"] not in have]
-    out = []
-    for r in todo:
+    have = {(r["listing_id"], r["scenario"]) for r in db.select("cost_estimates", {"select": "listing_id,scenario", "user_id": "is.null"})}
+    out, todo = [], set()
+    for r in rows:
         for e in estimate(float(r["surface_sqm"]), r.get("property_type")):
-            out.append({"listing_id": r["id"], "user_id": None, **e})
+            if (r["id"], e["scenario"]) not in have:
+                out.append({"listing_id": r["id"], "user_id": None, **e})
+                todo.add(r["id"])
     for i in range(0, len(out), 500):
         db.insert("cost_estimates", out[i : i + 500], returning=False)
     log(f"Renovation estimates added for {len(todo)} listings")

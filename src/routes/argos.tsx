@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
-import { ArrowLeft, Volume2, VolumeX } from "lucide-react";
+import { ArrowLeft, MessageCircle, PanelLeftClose, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
@@ -58,6 +58,7 @@ function ArgosPage() {
   const [busy, setBusy] = useState(false);
   const [aloud, setAloud] = useState(voice);
   const started = useRef(false);
+  const [chatOpen, setChatOpen] = useState(true);
 
   // Coming back from a listing restores the conversation and results instead of asking again.
   useEffect(() => {
@@ -114,7 +115,7 @@ function ArgosPage() {
     }
     setMsgs((m) => [...m, { role: "argos", text: reply }]);
     setBusy(false);
-    if (speakIt && canSpeak()) speak(reply, speechLang(l));
+    if (speakIt) void speak(reply, speechLang(l));
   }
 
   useEffect(() => {
@@ -127,8 +128,14 @@ function ArgosPage() {
 
   const shown: Msg[] = [{ role: "argos", text: t.hello }, ...msgs];
   return (
-    <div className="grid min-h-[100svh] bg-background lg:h-[100svh] lg:grid-cols-[minmax(360px,420px)_1fr]">
-      <aside className="flex flex-col border-b bg-card lg:h-[100svh] lg:border-b-0 lg:border-r">
+    <div className={cn("grid min-h-[100svh] bg-background lg:h-[100svh]", chatOpen && "lg:grid-cols-[minmax(360px,420px)_1fr]")}>
+      {!chatOpen && (
+        <button type="button" onClick={() => setChatOpen(true)}
+          className="fixed bottom-6 left-6 z-40 flex h-12 items-center gap-2 rounded-full bg-azure px-5 text-white shadow-[0_12px_32px_-10px_oklch(0.55_0.15_245/0.7)]">
+          <MessageCircle className="h-4 w-4" /> {lang === "ru" ? "Чат с Argos" : "Chat with Argos"}
+        </button>
+      )}
+      <aside className={cn("flex flex-col border-b bg-card lg:h-[100svh] lg:border-b-0 lg:border-r", !chatOpen && "hidden")}>
         <header className="flex items-center justify-between px-5 py-4">
           <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> <Wordmark size="sm" />
@@ -142,6 +149,10 @@ function ArgosPage() {
                 </span>
               ))}
             </div>
+            <button type="button" onClick={() => setChatOpen(false)} aria-label={lang === "ru" ? "Скрыть чат" : "Hide chat"}
+              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground">
+              <PanelLeftClose className="h-4 w-4" />
+            </button>
             {canSpeak() && (
               <button type="button" onClick={() => { if (aloud) stopSpeaking(); setAloud(!aloud); }} aria-pressed={aloud}
                 className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground">

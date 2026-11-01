@@ -23,3 +23,9 @@ verify_jwt = false
 
 [functions.translate-ui]
 verify_jwt = false
+
+[functions.argos-voice]
+verify_jwt = false
+
+[functions.area-brief]
+verify_jwt = false

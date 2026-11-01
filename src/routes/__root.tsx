@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  ClientOnly,
   Outlet,
   Link,
   createRootRouteWithContext,
@@ -11,6 +12,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 import { startAutoTranslate, stopAutoTranslate } from "@/lib/autotranslate";
 import { rememberList } from "@/lib/last-list";
+import { ArgosDock } from "@/components/odys/ArgosDock";
 import { useLang } from "@/lib/i18n";
 
 import appCss from "../styles.css?url";
@@ -173,6 +175,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
+      <ClientOnly fallback={null}><ArgosDock /></ClientOnly>
       <Toaster />
     </QueryClientProvider>
   );

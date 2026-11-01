@@ -1,9 +1,10 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { Phone } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { AgentChat } from "@/components/odys/AgentChat";
+import { openArgos } from "@/components/odys/ArgosDock";
 import { ArgosComposer } from "@/components/odys/ArgosComposer";
 import { formatEur } from "@/components/odys/primitives";
 import { Button } from "@/components/ui/button";
@@ -91,43 +92,35 @@ export function ArgosHandleButton({ l, userId, className }: { l: FeedRow; userId
   );
 }
 
-/** The listing's "ask Argos" box: suggested questions and a composer, opening the listing chat. */
-export function AskArgos({ l, userId, className }: { l: FeedRow; userId: string | null; className?: string }) {
+/** The listing's "ask Argos" box: suggested questions, a composer and a call button. All open the Argos dock,
+ * which knows which house is on screen. No sign-in needed to ask. */
+export function AskArgos({ className }: { l: FeedRow; userId: string | null; className?: string }) {
   const lang = useLang();
   const r = lang === "ru";
-  const navigate = useNavigate();
-  const deal = useDeal(l.id!, userId);
-  const [ask, setAsk] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
-  function start(q: string) {
-    if (!userId) { navigate({ to: "/login", search: { redirect: `/listing/${l.id}` } }); return; }
-    setAsk(q);
-    setOpen(true);
-  }
   return (
     <div className={cn("grain relative overflow-hidden rounded-[14px] bg-gradient-to-b from-[oklch(0.93_0.02_240)] to-[oklch(0.965_0.01_235)] p-5", className)}>
       <p className="font-display text-[22px] leading-tight">
         {r ? <>Спросите <em className="italic text-azure">Argos</em> об этом доме</> : <>Ask <em className="italic text-azure">Argos</em> about this house</>}
       </p>
       <p className="mt-1 text-[13px] font-light text-foreground/60">
-        {r ? "Он прочитал объявление и документы. Отвечает на вашем языке." : "He has read the notice and the papers. He answers in your language."}
+        {r ? "Он прочитал объявление. Пишите или звоните, отвечает на вашем языке." : "He has read the listing. Write or call, he answers in your language."}
       </p>
       <div className="mt-4 flex flex-wrap gap-1.5">
         {QUESTIONS[lang].map((q) => (
-          <button key={q} type="button" onClick={() => start(q)}
+          <button key={q} type="button" onClick={() => openArgos({ text: q })}
             className="rounded-full border border-foreground/12 bg-background/70 px-3 py-1.5 text-left text-[13px] font-light transition-colors hover:border-foreground/30 hover:bg-background">
             {q}
           </button>
         ))}
       </div>
       <div className="mt-4">
-        <ArgosComposer tone="light" lang={speechLang(lang)} onSubmit={(t) => start(t)}
+        <ArgosComposer tone="light" lang={speechLang(lang)} onSubmit={(t) => openArgos({ text: t })}
           placeholder={r ? "Спросите что угодно…" : "Ask anything…"} />
       </div>
-      {open && (
-        <AgentChat listingId={l.id!} dealId={deal?.id ?? null} open={open} {...(ask ? { initial: ask } : {})}
-          onOpenChange={(o) => { setOpen(o); if (!o) setAsk(null); }} />
-      )}
+      <button type="button" onClick={() => openArgos({ mode: "call" })}
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-azure py-2.5 text-[15px] text-white transition-opacity hover:opacity-90">
+        <Phone className="h-4 w-4" /> {r ? "Позвонить Argos про этот дом" : "Call Argos about this house"}
+      </button>
     </div>
   );
 }

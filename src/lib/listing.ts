@@ -57,7 +57,7 @@ export function pickEstimates(rows: CostEstimate[], userId: string | null) {
     const cur = out[r.scenario];
     if (!cur || (userId && r.user_id === userId && cur.user_id !== userId)) out[r.scenario] = r;
   }
-  return ["light", "standard", "full"].map((s) => out[s]).filter((x): x is CostEstimate => !!x);
+  return ["refresh", "light", "standard", "full"].map((s) => out[s]).filter((x): x is CostEstimate => !!x);
 }
 
 /** Conditional grant deduction: min(max_eur, pct% of renovation), per bound. Only when both are set. */
