@@ -18,7 +18,6 @@ alter table public.listings add column is_scrap boolean generated always as (
   ), false)
 ) stored;
 
-create index if not exists listings_photo_score_idx on public.listings (has_real_photo desc, score desc nulls last);
 create index if not exists listings_score_idx on public.listings (score desc nulls last);
 
 create view public.listing_feed with (security_invoker = on) as
@@ -41,5 +40,8 @@ grant select on public.listing_feed to anon, authenticated;
 analyze public.listings;
 
 -- The open feed in display order, so the first screen reads a few index entries instead of the whole table.
-create index if not exists listings_open_feed_idx on public.listings (has_real_photo desc, score desc nulls last)
+-- "nulls last" on both keys to match the app's order exactly, or Postgres can't use it for sorting.
+drop index if exists public.listings_photo_score_idx;
+drop index if exists public.listings_open_feed_idx;
+create index if not exists listings_open_feed_idx on public.listings (has_real_photo desc nulls last, score desc nulls last)
   where not is_scrap and not is_demo and status not in ('closed', 'withdrawn');
