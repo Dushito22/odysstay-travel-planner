@@ -1,0 +1,31 @@
+name: Auth domain
+
+# Points Supabase sign-in links and the SITE_URL secret at the live domain. Safe to re-run.
+
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: "Live domain, no scheme"
+        default: "odysstay.xyz"
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update
+        env:
+          T: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          D: ${{ github.event.inputs.domain }}
+        run: |
+          set +e
+          API=https://api.supabase.com/v1/projects/nryhvtxprjiylajolcef
+          curl -sS -H "Authorization: Bearer $T" $API/config/auth -o cur.json
+          OLD=$(jq -r '.uri_allow_list // ""' cur.json)
+          LIST=$(printf '%s,https://%s/**,https://www.%s/**,https://%s,https://www.%s' "$OLD" "$D" "$D" "$D" "$D" | tr ',' '\n' | awk 'NF && !s[$0]++' | paste -sd, -)
+          jq -n --arg site "https://$D" --arg list "$LIST" '{site_url:$site, uri_allow_list:$list}' > body.json
+          code=$(curl -sS -o out.json -w "%{http_code}" -X PATCH $API/config/auth -H "Authorization: Bearer $T" -H "Content-Type: application/json" --data @body.json)
+          echo "::notice title=Auth config::HTTP $code $(jq -c '{site_url,uri_allow_list}' out.json 2>/dev/null | head -c 600)"
+          code=$(curl -sS -o out2.json -w "%{http_code}" -X POST $API/secrets -H "Authorization: Bearer $T" -H "Content-Type: application/json" -d "[{\"name\":\"SITE_URL\",\"value\":\"https://$D\"}]")
+          echo "::notice title=SITE_URL secret::HTTP $code"
+          exit 0
