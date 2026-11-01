@@ -6,7 +6,7 @@ import { adminClient, corsHeaders } from "../_shared/runtime.ts";
 
 const BOT = Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "";
 const SECRET = Deno.env.get("TELEGRAM_WEBHOOK_SECRET") ?? "";
-const SITE = (Deno.env.get("SITE_URL") || "https://odysstay-trip-compass.lovable.app").replace(/\/$/, "");
+const SITE = (Deno.env.get("SITE_URL") || "https://odysstay.xyz").replace(/\/$/, "");
 const ELEVEN = Deno.env.get("ELEVENLABS_API_KEY") ?? "";
 const MODEL = Deno.env.get("ANTHROPIC_MODEL") || "claude-haiku-5-5";
 const PER_CHAT_DAY = 80;
