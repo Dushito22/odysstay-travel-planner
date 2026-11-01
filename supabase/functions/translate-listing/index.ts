@@ -9,7 +9,7 @@ const LANG_NAME: Record<string, string> = { en: "English", ru: "Russian" };
 const SYSTEM = `You translate Italian property listings (court and notary sales, agency ads) for a foreign buyer.
 Answer in exactly this format, nothing before or after:
 <translation>
-A faithful, natural translation of DESCRIPTION into the target language. Keep numbers, names and cadastral references exactly. Explain Italian legal or property terms in brackets the first time (for example "nuda proprietà" = bare ownership, someone else keeps the right to live there). Drop agency marketing filler only if it adds nothing factual.
+A faithful, natural translation of DESCRIPTION into the target language, laid out to be easy to read: short paragraphs separated by blank lines, and rooms or features as lines starting with "- ". Normal sentence case, never ALL CAPS. Keep numbers, names and cadastral references exactly. Explain at most three key Italian legal or property terms, in brackets the first time (for example "nuda proprietà" (bare ownership: someone else keeps the right to live there)). Leave out agency marketing filler, phone numbers, emails, office addresses and opening hours: the buyer contacts the seller through Odysstay.
 </translation>
 <advice>
 - 2 to 5 short, practical points in the target language that a buyer must notice in DESCRIPTION and FACTS: partial shares, rights of others, occupancy, what is and is not included, an auction disguised as a sale, photos that are only indicative, missing information to ask for. Only what the text supports. No general tips, no marketing.

@@ -270,9 +270,9 @@ function ListingPage() {
                 byKey["auction_date"] ? ["Sale date", <FactValue key="sd" fact={byKey["auction_date"]} sourceUrl={src} />] : null,
                 l.sale_type !== "sale" || byKey["deadline"] ? ["Offer deadline", <FactValue key="dl" fact={byKey["deadline"]} sourceUrl={src} />] : null,
               ].filter(Boolean) as [string, ReactNode][]).map(([label, node], i, all) => (
-                <div key={label} className={cn("bg-card p-5", fillClass(i, all.length))}>
-                  <dt className="text-xs font-normal uppercase tracking-wide text-muted-foreground">{t(label)}</dt>
-                  <dd className="mt-2 font-display text-[24px] tnum">{node}</dd>
+                <div key={label} className={cn("bg-card px-4 py-3", fillClass(i, all.length))}>
+                  <dt className="text-[11px] font-normal uppercase tracking-wide text-muted-foreground">{t(label)}</dt>
+                  <dd className="mt-1 font-display text-[18px] leading-snug tnum">{node}</dd>
                 </div>
               ))}
             </dl>

@@ -63,11 +63,25 @@ serve(async (req, body) => {
       }).slice(0, 6000);
     } catch { /* listing gone: answer without it */ }
   }
+  // Signed in: what the buyer told us on their profile, so Argos doesn't ask again.
+  let buyer = "";
+  const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+  if (token) {
+    try {
+      const { data: u } = await admin.auth.getUser(token);
+      if (u.user) {
+        const { data: p } = await admin.from("profiles").select("full_name, home_country, intent, budget_max_eur, renovation_budget_eur, preferred_regions, property_types")
+          .eq("id", u.user.id).maybeSingle();
+        if (p) buyer = JSON.stringify(p);
+      }
+    } catch { /* anonymous key, not a user */ }
+  }
   const mode = body["mode"] === "call" ? "call" : "chat";
   const language = typeof body["language"] === "string" ? String(body["language"]).slice(0, 20) : "";
   const last = msgs[msgs.length - 1]!;
   if (language) last.content = `(Reply in ${language}.)\n${last.content}`;
-  last.content = `${last.content}\n\nMODE: ${mode}\n<RESULTS>\n${context.slice(0, 4000)}\n</RESULTS>` + (listing ? `\n<LISTING>\n${listing}\n</LISTING>` : "");
+  last.content = `${last.content}\n\nMODE: ${mode}\n<RESULTS>\n${context.slice(0, 4000)}\n</RESULTS>` + (listing ? `\n<LISTING>\n${listing}\n</LISTING>` : "")
+    + (buyer ? `\n<BUYER_PROFILE note="what they told us on the site; use it, don't ask again">\n${buyer}\n</BUYER_PROFILE>` : "");
   const reply = await callClaude(SYSTEM, msgs, mode === "call" ? 200 : 350);
   return json({ reply: reply.replace(/\s*—\s*/g, ", ").trim() });
 });

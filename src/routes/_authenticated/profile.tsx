@@ -1,6 +1,6 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/odys/AppShell";
@@ -32,6 +32,7 @@ function ProfilePage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [fullName, setFullName] = useState(p?.full_name ?? "");
   const [country, setCountry] = useState(p?.home_country ?? "");
   const [intent, setIntent] = useState(p?.intent ?? null);
@@ -45,7 +46,15 @@ function ProfilePage() {
     can_move_residency: p?.can_move_residency ?? false,
   });
 
-  async function save() {
+  // Saves by itself a moment after any change, so Argos (here and on Telegram) always has the latest.
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    const id = window.setTimeout(() => void save(true), 900);
+    return () => window.clearTimeout(id);
+  }, [fullName, country, intent, budget, reno, regions, types, paper]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function save(quiet = false) {
     setSaving(true);
     try {
       await saveProfile({
@@ -59,7 +68,8 @@ function ProfilePage() {
         ...paper,
       });
       await qc.invalidateQueries({ queryKey: profileQuery.queryKey });
-      toast.success("Profile saved");
+      if (!quiet) toast.success("Profile saved");
+      setSavedAt(new Date());
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save");
     } finally {
@@ -76,7 +86,7 @@ function ProfilePage() {
 
   return (
     <>
-      <PageHeader title="Profile" intro="What you tell us shapes the opportunities we show you." />
+      <PageHeader title="Profile" intro="What you tell us here, Argos knows: on the site and on Telegram. It saves by itself." />
       <div className="space-y-6">
         <Section title="Argos on Telegram"><TelegramConnect /></Section>
         <Section title="About you">
@@ -109,7 +119,10 @@ function ProfilePage() {
         </Section>
         <div className="flex flex-wrap justify-between gap-3">
           <Button variant="outline" onClick={signOut}>Sign out</Button>
-          <Button onClick={save} disabled={saving}>{saving ? "Saving" : "Save changes"}</Button>
+          <span className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">{saving ? "Saving…" : savedAt ? "Saved. Argos knows." : "Changes save by themselves."}</span>
+            <Button onClick={() => void save()} disabled={saving}>Save</Button>
+          </span>
         </div>
       </div>
     </>

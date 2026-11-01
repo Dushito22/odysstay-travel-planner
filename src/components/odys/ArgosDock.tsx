@@ -29,6 +29,7 @@ const T = {
     chat: "Chat with Argos", call: "Call Argos", sub: "Your agent in Italy · always on",
     hello: "Ciao, I'm Argos. Ask me anything: a house, a town, how buying works here. Or tell me what you're dreaming of and I'll find it.",
     helloListing: (c: string) => `Ciao. Ask me anything about this house in ${c}, or about buying in Italy in general. I've read what the listing says.`,
+    callHello: "Ciao, Argos here. What can I do for you?",
     chips: ["Find me a stone house under €50k", "How do court auctions work?", "What does buying cost on top of the price?"],
     chipsListing: ["What will it really cost me?", "Is anyone living there?", "Can I see it before I buy?"],
     ask: "Ask anything…", thinking: "Argos is thinking…", start: "Start the call", end: "End call",
@@ -44,6 +45,7 @@ const T = {
     chat: "Написать Argos", call: "Позвонить Argos", sub: "Ваш агент в Италии · всегда на связи",
     hello: "Ciao, я Argos. Спрашивайте что угодно: про дом, город, как здесь всё устроено с покупкой. Или расскажите, о чём мечтаете, и я найду.",
     helloListing: (c: string) => `Ciao. Спрашивайте что угодно про этот дом в ${c} или про покупку в Италии вообще. Объявление я уже прочитал.`,
+    callHello: "Ciao, это Argos. Чем помочь?",
     chips: ["Найди каменный дом до €50 тыс.", "Как устроены судебные аукционы?", "Сколько стоит покупка сверх цены?"],
     chipsListing: ["Сколько это будет стоить на самом деле?", "Там кто-то живёт?", "Можно посмотреть до покупки?"],
     ask: "Спросите что угодно…", thinking: "Argos думает…", start: "Начать звонок", end: "Завершить",
@@ -145,7 +147,7 @@ export function ArgosDock() {
       setPartial("");
       if (!heard.trim()) {
         misses.current += 1;
-        if (misses.current >= 2) { inCall.current = false; setCall("ended"); setNote(t.didntCatch); return; }
+        if (misses.current >= 4) { inCall.current = false; setCall("ended"); setNote(t.didntCatch); return; }
         listenTurn();
         return;
       }
@@ -168,7 +170,8 @@ export function ArgosDock() {
     setSeconds(0);
     misses.current = 0;
     inCall.current = true;
-    const hello = msgsRef.current.length ? null : listingId && comune ? t.helloListing(comune) : t.hello;
+    // On a call, a short hello: the long one took most of the first fifteen seconds.
+    const hello = msgsRef.current.length ? null : t.callHello;
     if (hello) {
       setMsgs([{ role: "argos", text: hello }]);
       setCall("speaking");

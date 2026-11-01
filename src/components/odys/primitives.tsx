@@ -250,9 +250,9 @@ export function SourceQuote({ children, ...q }: QuoteProps & { children: ReactNo
             <button
               type="button"
               aria-label="Show the source in the official notice"
-              className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium text-brand hover:bg-muted"
+              className="inline-flex items-center gap-1 rounded-full border px-1.5 py-px font-sans text-[11px] font-normal text-brand hover:bg-muted"
             >
-              <Quote className="h-3 w-3" aria-hidden />
+              <Quote className="h-2.5 w-2.5" aria-hidden />
               Source
             </button>
           </PopoverTrigger>
