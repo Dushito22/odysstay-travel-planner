@@ -30,7 +30,7 @@ export function CardImage({ row, compact }: { row: FeedRow; compact?: boolean })
   const isRender = !!row.latest_render_path;
   const [fit, setFit] = useState<"cover" | "contain">("cover");
   return (
-    <div className={cn("relative aspect-[4/3] overflow-hidden bg-muted", !compact && "rounded-[10px]")}>
+    <div className={cn("relative aspect-[16/10] overflow-hidden bg-muted sm:aspect-[4/3]", !compact && "rounded-[10px]")}>
       {render ? (
         <>
           {fit === "contain" && (
@@ -169,7 +169,7 @@ export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: 
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <Link to="/listing/$id" params={{ id: row.id }}>
-              <h3 className={cn("truncate font-display leading-tight", compact ? "text-[20px]" : "text-[24px]")}>{row.comune ?? t("Unknown comune")}</h3>
+              <h3 className={cn("truncate font-display leading-tight", compact ? "text-[20px]" : "text-[21px] sm:text-[24px]")}>{row.comune ?? t("Unknown comune")}</h3>
             </Link>
             <p className="mt-0.5 truncate text-[13px] font-light text-foreground/55">
               {[row.province, row.region ? t(row.region) : null].filter(Boolean).join(" · ") || t("Location not stated")}
@@ -178,7 +178,7 @@ export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: 
           <div className="-mr-2 -mt-1"><SaveButton id={row.id} /></div>
         </div>
         <div className="mt-4 flex items-baseline justify-between gap-3">
-          <Money value={row.price_eur} className={cn(compact ? "text-[20px]" : "text-[26px]", "leading-none")} showOneEuroChip={false} />
+          <Money value={row.price_eur} className={cn(compact ? "text-[20px]" : "text-[22px] sm:text-[26px]", "leading-none")} showOneEuroChip={false} />
           {row.min_offer_eur != null && row.price_eur != null && row.min_offer_eur < row.price_eur && (
             <span className="text-[13px] font-light text-foreground/60 tnum">{t("offers from")} {formatEur(row.min_offer_eur)}</span>
           )}
@@ -206,7 +206,7 @@ export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: 
 export function ListingCardSkeleton() {
   return (
     <div className="overflow-hidden rounded-[10px] border border-foreground/[0.08]">
-      <div className="aspect-[4/3] animate-pulse bg-muted" />
+      <div className="aspect-[16/10] sm:aspect-[4/3] animate-pulse bg-muted" />
       <div className="space-y-3 p-5">
         <div className="h-5 w-1/2 animate-pulse rounded bg-muted" />
         <div className="h-4 w-1/3 animate-pulse rounded bg-muted" />

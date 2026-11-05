@@ -219,14 +219,14 @@ export function ArgosDock() {
   return (
     <>
       {!open && (
-        <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+4.75rem)] right-4 z-50 flex items-center gap-2 md:bottom-6 md:right-6">
+        <div className={`fixed bottom-[calc(env(safe-area-inset-bottom)+4.75rem)] right-3 z-50 items-center gap-1.5 md:flex md:bottom-6 md:right-6 ${listingId || pathname === "/" ? "hidden" : "flex"}`}>
           <button type="button" onClick={() => { setOpen(true); setMode("chat"); }}
-            className="flex h-12 items-center gap-2 rounded-full border border-foreground/10 bg-background/90 px-4 text-[15px] shadow-[0_12px_32px_-12px_oklch(0.3_0.04_250/0.45)] backdrop-blur-xl transition-transform hover:-translate-y-0.5">
+            className="flex h-11 items-center gap-2 rounded-full border border-foreground/10 bg-background/90 px-3.5 text-[15px] sm:h-12 sm:px-4 shadow-[0_12px_32px_-12px_oklch(0.3_0.04_250/0.45)] backdrop-blur-xl transition-transform hover:-translate-y-0.5">
             <MessageCircle className="h-4 w-4 text-azure" />
             <span className="hidden sm:inline">{t.chat}</span>
           </button>
           <button type="button" aria-label={t.call} onClick={() => { setOpen(true); setMode("call"); void startCall(); }}
-            className="group flex h-12 items-center gap-2 rounded-full bg-azure px-4 text-[15px] text-white shadow-[0_12px_32px_-10px_oklch(0.55_0.15_245/0.7)] transition-transform hover:-translate-y-0.5">
+            className="group flex h-11 items-center gap-2 rounded-full bg-azure px-3.5 text-[15px] sm:h-12 sm:px-4 text-white shadow-[0_12px_32px_-10px_oklch(0.55_0.15_245/0.7)] transition-transform hover:-translate-y-0.5">
             <span className="relative flex h-5 w-5 items-center justify-center">
               <span className="absolute inset-0 animate-ping rounded-full bg-white/30" />
               <Phone className="relative h-4 w-4" />

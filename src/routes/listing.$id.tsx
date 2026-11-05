@@ -241,12 +241,12 @@ function ListingPage() {
 
   return (
     <Shell>
-      <section className="grid gap-8 pt-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(340px,1fr)] lg:gap-10 lg:pt-10">
+      <section className="grid grid-cols-1 gap-6 pt-4 sm:pt-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(340px,1fr)] lg:gap-10 lg:pt-10">
         <Gallery data={data} userId={userId} />
         <HeroPanel data={data} userId={userId} />
       </section>
 
-      <div className="mt-6 grid gap-12 lg:grid-cols-[1fr_340px]">
+      <div className="mt-6 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-12">
         <aside className="lg:order-last lg:pt-10">
           <div className="lg:sticky lg:top-24"><AskArgos l={l} userId={userId} /></div>
         </aside>
@@ -523,7 +523,7 @@ function HeroPanel({ data, userId }: { data: ListingBundle; userId: string | nul
         {l.property_type && <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-normal text-muted-foreground">{t(TYPE_LABELS[l.property_type] ?? l.property_type)}</span>}
         {l.sale_type && <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-normal text-brand">{t(SALE_TYPE_LABELS[l.sale_type] ?? l.sale_type)}</span>}
       </div>
-      <h1 data-notranslate className="text-[44px] leading-[0.95] md:text-[52px]">{l.comune ?? t("Unknown comune")}</h1>
+      <h1 data-notranslate className="text-[34px] leading-[0.98] sm:text-[44px] md:text-[52px]">{l.comune ?? t("Unknown comune")}</h1>
       <p className="mt-2 text-muted-foreground">
         {[l.province, l.region ? t(l.region) : null].filter(Boolean).join(" · ") || t("Location not stated")}
         {l.title_en && <span className="text-foreground/70"> · {l.title_en}</span>}
@@ -531,7 +531,7 @@ function HeroPanel({ data, userId }: { data: ListingBundle; userId: string | nul
 
       <div className="mt-6 flex items-end justify-between gap-4 border-t border-foreground/10 pt-5">
         <div>
-          <Money value={l.price_eur} className="text-[38px] leading-none" />
+          <Money value={l.price_eur} className="text-[30px] leading-none sm:text-[38px]" />
           <p className="mt-2 text-sm text-muted-foreground tnum">
             {[
               l.min_offer_eur != null && l.price_eur != null && l.min_offer_eur < l.price_eur ? `${t("Offers valid from")} ${formatEur(l.min_offer_eur)}` : null,
@@ -596,17 +596,17 @@ function Gallery({ data, userId }: { data: ListingBundle; userId: string | null 
   const cover = img?.kind === "render" || img?.kind === "satellite";
   const hasReal = official.some((o) => o.kind === "original") || images.some((i) => i.kind === "original");
   return (
-    <div>
+    <div className="min-w-0">
       <div className="relative overflow-hidden rounded-[14px]">
         {img ? (
-          <div className="relative aspect-[4/3] bg-muted">
+          <div className="relative aspect-[3/2] bg-muted sm:aspect-[4/3]">
             {!cover && <img src={renderUrl(img.storage_path) ?? ""} alt="" aria-hidden referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl" />}
             <img src={renderUrl(img.storage_path) ?? ""} alt={img.caption_en ?? "Property image"} referrerPolicy="no-referrer"
               className={cn("relative h-full w-full", cover ? "object-cover" : "object-contain")} />
             {img.kind === "render" && <IllustrationLabel className="bottom-4 left-4" />}
           </div>
         ) : (
-          <div className="[&>div]:aspect-[4/3]"><CardImage row={l} /></div>
+          <div className="[&>div]:aspect-[3/2] sm:[&>div]:aspect-[4/3]"><CardImage row={l} /></div>
         )}
         <div className="absolute right-4 top-4">
           {l.id && hasReal && (
@@ -620,10 +620,10 @@ function Gallery({ data, userId }: { data: ListingBundle; userId: string | null 
         </div>
       </div>
       {all.length > 1 && (
-        <div className="mt-3 flex gap-2 overflow-x-auto">
+        <div className="mt-2 flex gap-1.5 overflow-x-auto sm:mt-3 sm:gap-2">
           {all.map((im, i) => (
             <button key={im.id} onClick={() => setActive(i)}
-              className={cn("relative h-16 w-24 shrink-0 overflow-hidden rounded-xl ring-2", i === active ? "ring-foreground" : "ring-transparent")}>
+              className={cn("relative h-12 w-16 shrink-0 overflow-hidden rounded-lg ring-2 sm:h-16 sm:w-24 sm:rounded-xl", i === active ? "ring-foreground" : "ring-transparent")}>
               <img src={renderUrl(im.storage_path) ?? ""} alt="" referrerPolicy="no-referrer" className="h-full w-full object-cover" loading="lazy" />
             </button>
           ))}
@@ -686,7 +686,7 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
             </div>
             {sel && (
               <div className="rounded-2xl border bg-card p-6">
-                <p className="font-display text-[36px] leading-none tnum">{range(sel.low_eur, sel.high_eur)}</p>
+                <p className="font-display text-[26px] leading-none tnum sm:text-[36px]">{range(sel.low_eur, sel.high_eur)}</p>
                 {sel.user_id && <p className="mt-1 text-xs text-brand">Your own estimate</p>}
                 <ul className="mt-5 divide-y">
                   {asItems(sel.items).map((it) => (
