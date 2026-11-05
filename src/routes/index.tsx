@@ -71,7 +71,8 @@ const COPY = {
     examples: ["Somewhere in Sicily under 30k. A house, not a flat. I can renovate.", "Show me the €1 towns in Sardinia.", "Something by the sea in the south, ready to live in, under 80k."],
     howTalkEnd: <>Tap the <Hi>mic</Hi> and speak any language, or type. Real houses appear while we talk.</>,
     helpLabel: "How to talk to Argos",
-    chips: ["A stone house under €50k, some work is fine", "Show me the €1 houses", "Court auctions in Sicily under €30k", "Surprise me"],
+    placeholderShort: "Stone house in Puglia, €40k…",
+    chips: ["Stone house under €50k", "€1 houses", "Sicily auctions"],
     browseAll: "Rather browse? See every listing",
     powered: "Argos, your AI agent in Italy · always ON",
     statement: [<>Italy sells houses <Em>below the court's valuation</Em>.</>, " Nobody tells you where."],
@@ -160,7 +161,8 @@ const COPY = {
     examples: ["Что-нибудь на Сицилии до 30 тысяч. Именно дом, не квартиру. Ремонт не пугает.", "Покажи города на Сардинии, где дома продают за 1 евро.", "У моря на юге, чтобы сразу заехать, до 80 тысяч."],
     howTalkEnd: <>Нажмите на <Hi>микрофон</Hi> и говорите на любом языке или просто напишите. Дома начнут появляться прямо по ходу разговора.</>,
     helpLabel: "Как говорить с Argos",
-    chips: ["Каменный дом до €50 тыс., ремонт не пугает", "Покажи дома за €1", "Суды на Сицилии, до €30 тыс.", "Удиви меня"],
+    placeholderShort: "Дом в Апулии до €40 тыс.…",
+    chips: ["Дом до €50 тыс.", "Дома за €1", "Торги на Сицилии"],
     browseAll: "Просто посмотреть? Все объявления",
     powered: "Argos, ваш ИИ-агент в Италии · всегда на связи",
     statement: [<>Италия продаёт дома <Em>дешевле судебной оценки</Em>.</>, " Просто об этом никто не рассказывает."],
@@ -329,7 +331,7 @@ function SiteHeader() {
         </nav>
         <div className="flex items-center gap-5 justify-self-end">
           <LangToggle light={!solid} />
-          {signedIn ? <PillLink to="/discover" light={!solid}>{lang === "ru" ? "Мой поиск" : "My search"}</PillLink> : <PillLink to="/login" light={!solid}>{c.nav.signIn}</PillLink>}
+          {signedIn ? <PillLink to="/discover" light={!solid}>{lang === "ru" ? "Мой поиск" : "My search"}</PillLink> : <PillLink to="/login" search={{ mode: "signin" }} light={!solid}>{c.nav.signIn}</PillLink>}
         </div>
       </div>
     </header>
@@ -360,6 +362,14 @@ function Hero() {
   const [c, lang] = useCopy();
   const navigate = useNavigate();
   const go = (q: string, spoken = false) => navigate({ to: "/argos", search: { q, ...(spoken ? { voice: true } : {}) } });
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const m = window.matchMedia("(max-width: 639px)");
+    const on = () => setNarrow(m.matches);
+    on();
+    m.addEventListener("change", on);
+    return () => m.removeEventListener("change", on);
+  }, []);
   return (
     <section className="relative flex min-h-[100svh] flex-col overflow-hidden bg-foreground text-white">
       <HeroVideo />
@@ -368,17 +378,17 @@ function Hero() {
           <span className="text-[oklch(0.84_0.085_236)]">{c.eyebrow.split(/[,:]/)[0]}</span>{c.eyebrow.slice(c.eyebrow.split(/[,:]/)[0]!.length)}
         </p>
         <h1 className="mt-6 type-h1 text-[38px] md:mt-7 md:text-[52px]">{c.hero}</h1>
-        <div className="mt-9 flex w-full max-w-[640px] items-center gap-2.5">
+        <div className="mt-7 flex w-full max-w-[640px] items-center gap-2 sm:mt-9 sm:gap-2.5">
           <span aria-hidden className="hidden w-7 shrink-0 sm:block" />
           <div className="min-w-0 flex-1">
-            <ArgosComposer onSubmit={go} placeholder={c.placeholder} lang={lang === "ru" ? "ru-RU" : "en-GB"} />
+            <ArgosComposer onSubmit={go} placeholder={narrow ? c.placeholderShort : c.placeholder} lang={lang === "ru" ? "ru-RU" : "en-GB"} />
           </div>
           <HelpDot />
         </div>
-        <div className="mt-6 flex max-w-[620px] flex-wrap justify-center gap-1.5">
+        <div className="mt-4 flex max-w-[620px] flex-wrap justify-center gap-1.5 sm:mt-6">
           {c.chips.map((chip) => (
             <button key={chip} type="button" onClick={() => go(chip)}
-              className="h-8 rounded-full border border-white/25 bg-white/10 px-3.5 text-[13px] font-light text-white/90 backdrop-blur-md transition-colors hover:bg-white/20">
+              className="h-7 rounded-full border border-white/25 bg-white/10 px-3 text-[12px] font-light sm:h-8 sm:px-3.5 sm:text-[13px] text-white/90 backdrop-blur-md transition-colors hover:bg-white/20">
               {chip}
             </button>
           ))}

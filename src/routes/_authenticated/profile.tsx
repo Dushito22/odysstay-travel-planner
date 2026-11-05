@@ -81,7 +81,7 @@ function ProfilePage() {
     await qc.cancelQueries();
     qc.clear();
     await supabase.auth.signOut();
-    navigate({ to: "/login", replace: true });
+    navigate({ to: "/login", search: { mode: "signin" }, replace: true });
   }
 
   return (
