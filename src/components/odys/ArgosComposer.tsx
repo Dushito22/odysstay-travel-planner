@@ -33,7 +33,7 @@ export function ArgosComposer({
     if (!el) return;
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
-  }, [text]);
+  }, [text, placeholder]);
 
   function send(value = text, spoken = false) {
     const v = value.trim();
