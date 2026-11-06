@@ -1,0 +1,39 @@
+name: Weekly drop
+
+# Argos's weekly picks. Paid plans on Thursday, everyone else on Saturday, 09:00 Rome time.
+# Run by hand with an email to send one person their drop now (force=true re-sends this week's).
+on:
+  schedule:
+    - cron: "7 7 * * 4"
+    - cron: "7 7 * * 6"
+  workflow_dispatch:
+    inputs:
+      email:
+        description: "Only this user (optional)"
+        required: false
+      tier:
+        description: "pro or all"
+        default: "all"
+      force:
+        description: "Re-send even if this week's drop exists"
+        default: "false"
+
+jobs:
+  drop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+      URL: https://nryhvtxprjiylajolcef.supabase.co/functions/v1/weekly-drop
+    steps:
+      - name: Send
+        run: |
+          TIER="${{ github.event.inputs.tier }}"
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            [ "$(date -u +%u)" = "4" ] && TIER=pro || TIER=all
+          fi
+          BODY=$(jq -nc --arg t "${TIER:-all}" --arg e "${{ github.event.inputs.email }}" --arg f "${{ github.event.inputs.force }}" \
+            '{tier:$t, email:(if $e=="" then null else $e end), force:($f=="true")}')
+          R=$(curl -sS --max-time 1500 -X POST "$URL" -H "content-type: application/json" -H "x-drop-secret: $SECRET" -d "$BODY")
+          echo "$R"
+          echo "::notice title=Drop::$(echo "$R" | head -c 900)"

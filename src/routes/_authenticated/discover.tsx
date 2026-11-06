@@ -6,6 +6,7 @@ import { ArgosComposer } from "@/components/odys/ArgosComposer";
 import { FilterChips, FilterPanel, MobileFilters, RESET_SEARCH } from "@/components/odys/Filters";
 import { ListingCard, ListingCardSkeleton } from "@/components/odys/ListingCard";
 import { SaveSearchButton } from "@/components/odys/SaveSearchButton";
+import { WeeklyDrop } from "@/components/odys/WeeklyDrop";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { feedSearchSchema, SORTS, type FeedSearch } from "@/lib/feed";
 import { useFeed } from "@/lib/use-feed";
@@ -72,6 +73,8 @@ function DiscoverPage() {
           <SaveSearchButton filters={filters} sort={sort} />
         </div>
       </div>
+
+      <WeeklyDrop />
 
       <div className="mt-6 flex flex-col gap-3 rounded-[14px] bg-gradient-to-r from-[oklch(0.93_0.02_240)] to-[oklch(0.965_0.01_235)] p-4 md:flex-row md:items-center md:gap-5 md:p-5">
         <p className="shrink-0 font-display text-[20px] leading-tight md:w-56">
