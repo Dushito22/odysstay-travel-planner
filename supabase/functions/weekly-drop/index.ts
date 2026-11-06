@@ -72,7 +72,19 @@ async function pickFor(admin: Admin, profile: Row, seen: Set<string>) {
   return out;
 }
 
-async function writeNote(rows: Row[], profile: Row, lang: string): Promise<{ script: string; lines: { why: string; tradeoff: string }[] }> {
+/** The note, retried once if it came back empty or in the wrong language. */
+async function writeNote(rows: Row[], profile: Row, lang: string) {
+  for (let i = 0; i < 2; i++) {
+    const n = await writeNoteOnce(rows, profile, lang);
+    const all = `${n.script} ${n.lines.map((l) => `${l.why} ${l.tradeoff}`).join(" ")}`;
+    const cyr = (all.match(/[а-яё]/gi) ?? []).length / Math.max(1, (all.match(/[a-zа-яё]/gi) ?? []).length);
+    if (n.script && (lang === "ru" ? cyr > 0.6 : cyr < 0.05)) return n;
+    console.error("drop note wrong language or empty, retrying", lang, cyr);
+  }
+  return { script: "", lines: [] as { why: string; tradeoff: string }[] };
+}
+
+async function writeNoteOnce(rows: Row[], profile: Row, lang: string): Promise<{ script: string; lines: { why: string; tradeoff: string }[] }> {
   const ru = lang === "ru";
   const data = rows.map((r, i) => ({
     n: i + 1, town: r.comune, region: r.region, price_eur: r.price_eur, sqm: r.surface_sqm, type: r.property_type,
@@ -80,7 +92,7 @@ async function writeNote(rows: Row[], profile: Row, lang: string): Promise<{ scr
     red_flags: r.red_flag_count, score: r.score, notes: (r.score_reasons ?? []).slice(0, 5),
   }));
   const system = `You are Argos, Odysstay's AI agent in Italy, sending a buyer their weekly picks.
-Write in ${ru ? "Russian" : "English"}. Warm, plain-spoken, like a friend who lives in Italy and does this for a living. No emojis, no em dashes, no exclamation marks, no markdown.
+Write every word in ${ru ? "Russian (town names stay as they are)" : "English"}, including every why and tradeoff line, whatever language the data is in. Warm, plain-spoken, like a friend who lives in Italy and does this for a living. No emojis, no em dashes, no exclamation marks, no markdown.
 Return JSON only: {"script": "...", "lines": [{"why": "...", "tradeoff": "..."}]} with one line per house, in the same order.
 script: a voice note under 90 words. Greet them by first name if known, say how many houses you picked this week, name your favourite one or two by town and price (say numbers as a person would say them), and end by inviting them to reply with a voice note or call you about any of them.
 why: under 14 words, the honest reason it's worth a look, using only the data.
@@ -118,16 +130,80 @@ async function tts(text: string, lang: string, fmt: "mp3_44100_64") {
 
 const money = (n: number | null, ru: boolean) => (n == null ? "" : `€${n.toLocaleString(ru ? "ru-RU" : "en-GB")}`);
 
-async function sendTelegram(chatId: number, picks: Pick[], voiceUrl: string | null, lang: string) {
+const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/** Two messages, no more: the houses as a photo album with the list as its caption, then Argos's
+ * voice note carrying the buttons. Falls back to one photo if Telegram can't fetch the album. */
+async function sendTelegram(chatId: number, picks: Pick[], voiceUrl: string | null, lang: string, weekLabel: string) {
   const ru = lang === "ru";
-  // Telegram fetches the MP3 we already stored, so the function never holds audio twice.
-  if (voiceUrl) await tg("sendVoice", { chat_id: chatId, voice: voiceUrl });
-  const head = ru ? "Ваши дома недели от Argos:" : "Your houses of the week from Argos:";
-  const body = picks.map((p, i) => `${i + 1}. ${p.comune}, ${p.region} · ${money(p.price_eur, ru)}${p.surface_sqm ? ` · ${p.surface_sqm} m²` : ""}\n${p.why}${p.tradeoff ? `\n${ru ? "Минус" : "Catch"}: ${p.tradeoff}` : ""}`).join("\n\n");
-  const tail = ru ? "Ответьте голосом или текстом, если какой-то зацепил. Расскажу подробнее." : "Reply by voice or text if one catches your eye and I'll tell you more.";
+  const head = `<b>${ru ? "Дома недели от Argos" : "This week from Argos"}</b> · ${esc(weekLabel)}`;
+  const line = (p: Pick, i: number) => `<b>${i + 1}. ${esc(p.comune)}</b> · ${money(p.price_eur, ru)}${p.surface_sqm ? ` · ${p.surface_sqm} m²` : ""}\n${esc(p.why)}${p.tradeoff ? `\n<i>${ru ? "Минус" : "Catch"}: ${esc(p.tradeoff)}</i>` : ""}`;
+  let caption = `${head}\n\n${picks.map(line).join("\n\n")}`;
+  if (caption.length > 1024) caption = `${head}\n\n${picks.map((p, i) => `<b>${i + 1}. ${esc(p.comune)}</b> · ${money(p.price_eur, ru)}\n${esc(p.why)}`).join("\n\n")}`.slice(0, 1024);
+  const withPhoto = picks.filter((p) => p.photo);
+  let shown = false;
+  if (withPhoto.length >= 2) {
+    const r = await tg("sendMediaGroup", { chat_id: chatId, media: withPhoto.map((p, i) => ({ type: "photo", media: p.photo, ...(i === 0 ? { caption, parse_mode: "HTML" } : {}) })) });
+    shown = !!r.ok;
+  }
+  if (!shown && withPhoto[0]) shown = !!(await tg("sendPhoto", { chat_id: chatId, photo: withPhoto[0].photo, caption, parse_mode: "HTML" })).ok;
+  if (!shown) shown = !!(await tg("sendMessage", { chat_id: chatId, text: caption, parse_mode: "HTML", disable_web_page_preview: true })).ok;
+
   const buttons = picks.map((p, i) => [{ text: `${i + 1}. ${p.comune} · ${money(p.price_eur, ru)}`, url: `${SITE}/listing/${p.id}` }]);
   buttons.push([{ text: ru ? "Позвонить Argos о них" : "Call Argos about these", url: `${SITE}/discover#drop` }]);
-  return await tg("sendMessage", { chat_id: chatId, text: `${head}\n\n${body}\n\n${tail}`.slice(0, 4000), disable_web_page_preview: true, reply_markup: { inline_keyboard: buttons } });
+  const ask = ru ? "Понравился какой-то? Ответьте голосом или текстом." : "One caught your eye? Reply by voice or text.";
+  const markup = { inline_keyboard: buttons };
+  const v = voiceUrl ? await tg("sendVoice", { chat_id: chatId, voice: voiceUrl, caption: ask, reply_markup: markup }) : { ok: false };
+  if (!v.ok) await tg("sendMessage", { chat_id: chatId, text: ask, reply_markup: markup });
+  return { ok: shown };
+}
+
+/** The same picks as an email, in the site's look: white page, serif headline, one photo per house. */
+function emailHtml(picks: Pick[], lang: string, weekLabel: string, audioUrl: string | null, script: string) {
+  const ru = lang === "ru";
+  const azure = "#1f6fb5";
+  const serif = "'PP Editorial New', Georgia, 'Times New Roman', serif";
+  const sans = "-apple-system, 'Helvetica Neue', Arial, sans-serif";
+  const house = (p: Pick, i: number) => `
+  <tr><td style="padding:0 0 36px">
+    <a href="${SITE}/listing/${p.id}" style="text-decoration:none;color:#141414">
+      ${p.photo ? `<img src="${p.photo}" width="560" alt="" style="display:block;width:100%;max-width:560px;height:auto;border-radius:12px;border:0">` : ""}
+      <div style="font-family:${serif};font-size:26px;line-height:1.2;margin:16px 0 2px">${i + 1}. ${esc(p.comune)}</div>
+      <div style="font-family:${sans};font-size:14px;color:#6b6b6b;margin:0 0 10px">${esc(p.region)} · ${money(p.price_eur, ru)}${p.surface_sqm ? ` · ${p.surface_sqm} m²` : ""}</div>
+      <div style="font-family:${sans};font-size:15px;line-height:1.5;font-weight:300;margin:0 0 4px">${esc(p.why)}</div>
+      ${p.tradeoff ? `<div style="font-family:${sans};font-size:14px;line-height:1.5;font-weight:300;color:#6b6b6b">${ru ? "Минус" : "Catch"}: ${esc(p.tradeoff)}</div>` : ""}
+      <div style="font-family:${sans};font-size:14px;color:${azure};margin-top:10px">${ru ? "Смотреть дом" : "See the house"} &rarr;</div>
+    </a>
+  </td></tr>`;
+  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${ru ? "Дома недели" : "This week from Argos"}</title></head>
+<body style="margin:0;padding:0;background:#ffffff">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff"><tr><td align="center" style="padding:32px 20px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
+  <tr><td style="font-family:${serif};font-size:22px;color:#1b2a4a;padding:0 0 28px">odysstay<span style="color:${azure}">.</span></td></tr>
+  <tr><td style="font-family:${sans};font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8a8a8a;padding:0 0 10px">${esc(weekLabel)}</td></tr>
+  <tr><td style="font-family:${serif};font-size:40px;line-height:1.05;color:#141414;padding:0 0 18px">${ru ? `Дома недели от <i style="color:${azure}">Argos</i>` : `This week from <i style="color:${azure}">Argos</i>`}</td></tr>
+  <tr><td style="font-family:${sans};font-size:16px;line-height:1.55;font-weight:300;color:#333;padding:0 0 22px">${esc(script)}</td></tr>
+  ${audioUrl ? `<tr><td style="padding:0 0 36px"><a href="${audioUrl}" style="display:inline-block;font-family:${sans};font-size:14px;color:#fff;background:${azure};border-radius:999px;padding:11px 20px;text-decoration:none">&#9654;&nbsp; ${ru ? "Послушать Argos" : "Listen to Argos"}</a>&nbsp;&nbsp;<a href="${SITE}/discover#drop" style="font-family:${sans};font-size:14px;color:${azure};text-decoration:none">${ru ? "Позвонить ему" : "Or call him"} &rarr;</a></td></tr>` : ""}
+  ${picks.map(house).join("")}
+  <tr><td style="border-top:1px solid #eeeeee;padding:20px 0 0;font-family:${sans};font-size:12px;line-height:1.6;color:#8a8a8a">
+    ${ru ? "Argos присылает 5 домов под ваш запрос раз в неделю." : "Argos sends you five houses for your brief once a week."}
+    <a href="${SITE}/profile" style="color:#8a8a8a">${ru ? "Изменить запрос, язык или отписаться" : "Change your brief, language, or unsubscribe"}</a>.<br>Odysstay · odysstay.xyz
+  </td></tr>
+</table></td></tr></table></body></html>`;
+}
+
+async function sendEmail(to: string, subject: string, html: string) {
+  const key = Deno.env.get("RESEND_API_KEY");
+  if (!key) return false;
+  const r = await fetch("https://api.resend.com/emails", {
+    method: "POST", headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+    body: JSON.stringify({
+      from: Deno.env.get("DROP_FROM") || "Argos at Odysstay <argos@odysstay.xyz>", to: [to], subject, html,
+      headers: { "List-Unsubscribe": `<${SITE}/profile>` },
+    }),
+  });
+  if (!r.ok) console.error("resend", r.status, (await r.text()).slice(0, 300));
+  return r.ok;
 }
 
 Deno.serve(async (req) => {
@@ -156,7 +232,7 @@ Deno.serve(async (req) => {
   let targets = users.filter((u) => (onlyEmail ? u.email?.toLowerCase() === onlyEmail
     : chatOf.has(u.id) || (u.last_sign_in_at && Date.parse(u.last_sign_in_at) > recent)));
   if (!force) targets = targets.filter((u) => !already.has(u.id));
-  const { data: profiles } = await admin.from("profiles").select("id, full_name, plan, intent, budget_max_eur, preferred_regions, property_types, languages").in("id", targets.map((u) => u.id));
+  const { data: profiles } = await admin.from("profiles").select("id, full_name, plan, intent, budget_max_eur, preferred_regions, property_types, languages, language, weekly_email").in("id", targets.map((u) => u.id));
   const profOf = new Map<string, Row>((profiles ?? []).map((p) => [p.id as string, p]));
   if (tier === "pro" && !onlyEmail) targets = targets.filter((u) => PAID.includes(profOf.get(u.id)?.plan ?? "free"));
   targets = targets.slice(0, MAX_USERS);
@@ -166,7 +242,9 @@ Deno.serve(async (req) => {
     try {
       const profile = profOf.get(u.id) ?? {};
       const chat = chatOf.get(u.id);
-      const lang = chat?.lang === "ru" || (profile.languages ?? []).includes("ru") ? "ru" : "en";
+      const lang = profile.language === "ru" || profile.language === "en" ? profile.language
+        : chat?.lang === "ru" || (profile.languages ?? []).includes("ru") ? "ru" : "en";
+      const weekLabel = new Date(`${week}T12:00:00Z`).toLocaleDateString(lang === "ru" ? "ru-RU" : "en-GB", { day: "numeric", month: "long" });
       const { data: prev } = await admin.from("weekly_drops").select("listing_ids").eq("user_id", u.id).neq("week", week).order("week", { ascending: false }).limit(6);
       const seen = new Set<string>((prev ?? []).flatMap((p) => p.listing_ids as string[]));
       const rows = await pickFor(admin, profile, seen);
@@ -190,7 +268,7 @@ Deno.serve(async (req) => {
 
       let sent = false;
       if (chat && BOT) {
-        const r = await sendTelegram(Number(chat.chat_id), picks, audioUrl, lang);
+        const r = await sendTelegram(Number(chat.chat_id), picks, audioUrl, lang, weekLabel);
         sent = !!r.ok;
         // So a reply like "tell me about the second one" makes sense to Argos on Telegram.
         if (sent) {
@@ -200,10 +278,16 @@ Deno.serve(async (req) => {
         }
       }
 
+      let emailed = false;
+      if (u.email && profile.weekly_email !== false && body.email_off !== true) {
+        const subject = lang === "ru" ? `Дома недели от Argos: ${picks[0]?.comune} и ещё ${picks.length - 1}` : `This week from Argos: ${picks[0]?.comune} and ${picks.length - 1} more`;
+        emailed = await sendEmail(u.email, subject, emailHtml(picks, lang, weekLabel, audioUrl, note.script));
+      }
+
       await admin.from("weekly_drops").upsert({
         user_id: u.id, week, lang, listing_ids: picks.map((p) => p.id), picks, script: note.script, audio_url: audioUrl, sent_telegram: sent,
       }, { onConflict: "user_id,week" });
-      report.push({ email: u.email, houses: picks.length, telegram: sent, voice: !!audioUrl, note: note.script.length });
+      report.push({ email: u.email, houses: picks.length, telegram: sent, emailed, voice: !!audioUrl, lang });
     } catch (e) {
       console.error("drop", u.email, e);
       report.push({ email: u.email, error: String(e).slice(0, 200) });

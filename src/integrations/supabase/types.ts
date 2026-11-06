@@ -932,6 +932,8 @@ export type Database = {
           has_pec: boolean
           home_country: string | null
           id: string
+          language: string | null
+          weekly_email: boolean
           intent: string | null
           languages: string[]
           onboarded: boolean
@@ -950,6 +952,8 @@ export type Database = {
           has_pec?: boolean
           home_country?: string | null
           id: string
+          language?: string | null
+          weekly_email?: boolean
           intent?: string | null
           languages?: string[]
           onboarded?: boolean
@@ -968,6 +972,8 @@ export type Database = {
           has_pec?: boolean
           home_country?: string | null
           id?: string
+          language?: string | null
+          weekly_email?: boolean
           intent?: string | null
           languages?: string[]
           onboarded?: boolean

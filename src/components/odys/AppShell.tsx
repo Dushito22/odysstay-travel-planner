@@ -2,8 +2,12 @@ import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bookmark, Compass, FolderLock, Shield, Handshake, Inbox, LogOut, Map, Sparkles, User } from "lucide-react";
 
+import { useEffect } from "react";
+
 import { supabase } from "@/integrations/supabase/client";
 import { inboxCountQuery } from "@/lib/deal";
+import { setLang, useLang } from "@/lib/i18n";
+import { profileQuery } from "@/lib/profile";
 import { useInboxRealtime } from "@/lib/use-deal";
 import { useT } from "@/lib/tr";
 import { LangToggle } from "./LangToggle";
@@ -40,6 +44,12 @@ export function AppShell() {
   }).data === true;
   const inboxCount = useQuery({ ...inboxCountQuery, refetchInterval: 60_000 }).data ?? 0;
   useInboxRealtime();
+  // The account's language wins over the browser's, so every device opens in the buyer's language.
+  const accountLang = useQuery(profileQuery).data?.language;
+  const lang = useLang();
+  useEffect(() => {
+    if ((accountLang === "en" || accountLang === "ru") && accountLang !== lang) setLang(accountLang);
+  }, [accountLang]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (pathname === "/onboarding") return <Outlet />;
 

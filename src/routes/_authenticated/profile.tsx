@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { chooseLang, useLang } from "@/lib/i18n";
 import { profileQuery, saveProfile } from "@/lib/profile";
+import { cn } from "@/lib/utils";
 import { TelegramConnect } from "@/components/odys/TelegramConnect";
 
 export const Route = createFileRoute("/_authenticated/profile")({
@@ -33,6 +35,8 @@ function ProfilePage() {
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const lang = useLang();
+  const [weeklyEmail, setWeeklyEmail] = useState(p?.weekly_email ?? true);
   const [fullName, setFullName] = useState(p?.full_name ?? "");
   const [country, setCountry] = useState(p?.home_country ?? "");
   const [intent, setIntent] = useState(p?.intent ?? null);
@@ -88,6 +92,22 @@ function ProfilePage() {
     <>
       <PageHeader title="Profile" intro="What you tell us here, Argos knows: on the site and on Telegram. It saves by itself." />
       <div className="space-y-6">
+        <Section title="Language and weekly picks">
+          <p className="mb-3 text-sm text-muted-foreground">The site, Argos's chats and calls, Telegram and your weekly picks all use this language.</p>
+          <div className="inline-grid grid-cols-2 rounded-full bg-muted p-1 text-[14px]">
+            {([["en", "English"], ["ru", "Русский"]] as const).map(([l, label]) => (
+              <button key={l} type="button" onClick={() => { chooseLang(l); qc.setQueryData(profileQuery.queryKey, (old) => (old ? { ...old, language: l } : old)); }}
+                className={cn("h-9 rounded-full px-5 transition-colors", lang === l ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <label className="mt-5 flex cursor-pointer items-center gap-3 text-[15px]">
+            <input type="checkbox" className="h-4 w-4 accent-[var(--color-azure)]" checked={weeklyEmail}
+              onChange={(e) => { setWeeklyEmail(e.target.checked); void saveProfile({ weekly_email: e.target.checked }); }} />
+            Email me Argos's five picks every Saturday
+          </label>
+        </Section>
         <Section title="Argos on Telegram"><TelegramConnect /></Section>
         <Section title="About you">
           <div className="grid gap-4 sm:grid-cols-2">

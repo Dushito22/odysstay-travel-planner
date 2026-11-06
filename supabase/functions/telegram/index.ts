@@ -189,6 +189,14 @@ Deno.serve(async (req) => {
   const day = new Date().toISOString().slice(0, 10);
   const count = chat?.day === day ? (chat?.n ?? 0) : 0;
   let userId: string | null = chat?.user_id ?? null;
+  // A linked buyer's chosen language (set at sign-up or in settings) wins over guessing.
+  const accountLang = async (id: string | null) => {
+    if (!id) return null;
+    const { data } = await admin.from("profiles").select("language").eq("id", id).maybeSingle();
+    return data?.language === "ru" || data?.language === "en" ? data.language as string : null;
+  };
+  const fixed = await accountLang(userId);
+  if (fixed) lang = fixed;
   const save = (h: Hist) => admin.from("telegram_chats").upsert({
     chat_id: chatId, user_id: userId, lang, voice: voiceMode, history: h.slice(-12), day, n: count + 1,
     username: msg.from?.username ?? null, updated_at: new Date().toISOString(),
@@ -206,8 +214,9 @@ Deno.serve(async (req) => {
         await admin.from("telegram_links").delete().eq("code", code);
         if (link && fresh) {
           userId = link.user_id;
+          lang = (await accountLang(userId)) ?? lang;
           await save(history);
-          await tg("sendMessage", { chat_id: chatId, text: t.linked });
+          await tg("sendMessage", { chat_id: chatId, text: T[lang === "ru" ? "ru" : "en"].linked });
           return new Response("ok");
         }
         await tg("sendMessage", { chat_id: chatId, text: t.linkOld });
@@ -233,7 +242,7 @@ Deno.serve(async (req) => {
       if (!said) { await tg("sendMessage", { chat_id: chatId, text: t.deaf }); return new Response("ok"); }
     }
     if (!said) return new Response("ok");
-    if (/[а-яё]/i.test(said)) lang = "ru"; else if (/^[\x00-\x7F\s€]+$/.test(said)) lang = "en";
+    if (!fixed) { if (/[а-яё]/i.test(said)) lang = "ru"; else if (/^[\x00-\x7F\s€]+$/.test(said)) lang = "en"; }
     await tg("sendChatAction", { chat_id: chatId, action: spoke || voiceMode ? "record_voice" : "typing" });
 
     const voiceOut = spoke || voiceMode;
