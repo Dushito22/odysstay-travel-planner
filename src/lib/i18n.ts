@@ -36,3 +36,13 @@ export function useLang(): Lang {
 
 /** Speech language for the mic and Argos's voice. */
 export const speechLang = (l: Lang) => (l === "ru" ? "ru-RU" : "en-GB");
+
+/** The buyer picked a language: switch the site now and, when signed in, remember it on the account
+ * so Argos, calls, Telegram and the weekly picks all follow. */
+export function chooseLang(l: Lang) {
+  setLang(l);
+  void import("@/integrations/supabase/client").then(async ({ supabase }) => {
+    const { data } = await supabase.auth.getUser();
+    if (data.user) await supabase.from("profiles").update({ language: l }).eq("id", data.user.id);
+  }).catch(() => {});
+}

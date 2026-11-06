@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.weekly-drop]
 verify_jwt = false
+
+[functions.onboard]
+verify_jwt = false
