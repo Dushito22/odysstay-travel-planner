@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.telegram-link]
 verify_jwt = false
+
+[functions.weekly-drop]
+verify_jwt = false

@@ -20,7 +20,8 @@ type Mode = "chat" | "call";
 type CallState = "idle" | "listening" | "thinking" | "speaking" | "ended";
 
 /** Open Argos from anywhere: openArgos({ mode: "call" }) or openArgos({ text: "Is anyone living there?" }). */
-export function openArgos(detail: { mode?: Mode; text?: string } = {}) {
+/** context: something Argos already said (like the weekly picks), so the conversation starts from it. */
+export function openArgos(detail: { mode?: Mode; text?: string; context?: string; hello?: string } = {}) {
   window.dispatchEvent(new CustomEvent("argos:open", { detail }));
 }
 
@@ -164,16 +165,16 @@ export function ArgosDock() {
     }, (err) => { inCall.current = false; setCall("ended"); setNote(err); });
   }, [ask, lang, t.didntCatch, t.limit]);
 
-  const startCall = useCallback(async () => {
+  const startCall = useCallback(async (helloOverride?: string) => {
     setNote(null);
     setAnonOut(false);
     setSeconds(0);
     misses.current = 0;
     inCall.current = true;
     // On a call, a short hello: the long one took most of the first fifteen seconds.
-    const hello = msgsRef.current.length ? null : t.callHello;
+    const hello = helloOverride ?? (msgsRef.current.length ? null : t.callHello);
     if (hello) {
-      setMsgs([{ role: "argos", text: hello }]);
+      setMsgs((m) => [...(helloOverride ? m : []), { role: "argos", text: hello }]);
       setCall("speaking");
       const how = await speak(hello, speechLang(lang));
       if (how === "limit-anon") { inCall.current = false; setAnonOut(true); setCall("ended"); return; }
@@ -193,10 +194,11 @@ export function ArgosDock() {
 
   useEffect(() => {
     const on = (e: Event) => {
-      const d = (e as CustomEvent<{ mode?: Mode; text?: string }>).detail ?? {};
+      const d = (e as CustomEvent<{ mode?: Mode; text?: string; context?: string; hello?: string }>).detail ?? {};
       setOpen(true);
       setMode(d.mode ?? "chat");
-      if (d.mode === "call") void startCall();
+      if (d.context) { msgsRef.current = [{ role: "argos", text: d.context }]; setMsgs(msgsRef.current); }
+      if (d.mode === "call") void startCall(d.hello);
       else if (d.text) void ask(d.text, "chat").then((r) => { if (aloud) void speak(r, speechLang(lang)); });
     };
     window.addEventListener("argos:open", on);

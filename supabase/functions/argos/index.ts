@@ -39,7 +39,8 @@ serve(async (req, body) => {
   const msgs = (Array.isArray(body["messages"]) ? body["messages"] : []).slice(-8)
     .filter((m): m is { role: string; text: string } => !!m && typeof (m as { text?: unknown }).text === "string")
     .map((m) => ({ role: m.role === "user" ? "user" as const : "assistant" as const, content: m.text.slice(0, 1200) }));
-  while (msgs.length && msgs[0]!.role !== "user") msgs.shift();
+  // A conversation can open with something Argos already said (the weekly picks): keep it as context.
+  if (msgs.length && msgs[0]!.role !== "user") msgs.unshift({ role: "user", content: "Hi Argos." });
   if (!msgs.length) throw new HttpError(400, "Say something first");
   const context = JSON.stringify({
     understood: body["understood"], not_yet: body["not_yet"], relaxed: body["relaxed"], total: body["total"],
