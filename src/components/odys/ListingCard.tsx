@@ -9,6 +9,7 @@ import { budgetFit, CONDITION_LABELS, inRegions, isCourtPhoto, renderUrl, SALE_T
 import { useLang } from "@/lib/i18n";
 import { useT } from "@/lib/tr";
 import type { Profile } from "@/lib/profile";
+import { allInCost, catches } from "@/lib/costs";
 import { cn } from "@/lib/utils";
 import { DeadlinePill, formatEur, IllustrationLabel, Money } from "./primitives";
 
@@ -150,6 +151,8 @@ export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: 
     fit === "within" ? <Chip key="fit" tone="success">{t("In budget")}</Chip> : null,
     inRegions(row, profile) ? <Chip key="reg" tone="success">{t("Your regions")}</Chip> : null,
   ].filter(Boolean).slice(0, 3);
+  const cost = allInCost(row, lang);
+  const catchLine = catches(row, lang)[0] ?? null;
   const meta = [
     row.property_type ? t(TYPE_LABELS[row.property_type] ?? row.property_type) : null,
     row.surface_sqm != null ? `${Math.round(row.surface_sqm).toLocaleString("en-GB")} ${lang === "ru" ? "м²" : "m²"}` : row.land_sqm != null ? `${Math.round(row.land_sqm).toLocaleString("en-GB")} ${lang === "ru" ? "м² земли" : "m² land"}` : null,
@@ -184,6 +187,16 @@ export function ListingCard({ row, profile, compact }: { row: FeedRow; profile: 
           )}
         </div>
         <p className="mt-2 truncate text-[13px] font-light text-foreground/55 tnum">{meta || t("Surface not stated")}</p>
+        {cost && (
+          <p className="mt-1.5 truncate text-[13px] font-light text-foreground/75 tnum">
+            ≈ {formatEur(cost.total)} <span className="text-foreground/50">{lang === "ru" ? "со всеми расходами" : "all in"}</span>
+          </p>
+        )}
+        {catchLine && (
+          <p className="mt-1 truncate text-[13px] font-light text-foreground/55">
+            <span className="text-[oklch(0.6_0.13_45)]">{lang === "ru" ? "Минус" : "Catch"}:</span> {catchLine}
+          </p>
+        )}
         <div className="mt-4 flex h-6 flex-wrap gap-1.5 overflow-hidden">{chips}</div>
         <div className="min-h-4 flex-1" />
         <div className="flex items-center justify-between border-t border-foreground/[0.08] pt-3.5 text-[13px] font-light">

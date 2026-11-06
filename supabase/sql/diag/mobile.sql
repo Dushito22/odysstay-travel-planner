@@ -1,0 +1,1 @@
+select json_build_object('rows', (select count(*) from public.auction_history), 'lots', (select count(*) from public.auction_lots), 'multi_round', (select count(*) from public.auction_lots where rounds > 1), 'regions', (select json_agg(r order by lots desc) from (select * from public.auction_region_stats limit 8) r));
