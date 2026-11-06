@@ -43,8 +43,8 @@ jobs:
         run: |
           for fn in agent-chat draft-message generate-render translate-listing translate-ui argos argos-voice area-brief telegram telegram-link capture weekly-drop; do
             echo "Deploying $fn"
-            supabase functions deploy "$fn" --project-ref "$PROJECT_REF" --use-api \
-              || supabase functions deploy "$fn" --project-ref "$PROJECT_REF"
+            supabase functions deploy "$fn" --project-ref "$PROJECT_REF" --use-api --yes \
+              || supabase functions deploy "$fn" --project-ref "$PROJECT_REF" --yes
           done
       - name: List deployed functions
         if: steps.token.outputs.ok == 'true'
