@@ -52,8 +52,8 @@ where sale_type like 'auction%' and not exists (select 1 from public.auction_his
 create or replace view public.auction_lots as
 select court, case_ref, max(region) as region, max(comune) as comune,
   count(distinct auction_at) filter (where auction_at is not null) as rounds,
-  (array_agg(price_eur order by at) filter (where price_eur is not null))[1] as first_price,
-  (array_agg(price_eur order by at desc) filter (where price_eur is not null))[1] as latest_price,
+  (array_agg(price_eur order by coalesce(auction_at, at), at) filter (where price_eur is not null))[1] as first_price,
+  (array_agg(price_eur order by coalesce(auction_at, at) desc, at desc) filter (where price_eur is not null))[1] as latest_price,
   max(appraisal_eur) as appraisal_eur,
   (array_agg(status order by at desc))[1] as latest_status,
   min(at) as first_seen, max(at) as last_change
