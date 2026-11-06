@@ -1,0 +1,13 @@
+name: Resend check
+on:
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      KEY: ${{ secrets.RESEND_API_KEY }}
+    steps:
+      - name: Check
+        run: |
+          echo "::notice title=Domains::$(curl -sS https://api.resend.com/domains -H "Authorization: Bearer $KEY" | head -c 800)"
+          echo "::notice title=Emails::$(curl -sS 'https://api.resend.com/emails?limit=3' -H "Authorization: Bearer $KEY" | head -c 1500)"
