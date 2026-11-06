@@ -9,5 +9,6 @@ jobs:
     steps:
       - name: Check
         run: |
-          echo "::notice title=Domains::$(curl -sS https://api.resend.com/domains -H "Authorization: Bearer $KEY" | head -c 800)"
-          echo "::notice title=Emails::$(curl -sS 'https://api.resend.com/emails?limit=3' -H "Authorization: Bearer $KEY" | head -c 1500)"
+          # Sends one plain test email and prints Resend's answer (an id, or the reason it refused).
+          echo "::notice title=Send::$(curl -sS -X POST https://api.resend.com/emails -H "Authorization: Bearer $KEY" -H 'content-type: application/json' \
+            -d '{"from":"Argos at Odysstay <argos@odysstay.xyz>","to":["gyurovik@gmail.com"],"subject":"Odysstay test","text":"Test from Odysstay. If you see this, email works."}' -w ' HTTP %{http_code}')"
