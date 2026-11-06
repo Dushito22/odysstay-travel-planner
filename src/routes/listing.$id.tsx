@@ -29,6 +29,7 @@ import {
 import { useLang } from "@/lib/i18n";
 import { lastList } from "@/lib/last-list";
 import { useT } from "@/lib/tr";
+import { allInCost, catches } from "@/lib/costs";
 import { cn } from "@/lib/utils";
 
 const ListingMap = lazy(() => import("@/components/odys/ListingMap"));
@@ -557,6 +558,8 @@ function HeroPanel({ data, userId }: { data: ListingBundle; userId: string | nul
         </ul>
       </div>
 
+      <CatchAndCost l={l} />
+
       <div className="mt-5">
         <ArgosHandleButton l={l} userId={userId} className="w-full" />
         <p className="mt-2 text-center text-[12px] font-light text-muted-foreground">
@@ -564,6 +567,39 @@ function HeroPanel({ data, userId }: { data: ListingBundle; userId: string | nul
         </p>
         <PurchaseQuoteLink listingId={l.id!} />
       </div>
+    </div>
+  );
+}
+
+/** The honest downsides and what it really costs, under Argos's take. */
+function CatchAndCost({ l }: { l: ListingBundle["listing"] }) {
+  const lang = useLang();
+  const r = lang === "ru";
+  const bad = catches(l, lang);
+  const cost = allInCost(l, lang);
+  if (!bad.length && !cost) return null;
+  return (
+    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {bad.length > 0 && (
+        <div className="rounded-[12px] border border-foreground/10 bg-card p-4">
+          <p className="text-[12px] uppercase tracking-[0.1em] text-[oklch(0.6_0.13_45)]">{r ? "Минусы" : "The catch"}</p>
+          <ul className="mt-2 space-y-1.5">
+            {bad.slice(0, 4).map((x) => <li key={x} className="text-[14px] font-light leading-snug text-foreground/80">{x}</li>)}
+          </ul>
+        </div>
+      )}
+      {cost && (
+        <div className="rounded-[12px] border border-foreground/10 bg-card p-4">
+          <p className="text-[12px] uppercase tracking-[0.1em] text-foreground/55">{r ? "Сколько выйдет всего" : "What it really costs"}</p>
+          <p className="mt-1.5 font-display text-[26px] leading-none tnum">≈ {formatEur(cost.total)}</p>
+          <dl className="mt-3 space-y-1 text-[13px] font-light">
+            {cost.parts.map((x) => (
+              <div key={x.label} className="flex justify-between gap-3"><dt className="text-foreground/60">{x.label}</dt><dd className="tnum">{formatEur(x.eur)}</dd></div>
+            ))}
+          </dl>
+          <p className="mt-2 text-[11px] font-light text-foreground/45">{r ? "Оценка. Точные суммы подтверждает нотариус." : "An estimate. The notary confirms the exact figures."}</p>
+        </div>
+      )}
     </div>
   );
 }
