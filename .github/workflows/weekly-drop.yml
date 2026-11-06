@@ -17,6 +17,9 @@ on:
       force:
         description: "Re-send even if this week's drop exists"
         default: "false"
+      email_only:
+        description: "Email only, skip Telegram (for testing)"
+        default: "false"
 
 jobs:
   drop:
@@ -32,8 +35,8 @@ jobs:
           if [ "${{ github.event_name }}" = "schedule" ]; then
             [ "$(date -u +%u)" = "4" ] && TIER=pro || TIER=all
           fi
-          BODY=$(jq -nc --arg t "${TIER:-all}" --arg e "${{ github.event.inputs.email }}" --arg f "${{ github.event.inputs.force }}" \
-            '{tier:$t, email:(if $e=="" then null else $e end), force:($f=="true")}')
+          BODY=$(jq -nc --arg t "${TIER:-all}" --arg e "${{ github.event.inputs.email }}" --arg f "${{ github.event.inputs.force }}" --arg eo "${{ github.event.inputs.email_only }}" \
+            '{tier:$t, email:(if $e=="" then null else $e end), force:($f=="true"), email_only:($eo=="true")}')
           R=$(curl -sS --max-time 1500 -X POST "$URL" -H "content-type: application/json" -H "x-drop-secret: $SECRET" -d "$BODY")
           echo "$R"
           echo "::notice title=Drop::$(echo "$R" | head -c 900)"
