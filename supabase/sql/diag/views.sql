@@ -16,7 +16,8 @@ group by court, case_ref;
 create or replace view public.auction_region_stats as
 select region, count(*) as lots,
   count(*) filter (where rounds > 1) as relisted,
-  round(avg(case when rounds > 1 and first_price > 0 then 100 * (1 - latest_price / first_price) end)::numeric, 1) as avg_fall_pct,
+  -- Only lots whose price actually fell: a higher later price means two listings share a case number.
+  round(avg(case when rounds > 1 and first_price > 0 and latest_price < first_price then 100 * (1 - latest_price / first_price) end)::numeric, 1) as avg_fall_pct,
   round(avg(case when appraisal_eur > 0 and latest_price > 0 then 100 * (1 - latest_price / appraisal_eur) end)::numeric, 1) as avg_below_appraisal_pct
 from public.auction_lots
 where region is not null
