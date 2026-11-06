@@ -267,7 +267,7 @@ Deno.serve(async (req) => {
       }
 
       let sent = false;
-      if (chat && BOT) {
+      if (chat && BOT && body.email_only !== true) {
         const r = await sendTelegram(Number(chat.chat_id), picks, audioUrl, lang, weekLabel);
         sent = !!r.ok;
         // So a reply like "tell me about the second one" makes sense to Argos on Telegram.
