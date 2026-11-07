@@ -14,14 +14,17 @@ export const Route = createFileRoute("/_authenticated/admin")({
 type Overview = {
   stats: Record<string, number>;
   waitlist: { plan: string; billing: string; created_at: string; email: string }[];
-  purchases: { id: string; note: string | null; created_at: string; listing_id: string | null; email: string; listing_title: string | null; listing_price: number | null }[];
-  users: { email: string; created_at: string; last_sign_in_at: string | null; deals: number; saved: number }[];
+  purchases: { id: string; kind: string; status: string; note: string | null; created_at: string; listing_id: string | null; email: string; listing_title: string | null; listing_price: number | null }[];
+  sources: { source: string; n: number }[];
+  users: { email: string; signup_source: string | null; created_at: string; last_sign_in_at: string | null; deals: number; saved: number }[];
 };
 
 const STAT_LABELS: [string, string][] = [
   ["users", "Users"], ["users_7d", "New, 7 days"], ["listings", "Listings"], ["deals", "Deals"],
-  ["saved", "Saved houses"], ["telegram", "On Telegram"], ["waitlist", "Plan waitlist"], ["purchase", "Quote requests"],
+  ["saved", "Saved houses"], ["telegram", "On Telegram"], ["waitlist", "Plan waitlist"], ["purchase", "Service requests"],
 ];
+
+const KIND: Record<string, string> = { deal_check: "Deal Check", remote_purchase: "Remote purchase", search_purchase: "Search + purchase" };
 
 const d = (v: string | null) => (v ? format(new Date(v), "d MMM yyyy, HH:mm") : "never");
 
@@ -62,9 +65,9 @@ function AdminPage() {
         ))}
       </div>
 
-      <Section title="Purchase service requests" empty="No requests yet." rows={o.purchases.length}>
+      <Section title="Service requests" empty="No requests yet." rows={o.purchases.length}>
         {o.purchases.map((p) => (
-          <Row key={p.id} a={p.email} b={p.listing_id ? (
+          <Row key={p.id} a={`${KIND[p.kind] ?? p.kind} · ${p.email}`} b={p.listing_id ? (
             <Link to="/listing/$id" params={{ id: p.listing_id }} className="underline">{p.listing_title ?? "Listing"}{p.listing_price ? `, €${p.listing_price.toLocaleString("en")}` : ""}</Link>
           ) : "General request"} c={d(p.created_at)} />
         ))}
@@ -76,9 +79,13 @@ function AdminPage() {
         ))}
       </Section>
 
+      <Section title="Where sign-ups come from" empty="No sign-ups yet." rows={o.sources?.length ?? 0}>
+        {(o.sources ?? []).map((x) => <Row key={x.source} a={x.source} b={`${x.n} people`} c="" />)}
+      </Section>
+
       <Section title="Latest users" empty="No users." rows={o.users.length}>
         {o.users.map((u) => (
-          <Row key={u.email} a={u.email} b={`${u.deals} deals, ${u.saved} saved`} c={`joined ${d(u.created_at)}`} />
+          <Row key={u.email} a={u.email} b={`${u.signup_source ?? "direct"} · ${u.deals} deals, ${u.saved} saved`} c={`joined ${d(u.created_at)}`} />
         ))}
       </Section>
     </>

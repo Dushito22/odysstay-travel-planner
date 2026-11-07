@@ -1,0 +1,25 @@
+name: Channel post
+
+# One find a day on the public Telegram channel, 10:07 Rome time. Run by hand with dry=true to preview.
+on:
+  schedule:
+    - cron: "7 9 * * *"
+  workflow_dispatch:
+    inputs:
+      dry:
+        description: "Preview only, don't post"
+        default: "true"
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    env:
+      SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+    steps:
+      - name: Post
+        run: |
+          DRY="${{ github.event.inputs.dry }}"
+          R=$(curl -sS --max-time 120 -X POST https://nryhvtxprjiylajolcef.supabase.co/functions/v1/channel-post \
+            -H "content-type: application/json" -H "x-drop-secret: $SECRET" -d "{\"dry\": ${DRY:-false}}")
+          echo "$R"
+          echo "::notice title=Post::$(echo "$R" | head -c 1500)"

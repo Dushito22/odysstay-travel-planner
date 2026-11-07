@@ -11,12 +11,12 @@ export const Route = createFileRoute("/pricing")({
       {
         name: "description",
         content:
-          "Free to look around every house for sale in Italy. Explorer €19 and Buyer €39 a month when you shortlist and buy.",
+          "Free to look around every house for sale in Italy. Buyer €29 a month. A Deal Check on one house for €290, and a fixed-fee remote purchase from €1,900.",
       },
       { property: "og:title", content: "Pricing | Odysstay" },
       {
         property: "og:description",
-        content: "Free to look around. Explorer €19, Buyer €39 a month.",
+        content: "Free to look around. Buyer €29 a month. Deal Check €290. Remote purchase from €1,900.",
       },
     ],
   }),

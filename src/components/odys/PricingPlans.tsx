@@ -3,13 +3,13 @@ import { Check } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { PurchaseServiceCard } from "@/components/odys/PurchaseService";
+import { ServicesSection } from "@/components/odys/PurchaseService";
 import { supabase } from "@/integrations/supabase/client";
 import { useLang } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type Plan = {
-  id: "free" | "explorer" | "buyer";
+  id: "free" | "buyer";
   name: { en: string; ru: string };
   monthly: number;
   blurb: { en: string; ru: string };
@@ -23,38 +23,28 @@ const PLANS: Plan[] = [
     blurb: { en: "Look around properly, at no cost.", ru: "Спокойно осмотреться, бесплатно." },
     features: [
       { en: "Every listing in Italy, map and deal score", ru: "Все объявления Италии, карта и оценка сделки" },
-      { en: "Translations and Argos's take on every house", ru: "Перевод и мнение Argos по каждому дому" },
-      { en: "Argos chat and a few minutes of calls a day", ru: "Чат с Argos и несколько минут звонков в день" },
-      { en: "1 renovation illustration", ru: "1 иллюстрация ремонта" },
-      { en: "1 saved search", ru: "1 сохранённый поиск" },
+      { en: "The catch and the full cost on every house", ru: "Минусы и полная стоимость по каждому дому" },
+      { en: "Argos's five picks every Saturday, with a voice note", ru: "5 домов от Argos каждую субботу, с голосовым" },
+      { en: "Chat with Argos, here and on Telegram", ru: "Чат с Argos здесь и в Telegram" },
+      { en: "1 renovation illustration, 1 saved search", ru: "1 иллюстрация ремонта, 1 сохранённый поиск" },
     ],
   },
   {
-    id: "explorer", name: { en: "Explorer", ru: "Исследователь" }, monthly: 19,
-    blurb: { en: "For when you're shortlisting.", ru: "Когда вы уже выбираете." },
+    id: "buyer", name: { en: "Buyer", ru: "Покупатель" }, monthly: 29, featured: true,
+    blurb: { en: "For when you're serious.", ru: "Когда вы всерьёз." },
     features: [
       { en: "Everything in Free", ru: "Всё из бесплатного" },
-      { en: "Unlimited Argos chat, 30 minutes of calls a month", ru: "Безлимитный чат, 30 минут звонков в месяц" },
-      { en: "Argos on Telegram with instant alerts for new matches", ru: "Argos в Telegram и мгновенные уведомления о новых домах" },
-      { en: "3 active deals: Argos writes to sellers in Italian, you approve", ru: "3 активные сделки: Argos пишет продавцам по-итальянски, вы одобряете" },
-      { en: "15 illustrations a month, unlimited saved searches", ru: "15 иллюстраций в месяц, безлимит сохранённых поисков" },
-    ],
-  },
-  {
-    id: "buyer", name: { en: "Buyer", ru: "Покупатель" }, monthly: 39, featured: true,
-    blurb: { en: "For when you're buying.", ru: "Когда вы покупаете." },
-    features: [
-      { en: "Everything in Explorer", ru: "Всё из тарифа «Исследователь»" },
-      { en: "Unlimited deals, messages and follow-ups", ru: "Безлимит сделок, писем и напоминаний" },
-      { en: "2 hours of calls with Argos a month", ru: "2 часа звонков с Argos в месяц" },
+      { en: "Calls with Argos, 2 hours a month", ru: "Звонки с Argos, 2 часа в месяц" },
+      { en: "Argos writes to sellers in Italian, you approve each message", ru: "Argos пишет продавцам по-итальянски, вы одобряете каждое письмо" },
       { en: "Court reports read for you: occupants, debts, risks", ru: "Отчёты суда прочитаны за вас: жильцы, долги, риски" },
-      { en: "Unlimited illustrations", ru: "Безлимит иллюстраций" },
-      { en: "A person at Odysstay checks anything binding", ru: "Человек из Odysstay проверяет всё, что вас обязывает" },
+      { en: "Your picks on Thursday, two days before everyone", ru: "Подборка в четверг, на два дня раньше всех" },
+      { en: "Unlimited illustrations and saved searches", ru: "Безлимит иллюстраций и сохранённых поисков" },
+      { en: "What you've paid counts toward a Deal Check or purchase", ru: "Оплаченное засчитывается в проверку сделки или покупку" },
     ],
   },
 ];
 
-/** The three plans. Paid plans collect interest until payments are switched on. */
+/** Free and Buyer, then the services. The paid plan collects interest until payments are switched on. */
 export function PricingPlans({ className }: { className?: string }) {
   const ru = useLang() === "ru";
   const L = ru ? "ru" : "en";
@@ -84,7 +74,7 @@ export function PricingPlans({ className }: { className?: string }) {
           ))}
         </div>
       </div>
-      <div className="mx-auto mt-8 grid max-w-5xl gap-4 md:grid-cols-3">
+      <div className="mx-auto mt-8 grid max-w-3xl gap-4 md:grid-cols-2">
         {PLANS.map((p) => {
           const price = yearly && p.monthly ? Math.round((p.monthly * 10) / 12) : p.monthly;
           return (
@@ -120,11 +110,11 @@ export function PricingPlans({ className }: { className?: string }) {
           );
         })}
       </div>
-      <PurchaseServiceCard className="mt-4" />
+      <ServicesSection className="mt-14" />
       <p className="mx-auto mt-6 max-w-2xl text-center text-sm text-muted-foreground">
         {ru
-          ? "Оплата откроется скоро: запишитесь, и мы сообщим первыми. Сборы коммуны, нотариуса и геометра вы платите им напрямую, Odysstay не держит ваши деньги."
-          : "Payments open soon: join the list and you hear first. Fees to the comune, notary or surveyor go straight to them. Odysstay never holds your money."}
+          ? "Подписка откроется скоро: запишитесь, и мы сообщим первыми. Odysstay не держит ваши деньги: сборы нотариуса, юриста и геометра идут им напрямую."
+          : "The Buyer plan opens soon: join the list and you hear first. Odysstay never holds your money: notary, lawyer and surveyor fees go straight to them."}
       </p>
     </div>
   );

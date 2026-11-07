@@ -41,3 +41,9 @@ verify_jwt = false
 
 [functions.onboard]
 verify_jwt = false
+
+[functions.service-request]
+verify_jwt = false
+
+[functions.channel-post]
+verify_jwt = false
