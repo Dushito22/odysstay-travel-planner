@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Analytics } from "@vercel/analytics/react";
 import {
   ClientOnly,
   Outlet,
@@ -19,6 +20,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { rememberSource } from "@/lib/source";
 
 function NotFoundComponent() {
   return (
@@ -150,6 +152,8 @@ function RootComponent() {
     return () => { window.clearTimeout(t); stopAutoTranslate(); };
   }, [lang]);
 
+  useEffect(() => { rememberSource(); }, []);
+
   useEffect(() => {
     const at = router.state.location;
     rememberList(at.href, at.pathname);
@@ -175,7 +179,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
-      <ClientOnly fallback={null}><ArgosDock /></ClientOnly>
+      <ClientOnly fallback={null}><ArgosDock /><Analytics /></ClientOnly>
       <Toaster />
     </QueryClientProvider>
   );

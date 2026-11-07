@@ -9,6 +9,7 @@ import { Slider } from "@/components/ui/slider";
 import { callFunction } from "@/lib/agent";
 import { chooseLang, speechLang, useLang, type Lang } from "@/lib/i18n";
 import { profileQuery, REGIONS, saveProfile, type ProfileUpdate } from "@/lib/profile";
+import { signupSource } from "@/lib/source";
 import { cn } from "@/lib/utils";
 import { canListen, listen, speak, stopSpeaking } from "@/lib/voice";
 
@@ -86,7 +87,7 @@ function Onboarding() {
   async function finish(patch: ProfileUpdate) {
     setSaving(true);
     try {
-      await saveProfile({ ...patch, language: lang, onboarded: true });
+      await saveProfile({ ...patch, language: lang, onboarded: true, signup_source: signupSource() });
       await qc.invalidateQueries({ queryKey: profileQuery.queryKey });
       navigate({ to: "/discover" });
     } catch (e) {

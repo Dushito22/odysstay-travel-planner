@@ -11,7 +11,7 @@ import { toast } from "sonner";
 
 import { GenerateRender } from "@/components/odys/GenerateRender";
 import { ArgosHandleButton, argosTake, AskArgos } from "@/components/odys/ListingArgos";
-import { PurchaseQuoteLink } from "@/components/odys/PurchaseService";
+import { ListingServiceLinks } from "@/components/odys/PurchaseService";
 import { Description } from "@/components/odys/Description";
 import { Nearby } from "@/components/odys/Nearby";
 import { LangToggle } from "@/components/odys/LangToggle";
@@ -565,7 +565,7 @@ function HeroPanel({ data, userId }: { data: ListingBundle; userId: string | nul
         <p className="mt-2 text-center text-[12px] font-light text-muted-foreground">
           {r ? "Argos пишет продавцу по-итальянски, вы одобряете каждое сообщение." : "Argos writes to the seller in Italian. You approve every message."}
         </p>
-        <PurchaseQuoteLink listingId={l.id!} />
+        <ListingServiceLinks listingId={l.id!} price={l.price_eur} />
       </div>
     </div>
   );
