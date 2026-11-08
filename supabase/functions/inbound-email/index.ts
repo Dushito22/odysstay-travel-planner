@@ -21,6 +21,25 @@ async function verified(req: Request, raw: string) {
   return sigs.split(" ").some((s) => s.split(",")[1] === expected);
 }
 
+/** Anything that isn't a reply to a deal (hello@, argos@, a stray email) is forwarded to the owner's inbox. */
+async function forwardToOwner(d: Record<string, any>) {
+  const owner = Deno.env.get("OWNER_EMAIL") || "gyurovik@gmail.com";
+  const send = Deno.env.get("RESEND_API_KEY");
+  if (!send) return { ignored: "no thread address" };
+  const full = await fetch(`https://api.resend.com/emails/receiving/${d.email_id}`, { headers: { authorization: `Bearer ${KEY}` } }).then((r) => r.json()).catch(() => ({}));
+  const text = String(full.text || (full.html ? strip(full.html) : "") || "(no text)");
+  const r = await fetch("https://api.resend.com/emails", {
+    method: "POST", headers: { authorization: `Bearer ${send}`, "content-type": "application/json" },
+    body: JSON.stringify({
+      from: Deno.env.get("DROP_FROM") || "Argos at Odysstay <argos@odysstay.xyz>", to: [owner], reply_to: d.from,
+      subject: `Fwd: ${d.subject ?? "(no subject)"}`,
+      text: `From: ${d.from}\nTo: ${(d.to ?? []).join(", ")}\n\n${text}`,
+      ...(full.html ? { html: `<p style="font:13px sans-serif;color:#666">From: ${String(d.from).replace(/</g, "&lt;")}<br>To: ${(d.to ?? []).join(", ")}</p><hr>${full.html}` } : {}),
+    }),
+  });
+  return { forwarded: r.ok };
+}
+
 const strip = (html: string) => html.replace(/<style[\s\S]*?<\/style>/gi, "").replace(/<br\s*\/?>/gi, "\n").replace(/<\/p>/gi, "\n\n").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\n{3,}/g, "\n\n").trim();
 /** Drops the quoted earlier messages so only the new reply is kept. */
 const fresh = (t: string) => t.split(/\n(?:>|On .+wrote:|Il giorno .+ha scritto:|-{2,}\s*Original Message|Da: )/)[0]!.trim();
@@ -34,7 +53,7 @@ Deno.serve(async (req) => {
   const d = evt.data ?? {};
   const rcpts: string[] = [...(d.to ?? []), ...(d.received_for ?? []), ...(d.cc ?? [])];
   const threadId = rcpts.map((a) => String(a).match(/r-([0-9a-f-]{36})@/i)?.[1]).find(Boolean);
-  if (!threadId) return ok({ ignored: "no thread address" });
+  if (!threadId) return ok(await forwardToOwner(d));
 
   const admin = adminClient();
   const { data: thread } = await admin.from("threads").select("id, deal_id, subject").eq("id", threadId).maybeSingle();
