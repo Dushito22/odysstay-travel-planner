@@ -235,15 +235,20 @@ export async function setStage(deal: Deal, to: string) {
   await logEvent(deal.id, "stage_changed", { from: deal.stage, to });
 }
 
-export async function approveMessage(msg: DealMessage, userId: string, typedConfirm: string) {
+export class NeedsEmail extends Error {}
+
+/** Approves and actually sends: Argos emails it from argos@odysstay.xyz with replies routed back here.
+ * Throws NeedsEmail when we have no address for the recipient yet; pass `email` to send to one. */
+export async function approveMessage(msg: DealMessage, _userId: string, typedConfirm: string, email?: string) {
   assertConfirmed(msg.is_binding, typedConfirm);
-  const { error } = await supabase
-    .from("messages")
-    .update({ status: "approved", approved_at: new Date().toISOString(), approved_by: userId })
-    .eq("id", msg.id);
-  if (error) throw error;
-  const { data: thread } = await supabase.from("threads").select("deal_id").eq("id", msg.thread_id).single();
-  if (thread) await logEvent(thread.deal_id, "message_approved", { message_id: msg.id });
+  const { data, error } = await supabase.functions.invoke("send-message", { body: { message_id: msg.id, confirm: typedConfirm, email } });
+  if (error) {
+    const ctx = (error as { context?: Response }).context;
+    const j = ctx ? await ctx.json().catch(() => null) : null;
+    throw new Error(j?.error ?? error.message);
+  }
+  if (data?.needs_email) throw new NeedsEmail("needs email");
+  return data as { sent: boolean; to?: string };
 }
 
 export async function rejectMessage(msg: DealMessage) {

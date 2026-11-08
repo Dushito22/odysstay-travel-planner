@@ -1,4 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { ArgosStatus } from "@/components/odys/deal/ArgosStatus";
+import { DealQuickActions } from "@/components/odys/deal/DealQuickActions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 
@@ -80,6 +83,7 @@ function DealRoom({ bundle }: { bundle: DealBundle }) {
   const overdue = tasks.filter((t) => isTaskOverdue(t));
   const threadOf = (id: string) => threads.find((t) => t.id === id);
   const closed = ["won", "lost", "withdrawn"].includes(deal.stage);
+  const [tab, setTab] = useState(awaiting.length ? "conversations" : "plan");
 
   return (
     <div className="space-y-8">
@@ -90,15 +94,15 @@ function DealRoom({ bundle }: { bundle: DealBundle }) {
       </Button>
 
       {/* Header */}
-      <section className="flex flex-col gap-5 rounded-2xl border bg-card p-4 sm:flex-row sm:items-center md:p-5">
+      <section className="flex flex-wrap gap-4 rounded-2xl border bg-card p-4 sm:flex-nowrap sm:items-center sm:gap-5 md:p-5">
         {listing && (
-          <div className="w-full shrink-0 sm:w-44">
+          <div className="w-24 shrink-0 overflow-hidden rounded-xl sm:w-44 [&>div]:!aspect-square sm:[&>div]:!aspect-[4/3]">
             <CardImage row={listing} compact />
           </div>
         )}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl md:text-4xl">{listing?.comune ?? "Listing unavailable"}</h1>
+            <h1 className="text-[26px] leading-tight sm:text-3xl md:text-4xl">{listing?.comune ?? "Listing unavailable"}</h1>
             <ScoreBadge score={listing?.score} reasons={listing?.score_reasons} size="sm" />
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -126,15 +130,18 @@ function DealRoom({ bundle }: { bundle: DealBundle }) {
             )}
           </div>
         </div>
-        <div className="sm:self-start">
+        <div className="w-full sm:w-auto sm:self-start">
           <div className="flex flex-wrap gap-2">
             {listing?.id && (
               <AgentChatButton listingId={listing.id} dealId={deal.id} signedIn variant="default" />
             )}
             <DealSettings bundle={bundle} run={run} pending={pending} />
+            <DealQuickActions deal={deal} />
           </div>
         </div>
       </section>
+
+      {!closed && <ArgosStatus bundle={bundle} onOpenConversations={() => { setTab("conversations"); document.getElementById("deal-tabs")?.scrollIntoView({ behavior: "smooth", block: "start" }); }} />}
 
       {/* Stage */}
       <section aria-label="Deal stage">
@@ -203,7 +210,7 @@ function DealRoom({ bundle }: { bundle: DealBundle }) {
       )}
 
       {/* Tabs */}
-      <Tabs defaultValue={awaiting.length ? "conversations" : "plan"}>
+      <Tabs id="deal-tabs" value={tab} onValueChange={setTab} className="scroll-mt-20">
         <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="plan">Plan</TabsTrigger>
           <TabsTrigger value="conversations">

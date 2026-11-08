@@ -873,7 +873,9 @@ export type Database = {
           id: string
           is_binding: boolean
           language: string
+          provider_id: string | null
           sent_at: string | null
+          sent_to: string | null
           status: string
           subject: string | null
           thread_id: string
@@ -890,7 +892,9 @@ export type Database = {
           id?: string
           is_binding?: boolean
           language?: string
+          provider_id?: string | null
           sent_at?: string | null
+          sent_to?: string | null
           status?: string
           subject?: string | null
           thread_id: string
@@ -907,7 +911,9 @@ export type Database = {
           id?: string
           is_binding?: boolean
           language?: string
+          provider_id?: string | null
           sent_at?: string | null
+          sent_to?: string | null
           status?: string
           subject?: string | null
           thread_id?: string

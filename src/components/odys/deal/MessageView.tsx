@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   approveMessage,
+  NeedsEmail,
   markMessageSent,
   rejectMessage,
   saveMessageBody,
@@ -87,11 +88,21 @@ export function ApprovalCard({
   const [draft, setDraft] = useState(msg.body_original);
   const busy = pending?.startsWith(msg.id) ?? false;
 
-  const approve = (typed = "") =>
+  const [needEmail, setNeedEmail] = useState(false);
+  const [email, setEmail] = useState("");
+  const [typedSaved, setTypedSaved] = useState("");
+  const approve = (typed = "", to?: string) =>
     run(
       `${msg.id}-approve`,
-      () => approveMessage(msg, userId, typed),
-      "Approved. Odysstay sends approved messages within a few minutes.",
+      async () => {
+        try {
+          await approveMessage(msg, userId, typed, to);
+        } catch (e) {
+          if (e instanceof NeedsEmail) { setTypedSaved(typed); setNeedEmail(true); throw new Error("Add the recipient's email to send it."); }
+          throw e;
+        }
+      },
+      "Sent. Replies will appear here, on Telegram and in your email.",
     );
 
   return (
@@ -159,7 +170,18 @@ export function ApprovalCard({
         )}
       </div>
 
-      {!editing && (
+      {needEmail && (
+        <div className="mt-4 rounded-xl border border-dashed p-3">
+          <p className="text-sm text-muted-foreground">We don't have this person's email yet. Portals often hide it: copy it from the listing or the agency's site.</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@agency.it"
+              className="h-9 min-w-0 flex-1 rounded-lg border bg-background px-3 text-sm outline-none focus:border-foreground/40" />
+            <Button size="sm" disabled={busy || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)} onClick={() => approve(typedSaved, email)}>Send</Button>
+          </div>
+        </div>
+      )}
+
+      {!editing && !needEmail && (
         <div className="mt-5 flex flex-wrap items-center gap-2">
           {msg.is_binding ? (
             <ConfirmBinding
@@ -182,7 +204,7 @@ export function ApprovalCard({
             />
           ) : (
             <Button disabled={busy} onClick={() => approve()}>
-              Approve
+              Approve and send
             </Button>
           )}
           <Button
@@ -201,7 +223,7 @@ export function ApprovalCard({
   );
 }
 
-/** Until the backend sends email, the user sends approved messages themselves. */
+/** A message approved before automatic sending existed: send it now, or copy it and send it yourself. */
 export function SendYourself({
   msg,
   thread,
@@ -225,9 +247,16 @@ export function SendYourself({
   return (
     <div className="mt-3 rounded-xl border border-dashed p-3 text-sm">
       <p className="text-muted-foreground">
-        Approved. Until automatic sending is live, send it yourself and mark it as sent.
+        Approved but not sent yet. Argos can send it now, or you can send it yourself.
       </p>
       <div className="mt-2 flex flex-wrap items-center gap-2">
+        <Button
+          size="sm"
+          disabled={pending === `${msg.id}-send`}
+          onClick={() => run(`${msg.id}-send`, () => approveMessage(msg, "", "CONFIRM"), "Sent")}
+        >
+          Send now
+        </Button>
         {to ? (
           <Button size="sm" variant="outline" onClick={() => copy(to, "Address")}>
             <Copy /> {to}

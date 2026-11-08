@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import type { FeedRow } from "@/lib/feed";
 import { speechLang, useLang } from "@/lib/i18n";
-import { startDeal, UpgradeRequired } from "@/lib/listing";
+import { startDeal, draftFirstMessage, UpgradeRequired } from "@/lib/listing";
 import { cn } from "@/lib/utils";
 
 /** 1 день, 2 дня, 5 дней */
@@ -78,7 +78,10 @@ export function ArgosHandleButton({ l, userId, className }: { l: FeedRow; userId
     if (deal) { navigate({ to: "/deals/$id", params: { id: deal.id } }); return; }
     setBusy(true);
     try {
-      navigate({ to: "/deals/$id", params: { id: await startDeal(l) } });
+      const id = await startDeal(l);
+      // Argos drafts the first message while the deal page opens; the page shows it when ready.
+      void draftFirstMessage(id, l).catch(() => {});
+      navigate({ to: "/deals/$id", params: { id } });
     } catch (e) {
       if (e instanceof UpgradeRequired)
         toast(r ? "Бесплатный план: одна активная сделка за раз." : "The free plan includes one active deal at a time.", { action: { label: r ? "Тарифы" : "See plans", onClick: () => navigate({ to: "/pricing" }) } });

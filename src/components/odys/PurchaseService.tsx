@@ -34,7 +34,7 @@ export function useServiceRequest(kind: ServiceKind, listingId?: string) {
         window.location.href = u.toString();
         return;
       }
-      if (r.pay) setOrder({ id: r.id, ref: r.ref, pay: r.pay });
+      if (kind === "deal_check" && !r.paid) setOrder({ id: r.id, ref: r.ref, pay: r.pay ?? { amount_eur: 290, amount_usd: 0, options: [] } });
       setState("done");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Something went wrong. Please try again.");
