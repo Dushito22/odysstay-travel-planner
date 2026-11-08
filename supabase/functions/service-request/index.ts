@@ -1,7 +1,8 @@
 // A buyer orders a Deal Check or the purchase service. Saves the request with a payment reference,
-// emails the owner, and for a Deal Check returns how to pay: bank transfer or stablecoins, with
-// details kept in server secrets so they never sit in the public site code.
+// emails the owner, and for a Deal Check returns the stablecoin addresses to pay to, kept in server
+// secrets so they never sit in the public site code. Card and bank payments are requested by email.
 // action "claim": the buyer says they've paid (optionally with a transaction id); the owner is emailed.
+// action "card": the buyer asks for a card or bank payment link; the owner is emailed.
 import { adminClient, HttpError, json, requireUser, serve } from "../_shared/runtime.ts";
 
 const KINDS = ["deal_check", "remote_purchase", "search_purchase"] as const;
@@ -30,17 +31,21 @@ async function usdPerEur() {
   } catch { return 1.1; }
 }
 
+const NETWORKS: Record<string, string> = { TRON: "TRON (TRC20)", ETHEREUM: "Ethereum (ERC20)", ETH: "Ethereum (ERC20)", BASE: "Base", SOLANA: "Solana", SOL: "Solana", POLYGON: "Polygon", ARBITRUM: "Arbitrum", BSC: "BNB Chain (BEP20)", OPTIMISM: "Optimism", PLASMA: "Plasma", TON: "TON", AVALANCHE: "Avalanche" };
+
+/** Stablecoin addresses from secrets named PAY_USDT_<NETWORK> or PAY_USDC_<NETWORK>, e.g. PAY_USDT_TRON. */
 async function payment() {
-  const bank = {
-    name: env("PAY_NAME"),
-    eur: env("PAY_EUR_IBAN") ? { iban: env("PAY_EUR_IBAN"), bic: env("PAY_EUR_BIC") } : null,
-    gbp: env("PAY_GBP_ACCOUNT") || null,
-    usd: env("PAY_USD_ACCOUNT") || null,
-  };
-  const crypto = { usdt_tron: env("PAY_USDT_TRON") || null, usdc_base: env("PAY_USDC_BASE") || null };
-  if (!bank.eur && !bank.gbp && !bank.usd && !crypto.usdt_tron && !crypto.usdc_base) return null;
+  const options: { coin: "USDT" | "USDC"; network: string; label: string; address: string }[] = [];
+  for (const [k, v] of Object.entries(Deno.env.toObject())) {
+    const m = k.match(/^PAY_(USDT|USDC)_([A-Z]+)$/);
+    if (!m || !v.trim()) continue;
+    options.push({ coin: m[1] as "USDT" | "USDC", network: m[2]!, label: NETWORKS[m[2]!] ?? m[2]!, address: v.trim() });
+  }
+  if (!options.length) return null;
+  const order = ["TRON", "ETHEREUM", "ETH", "BASE", "SOLANA", "SOL", "POLYGON", "ARBITRUM", "BSC", "OPTIMISM", "TON", "PLASMA", "AVALANCHE"];
+  options.sort((a, b) => (a.coin === b.coin ? order.indexOf(a.network) - order.indexOf(b.network) : a.coin === "USDT" ? -1 : 1));
   const rate = await usdPerEur();
-  return { amount_eur: DEAL_CHECK_EUR, amount_usd: Math.ceil(DEAL_CHECK_EUR * rate), bank, crypto };
+  return { amount_eur: DEAL_CHECK_EUR, amount_usd: Math.ceil(DEAL_CHECK_EUR * rate), options };
 }
 
 const newRef = () => `ODY-${crypto.getRandomValues(new Uint8Array(3)).reduce((s, b) => s + b.toString(16).padStart(2, "0"), "").toUpperCase().slice(0, 5)}`;
@@ -48,6 +53,15 @@ const newRef = () => `ODY-${crypto.getRandomValues(new Uint8Array(3)).reduce((s,
 serve(async (req, body) => {
   const admin = adminClient();
   const user = await requireUser(req, admin);
+
+  if (body["action"] === "card") {
+    const id = String(body["id"] ?? "");
+    const { data: r } = await admin.from("purchase_requests").select("id, kind, payment_ref, user_id").eq("id", id).maybeSingle();
+    if (!r || r.user_id !== user.id) throw new HttpError(404, "Order not found.");
+    await admin.from("purchase_requests").update({ paid_note: "asked for a card or bank link" }).eq("id", id);
+    await tellOwner(`Card link wanted: ${r.payment_ref} from ${user.email}`, `${user.email} wants to pay ${NAMES[r.kind]} by card or bank transfer.\nReference: ${r.payment_ref}\nSend them a payment link by email.\n\n${SITE}/admin`);
+    return json({ ok: true });
+  }
 
   if (body["action"] === "claim") {
     const id = String(body["id"] ?? "");

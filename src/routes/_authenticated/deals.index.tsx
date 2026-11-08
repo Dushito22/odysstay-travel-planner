@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { DealQuickActions } from "@/components/odys/deal/DealQuickActions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 
@@ -149,7 +150,10 @@ function DealRow({ deal, needsYou }: { deal: DealWithListing; needsYou: number }
             )}
           </div>
         </div>
-        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <div className="flex shrink-0 items-center gap-1.5">
+          <DealQuickActions deal={deal} compact afterDelete={() => {}} />
+          <ChevronRight className="ml-1 hidden h-4 w-4 text-muted-foreground sm:block" />
+        </div>
       </Link>
     </li>
   );

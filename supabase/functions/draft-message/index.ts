@@ -74,7 +74,8 @@ serve(async (req, body) => {
     admin.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
     loadListing(admin, deal.listing_id),
   ]);
-  const fullName = profile?.full_name?.trim();
+  const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+  const fullName = profile?.full_name?.trim() || (typeof meta["full_name"] === "string" ? meta["full_name"].trim() : "") || (typeof meta["name"] === "string" ? meta["name"].trim() : "");
   if (!fullName)
     throw new HttpError(
       400,

@@ -35,6 +35,8 @@ const baseMsg: DealMessage = {
   approved_by: null,
   approved_at: null,
   sent_at: null,
+  provider_id: null,
+  sent_to: null,
   created_at: "2026-10-26T10:00:00Z",
 };
 
@@ -77,7 +79,7 @@ describe("ApprovalCard", () => {
 
   it("approves a non-binding message in one click", async () => {
     render(<ApprovalCard msg={baseMsg} thread={thread} userId="u1" run={run} pending={null} />);
-    fireEvent.click(screen.getByRole("button", { name: "Approve" }));
+    fireEvent.click(screen.getByRole("button", { name: "Approve and send" }));
     await waitFor(() => expect(approveMessage).toHaveBeenCalledTimes(1));
   });
 

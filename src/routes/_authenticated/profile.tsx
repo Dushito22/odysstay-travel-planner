@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { OrdersSection } from "@/components/odys/OrdersSection";
 import { chooseLang, useLang } from "@/lib/i18n";
 import { profileQuery, saveProfile } from "@/lib/profile";
 import { cn } from "@/lib/utils";
@@ -92,6 +93,7 @@ function ProfilePage() {
     <>
       <PageHeader title="Profile" intro="What you tell us here, Argos knows: on the site and on Telegram. It saves by itself." />
       <div className="space-y-6">
+        <Section title="Plan and orders"><OrdersSection plan={p?.plan} /></Section>
         <Section title="Language and weekly picks">
           <p className="mb-3 text-sm text-muted-foreground">The site, Argos's chats and calls, Telegram and your weekly picks all use this language.</p>
           <div className="inline-grid grid-cols-2 rounded-full bg-muted p-1 text-[14px]">

@@ -47,3 +47,9 @@ verify_jwt = false
 
 [functions.channel-post]
 verify_jwt = false
+
+[functions.send-message]
+verify_jwt = false
+
+[functions.inbound-email]
+verify_jwt = false
