@@ -32,8 +32,8 @@ export function PublicFooter() {
           <Link to="/terms" className="hover:text-foreground">
             {t("Terms")}
           </Link>
-          <a href="mailto:hello@odysstay.com" className="hover:text-foreground">
-            hello@odysstay.com
+          <a href="mailto:hello@odysstay.xyz" className="hover:text-foreground">
+            hello@odysstay.xyz
           </a>
         </nav>
       </div>

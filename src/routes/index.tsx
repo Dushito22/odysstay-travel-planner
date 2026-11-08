@@ -860,7 +860,7 @@ function Footer() {
           <Link to="/privacy" className={link}>Privacy</Link>
           <Link to="/terms" className={link}>Terms</Link>
           <Link to="/credits" className={link}>{c.credits}</Link>
-          <a href="mailto:hello@odysstay.com" className={link}>hello@odysstay.com</a>
+          <a href="mailto:hello@odysstay.xyz" className={link}>hello@odysstay.xyz</a>
         </nav>
       </Wrap>
       <Wrap className="relative flex flex-wrap items-center justify-between gap-4 border-t border-white/15 py-5 text-[13px] font-light text-white/60">

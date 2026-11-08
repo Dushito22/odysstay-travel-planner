@@ -5,7 +5,7 @@
 import { adminClient, HttpError, json, serve, uuid } from "../_shared/runtime.ts";
 
 const NEW_PER_DAY = 400;
-const UA = { "User-Agent": "Odysstay/1.0 (hello@odysstay.com)" };
+const UA = { "User-Agent": "Odysstay/1.0 (hello@odysstay.xyz)" };
 
 type Osm = { lat?: number; lon?: number; center?: { lat: number; lon: number }; tags?: Record<string, string> };
 
