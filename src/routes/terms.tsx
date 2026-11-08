@@ -11,7 +11,7 @@ export const Route = createFileRoute("/terms")({
         <h1 className="text-4xl">Terms</h1>
         <p className="text-muted-foreground">Our full terms of service are being finalised.</p>
         <p className="text-muted-foreground">{LEGAL_LINE}</p>
-        <p className="text-muted-foreground">Questions: hello@odysstay.com</p>
+        <p className="text-muted-foreground">Questions: hello@odysstay.xyz</p>
       </article>
     </PublicShell>
   ),

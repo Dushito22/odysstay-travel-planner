@@ -12,7 +12,7 @@ export const Route = createFileRoute("/privacy")({
           Our full privacy policy is being finalised. In short: your documents are private to you,
           your messages are sent only after you approve them, and we never sell your data.
         </p>
-        <p className="text-muted-foreground">Questions: hello@odysstay.com</p>
+        <p className="text-muted-foreground">Questions: hello@odysstay.xyz</p>
       </article>
     </PublicShell>
   ),
