@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 import { PageHeader } from "@/components/odys/AppShell";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,7 +15,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
 type Overview = {
   stats: Record<string, number>;
   waitlist: { plan: string; billing: string; created_at: string; email: string }[];
-  purchases: { id: string; kind: string; status: string; note: string | null; created_at: string; listing_id: string | null; email: string; listing_title: string | null; listing_price: number | null }[];
+  purchases: { id: string; kind: string; status: string; payment_ref: string | null; paid_note: string | null; paid_claimed_at: string | null; note: string | null; created_at: string; listing_id: string | null; email: string; listing_title: string | null; listing_price: number | null }[];
   sources: { source: string; n: number }[];
   users: { email: string; signup_source: string | null; created_at: string; last_sign_in_at: string | null; deals: number; saved: number }[];
 };
@@ -38,6 +39,11 @@ function AdminPage() {
       return data as unknown as Overview;
     },
   });
+
+  const setStatus = async (id: string, status: string) => {
+    const { error } = await supabase.rpc("admin_set_request_status" as never, { request_id: id, new_status: status } as never);
+    if (error) toast.error(error.message); else void q.refetch();
+  };
 
   if (q.isLoading) return <><PageHeader title="Admin" /><Skeleton className="h-64 w-full" /></>;
   if (q.error || !q.data) {
@@ -67,9 +73,22 @@ function AdminPage() {
 
       <Section title="Service requests" empty="No requests yet." rows={o.purchases.length}>
         {o.purchases.map((p) => (
-          <Row key={p.id} a={`${KIND[p.kind] ?? p.kind} · ${p.email}`} b={p.listing_id ? (
-            <Link to="/listing/$id" params={{ id: p.listing_id }} className="underline">{p.listing_title ?? "Listing"}{p.listing_price ? `, €${p.listing_price.toLocaleString("en")}` : ""}</Link>
-          ) : "General request"} c={d(p.created_at)} />
+          <div key={p.id}>
+            <Row a={`${KIND[p.kind] ?? p.kind} · ${p.email}`} b={p.listing_id ? (
+              <Link to="/listing/$id" params={{ id: p.listing_id }} className="underline">{p.listing_title ?? "Listing"}{p.listing_price ? `, €${p.listing_price.toLocaleString("en")}` : ""}</Link>
+            ) : "General request"} c={d(p.created_at)} />
+            <div className="flex flex-wrap items-center gap-2 px-4 pb-2.5 text-[12px]">
+              {p.payment_ref && <span className="rounded bg-muted px-1.5 py-0.5 font-mono">{p.payment_ref}</span>}
+              <span className={p.status === "paid" ? "text-success" : "text-foreground/60"}>{p.status}</span>
+              {p.paid_claimed_at && p.status !== "paid" && <span className="text-[oklch(0.6_0.13_45)]">says paid {d(p.paid_claimed_at)}{p.paid_note ? `: ${p.paid_note}` : ""}</span>}
+              {p.status !== "paid" && (
+                <button type="button" onClick={() => void setStatus(p.id, "paid")} className="ml-auto rounded-full border px-2.5 py-0.5 hover:border-foreground/40">Mark paid</button>
+              )}
+              {p.status === "paid" && (
+                <button type="button" onClick={() => void setStatus(p.id, "done")} className="ml-auto rounded-full border px-2.5 py-0.5 hover:border-foreground/40">Mark done</button>
+              )}
+            </div>
+          </div>
         ))}
       </Section>
 

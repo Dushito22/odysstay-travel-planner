@@ -3,6 +3,7 @@ import { ArrowRight, Check } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { PaymentDialog, type PayInfo } from "@/components/odys/PaymentDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { callFunction } from "@/lib/agent";
 import { useLang } from "@/lib/i18n";
@@ -17,6 +18,7 @@ const DEAL_CHECK_PAY = (import.meta.env["VITE_STRIPE_DEAL_CHECK_URL"] as string 
 export function useServiceRequest(kind: ServiceKind, listingId?: string) {
   const navigate = useNavigate();
   const [state, setState] = useState<"idle" | "busy" | "done">("idle");
+  const [order, setOrder] = useState<{ id: string; ref: string; pay: PayInfo } | null>(null);
   async function request() {
     const { data } = await supabase.auth.getSession();
     const session = data.session;
@@ -24,7 +26,7 @@ export function useServiceRequest(kind: ServiceKind, listingId?: string) {
     if (!session) { void navigate({ to: "/login", search: { redirect: back } }); return; }
     setState("busy");
     try {
-      const r = await callFunction<{ id: string }>("service-request", { kind, listing_id: listingId ?? null });
+      const r = await callFunction<{ id: string; ref: string; paid?: boolean; pay: PayInfo | null }>("service-request", { kind, listing_id: listingId ?? null });
       if (kind === "deal_check" && DEAL_CHECK_PAY) {
         const u = new URL(DEAL_CHECK_PAY);
         u.searchParams.set("client_reference_id", r.id);
@@ -32,13 +34,15 @@ export function useServiceRequest(kind: ServiceKind, listingId?: string) {
         window.location.href = u.toString();
         return;
       }
+      if (r.pay) setOrder({ id: r.id, ref: r.ref, pay: r.pay });
       setState("done");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Something went wrong. Please try again.");
       setState("idle");
     }
   }
-  return { state, request };
+  const dialog = order ? <PaymentDialog open onClose={() => setOrder(null)} orderId={order.id} payRef={order.ref} pay={order.pay} /> : null;
+  return { state, request, dialog };
 }
 
 const BANDS = [
@@ -67,6 +71,7 @@ export function ServicesSection({ className }: { className?: string }) {
           {ru ? "Фиксированная цена, не процент. Юрист, нотариус, геометра и налоги оплачиваются им напрямую, по их тарифам." : "Fixed fees, not a percentage. Lawyer, notary, surveyor and taxes are paid to them directly, at cost."}
         </p>
       </div>
+      {check.dialog}
       <div className="grid gap-4 md:grid-cols-3">
         <ServiceCard
           featured
@@ -146,6 +151,7 @@ export function ListingServiceLinks({ listingId, price }: { listingId: string; p
   const fee = purchaseFee(price).toLocaleString(ru ? "ru-RU" : "en-GB");
   return (
     <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+      {check.dialog}
       <button type="button" onClick={() => void check.request()} disabled={check.state !== "idle"}
         className="flex items-center justify-center gap-1.5 rounded-full border border-azure/40 px-4 py-2.5 text-[13px] text-azure transition-colors hover:bg-azure-soft disabled:opacity-80">
         {check.state === "done" ? (ru ? "Записали. Напишем сегодня." : "Got it. We'll write today.") : <>{ru ? "Проверка сделки, €290" : "Deal Check, €290"} <ArrowRight className="h-3.5 w-3.5" /></>}
