@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { SellerIntel } from "@/components/odys/SellerIntel";
 import { useSignedIn } from "@/lib/signed-in";
 import {
   ClientOnly, createFileRoute, Link, useNavigate, useRouter, type ErrorComponentProps,
@@ -559,6 +560,7 @@ function HeroPanel({ data, userId }: { data: ListingBundle; userId: string | nul
       </div>
 
       <CatchAndCost l={l} />
+      <SellerIntel listingId={l.id!} />
 
       <div className="mt-5">
         <ArgosHandleButton l={l} userId={userId} className="w-full" />

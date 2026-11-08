@@ -54,13 +54,15 @@ async function candidates(admin: Admin, profile: Row, seen: Set<string>, days: n
   return ((data ?? []) as Row[]).filter((r) => !seen.has(r.id));
 }
 
-/** Five houses, never two from the same town. Widens the window if the week was thin. */
-async function pickFor(admin: Admin, profile: Row, seen: Set<string>) {
+/** Five houses, never two from the same town. Widens the window if the week was thin. Houses already in
+ * many buyers' picks or deals slide down a little, so close calls go to different houses for different people. */
+async function pickFor(admin: Admin, profile: Row, seen: Set<string>, pop: Map<string, number>) {
   let rows: Row[] = [];
   for (const days of [8, 30, 120]) {
     rows = await candidates(admin, profile, seen, days);
     if (rows.length >= 5) break;
   }
+  rows.sort((a, b) => ((b.score ?? 0) - 4 * (pop.get(b.id) ?? 0)) - ((a.score ?? 0) - 4 * (pop.get(a.id) ?? 0)));
   const out: Row[] = [];
   const towns = new Set<string>();
   for (const r of rows) {
@@ -237,6 +239,13 @@ Deno.serve(async (req) => {
   if (tier === "pro" && !onlyEmail) targets = targets.filter((u) => PAID.includes(profOf.get(u.id)?.plan ?? "free"));
   targets = targets.slice(0, MAX_USERS);
 
+  // How crowded each house already is: this week's picks plus open deals.
+  const pop = new Map<string, number>();
+  const { data: weekDrops } = await admin.from("weekly_drops").select("listing_ids, user_id").eq("week", week);
+  for (const d of weekDrops ?? []) if (!targets.some((t) => t.id === d.user_id)) for (const id of d.listing_ids ?? []) pop.set(id, (pop.get(id) ?? 0) + 1);
+  const { data: openDeals } = await admin.from("deals").select("listing_id").not("stage", "in", "(won,lost,withdrawn)");
+  for (const d of openDeals ?? []) pop.set(d.listing_id, (pop.get(d.listing_id) ?? 0) + 2);
+
   const report: Row[] = [];
   for (const u of targets) {
     try {
@@ -247,7 +256,8 @@ Deno.serve(async (req) => {
       const weekLabel = new Date(`${week}T12:00:00Z`).toLocaleDateString(lang === "ru" ? "ru-RU" : "en-GB", { day: "numeric", month: "long" });
       const { data: prev } = await admin.from("weekly_drops").select("listing_ids").eq("user_id", u.id).neq("week", week).order("week", { ascending: false }).limit(6);
       const seen = new Set<string>((prev ?? []).flatMap((p) => p.listing_ids as string[]));
-      const rows = await pickFor(admin, profile, seen);
+      const rows = await pickFor(admin, profile, seen, pop);
+      for (const r of rows) pop.set(r.id, (pop.get(r.id) ?? 0) + 1);
       // Nothing personal to say without a note, so a failed note skips this buyer rather than sending bare links.
       if (!rows.length) { report.push({ email: u.email, skipped: "no houses" }); continue; }
       const note = await writeNote(rows, profile, lang);

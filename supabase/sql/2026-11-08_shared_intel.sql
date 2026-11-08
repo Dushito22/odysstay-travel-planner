@@ -27,3 +27,16 @@ language sql stable security definer set search_path = public as $$
   ) x;
 $$;
 grant execute on function public.listing_interest(uuid) to anon, authenticated;
+
+-- A conversation can wait its turn (so one agency isn't crowded by several buyers), and a seller's reply
+-- is logged as coming from the contact.
+do $$
+declare c text;
+begin
+  select conname into c from pg_constraint where conrelid = 'public.threads'::regclass and contype = 'c' and pg_get_constraintdef(oid) like '%waiting_reply%';
+  if c is not null then execute format('alter table public.threads drop constraint %I', c); end if;
+  alter table public.threads add constraint threads_status_check check (status in ('open', 'waiting_reply', 'needs_you', 'queued', 'closed'));
+  select conname into c from pg_constraint where conrelid = 'public.deal_events'::regclass and contype = 'c' and pg_get_constraintdef(oid) like '%actor%';
+  if c is not null then execute format('alter table public.deal_events drop constraint %I', c); end if;
+  alter table public.deal_events add constraint deal_events_actor_check check (actor in ('user', 'agent', 'system', 'contact'));
+end $$;
