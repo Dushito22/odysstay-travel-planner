@@ -131,8 +131,20 @@ export function budgetFit(r: FeedRow, p: Profile | null): "within" | "over" | nu
 
 const num = (v: number | null | undefined, d: number) => (v == null ? d : v);
 
+/** A stable shuffle key per person per day, so houses with near-equal scores come in a different order
+ * for each buyer and the same few don't get every enquiry. */
+function mixKey(id: string, seed: string) {
+  let h = 2166136261;
+  for (const ch of seed + id) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return h >>> 0;
+}
+const BUCKET = 5;
+const bucket = (s: number) => Math.floor(s / BUCKET);
+
 export function sortFeed(rows: FeedRow[], sort: string, p: Profile | null) {
   const r = [...rows];
+  const seed = `${p?.id ?? "guest"}:${new Date().toISOString().slice(0, 10)}`;
+  const mix = (a: FeedRow, b: FeedRow) => mixKey(a.id ?? "", seed) - mixKey(b.id ?? "", seed);
   switch (sort) {
     case "cheapest":
       return r.sort((a, b) => num(a.price_eur, Infinity) - num(b.price_eur, Infinity));
@@ -145,9 +157,9 @@ export function sortFeed(rows: FeedRow[], sort: string, p: Profile | null) {
     case "newest":
       return r.sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
     case "foryou":
-      return r.sort((a, b) => Number(!!b.has_real_photo) - Number(!!a.has_real_photo) || forYouScore(b, p) - forYouScore(a, p));
+      return r.sort((a, b) => Number(!!b.has_real_photo) - Number(!!a.has_real_photo) || bucket(forYouScore(b, p)) - bucket(forYouScore(a, p)) || mix(a, b));
     default:
-      return r.sort((a, b) => Number(!!b.has_real_photo) - Number(!!a.has_real_photo) || num(b.score, -1) - num(a.score, -1));
+      return r.sort((a, b) => Number(!!b.has_real_photo) - Number(!!a.has_real_photo) || bucket(num(b.score, -1)) - bucket(num(a.score, -1)) || mix(a, b));
   }
 }
 
