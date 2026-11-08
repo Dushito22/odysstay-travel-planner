@@ -21,6 +21,7 @@ const FROM = (Deno.env.get("SEND_FROM_ADDRESS") || "argos@odysstay.xyz").trim();
 const FOLLOW_UP_DAYS = 3;
 const MAX_FOLLOW_UPS = 2;
 const MAX_AUTO_SENDS_PER_DAY = 4;
+const COOLDOWN_HOURS = 72;
 
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "content-type": "application/json" } });
 
@@ -54,8 +55,9 @@ You decide the single next move. Return JSON only:
  "binding": true/false,
  "update": "one short past-tense line for the buyer's timeline, in BUYER_LANGUAGE, saying what you did or learned and what happens next",
  "question": "a short question for the buyer in BUYER_LANGUAGE when next is ask_buyer, else empty",
- "learned": ["each new fact the seller gave, in BUYER_LANGUAGE, very short"]}
+ "learned": [{"en": "each new fact the seller gave about the house, very short, English", "ru": "the same in Russian"}]}
 How you work:
+- KNOWN lists what sellers already told Odysstay about this house (from earlier conversations). Never ask again what's already known; build on it and ask only what's missing or specific to this buyer (their viewing, their questions). Never mention other buyers, clients or conversations.
 - Mission: confirm it's still available, get the floor plan, cadastral records (visura, planimetria) and energy certificate (APE), learn whether it's empty or occupied, any extra costs (condominium, debts, works), the reason for selling and how flexible the price is, and arrange a viewing or video call.
 - You write on behalf of the buyer (use their full name, e.g. "Le scrivo per conto di <name>, interessato all'immobile..."). Mention the property by what identifies it (type, street or area, town, and the portal or notice it's from). At most three questions per email. If someone asks directly whether you are a person, say plainly you are a digital assistant. Never give the buyer's phone or address.
 - ${STYLE}
@@ -78,7 +80,7 @@ function history(c: Ctx, threadId: string) {
   }));
 }
 
-async function decide(c: Ctx, thread: Row | null, why: string) {
+async function decide(c: Ctx, thread: Row | null, why: string, known: string[]) {
   const l = c.listing ?? {};
   const input = {
     today: new Date().toISOString().slice(0, 10), BUYER_LANGUAGE: c.lang === "ru" ? "Russian" : "English", why,
@@ -86,6 +88,7 @@ async function decide(c: Ctx, thread: Row | null, why: string) {
     house: { town: l.comune, region: l.region, price_eur: l.price_eur, sqm: l.surface_sqm, type: l.property_type, condition: l.condition, sale: l.sale_type, occupancy: l.occupancy, auction_at: l.auction_at, court_value_eur: l.appraisal_eur, listing_url: l.source_url, summary: l.summary_en?.slice(0, 1200) },
     CONTACT: thread?.contacts ? { name: thread.contacts.name, organisation: thread.contacts.organisation, kind: thread.contacts.kind, is_person: looksLikePerson(thread.contacts.name) } : null,
     conversation: thread ? history(c, thread.id) : [],
+    KNOWN: known,
   };
   const text = await callClaude(SYSTEM, [{ role: "user", content: JSON.stringify(input) }], 2500);
   const m = text.match(/\{[\s\S]*\}/);
@@ -167,20 +170,42 @@ async function step(admin: Admin, dealId: string, why: string, givenEmail?: stri
   // Don't double up: one draft waiting for the buyer is enough.
   if (c.messages.some((m: Row) => m.thread_id === thread.id && m.status === "awaiting_approval")) return { skipped: "waiting for buyer" };
 
-  const o = await decide(c, thread, why);
   const ru = c.lang === "ru";
+  // What sellers already told us about this house in the last 30 days, from any buyer's conversation.
+  const { data: intel } = await admin.from("listing_intel").select("fact_en, learned_at").eq("listing_id", c.deal.listing_id)
+    .gt("learned_at", new Date(Date.now() - 30 * 864e5).toISOString()).order("learned_at", { ascending: false }).limit(30);
+  const known = (intel ?? []).map((x: Row) => `${x.fact_en} (${String(x.learned_at).slice(0, 10)})`);
+  const o = await decide(c, thread, why, known);
   const to = thread.contacts?.email || thread.contacts?.pec || null;
   const auto = c.deal.autonomy === "auto_info_requests";
   const today = new Date(Date.now() - 864e5).toISOString();
   const sentToday = c.messages.filter((m: Row) => m.direction === "outbound" && m.status === "sent" && (m.sent_at ?? "") > today).length;
 
-  if (o.learned?.length) await event(admin, dealId, "agent_learned", { facts: o.learned });
+  const learned = (Array.isArray(o.learned) ? o.learned : []).filter((f: Row) => f && typeof f.en === "string" && f.en.trim());
+  if (learned.length) {
+    await event(admin, dealId, "agent_learned", { facts: learned.map((f: Row) => (ru ? f.ru || f.en : f.en)) });
+    await admin.from("listing_intel").insert(learned.map((f: Row) => ({ listing_id: c.deal.listing_id, fact_en: f.en.slice(0, 300), fact_ru: f.ru ? String(f.ru).slice(0, 300) : null, deal_id: dealId })));
+  }
   if (o.next === "wait" || o.next === "done" || !o.body_it) {
     if (o.update) await event(admin, dealId, "agent_update", { summary: o.update });
     return { next: o.next };
   }
 
   const base = { thread_id: thread.id, direction: "outbound", is_binding: !!o.binding, language: "it", subject: o.subject || thread.subject, body_original: o.body_it, body_en: o.body_en || null, attachments: [], ai_generated: true };
+  // One email per seller address every few days across all of Odysstay, so a popular house's agency
+  // never gets a flood. If someone else's Argo wrote to them recently, this one waits its turn.
+  let cooling: string | null = null;
+  if (to && !o.binding) {
+    const since = new Date(Date.now() - COOLDOWN_HOURS * 3600e3).toISOString();
+    const { data: recent } = await admin.from("messages").select("sent_at, thread_id").eq("sent_to", to).eq("status", "sent").gt("sent_at", since).neq("thread_id", thread.id).order("sent_at", { ascending: false }).limit(1);
+    if (recent?.length) cooling = new Date(Date.parse(recent[0].sent_at) + COOLDOWN_HOURS * 3600e3).toISOString();
+  }
+  if (cooling && auto && o.next === "send") {
+    await admin.from("threads").update({ status: "queued", last_message_at: cooling }).eq("id", thread.id);
+    const day = new Date(cooling).toLocaleDateString(ru ? "ru-RU" : "en-GB", { weekday: "long", day: "numeric", month: "short" });
+    await event(admin, dealId, "agent_update", { summary: ru ? `Письмо готово. Это агентство недавно получало письмо от Odysstay, поэтому Argo отправит его ${day}, чтобы не надоедать.` : `Message ready. This agency heard from Odysstay recently, so Argo sends it on ${day} to avoid crowding them.` });
+    return { queued: cooling };
+  }
   const canSend = auto && !o.binding && o.next === "send" && !!to && sentToday < MAX_AUTO_SENDS_PER_DAY;
   if (canSend) {
     const providerId = await sendEmail(c, thread, to!, base.subject, o.body_it);
@@ -205,9 +230,15 @@ async function step(admin: Admin, dealId: string, why: string, givenEmail?: stri
 
 /** Follow-ups for threads that went quiet. */
 async function sweep(admin: Admin) {
+  const out: Row[] = [];
+  const { data: queued } = await admin.from("threads").select("id, deal_id").eq("status", "queued").lt("last_message_at", new Date().toISOString()).limit(20);
+  for (const t of queued ?? []) {
+    await admin.from("threads").update({ status: "open" }).eq("id", t.id);
+    try { out.push({ deal: t.deal_id, ...(await step(admin, t.deal_id, "Your earlier message was held back so the agency wasn't crowded. Send it now if it still makes sense.")) }); }
+    catch (e) { out.push({ deal: t.deal_id, error: String(e).slice(0, 160) }); }
+  }
   const cutoff = new Date(Date.now() - FOLLOW_UP_DAYS * 864e5).toISOString();
   const { data: threads } = await admin.from("threads").select("id, deal_id, status, last_message_at").eq("status", "waiting_reply").lt("last_message_at", cutoff).limit(40);
-  const out: Row[] = [];
   for (const t of threads ?? []) {
     const { data: msgs } = await admin.from("messages").select("direction, status, sent_at, created_at").eq("thread_id", t.id).order("created_at");
     const lastIn = [...(msgs ?? [])].reverse().find((m) => m.direction === "inbound");
