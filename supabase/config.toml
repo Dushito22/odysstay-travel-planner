@@ -53,3 +53,6 @@ verify_jwt = false
 
 [functions.inbound-email]
 verify_jwt = false
+
+[functions.autopilot]
+verify_jwt = false

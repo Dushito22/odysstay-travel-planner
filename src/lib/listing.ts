@@ -144,7 +144,7 @@ export async function startDeal(listing: FeedRow): Promise<string> {
     if ((count ?? 0) > 0) throw new UpgradeRequired();
   }
   const { data: deal, error: dErr } = await supabase
-    .from("deals").insert({ user_id: uid, listing_id: listing.id, stage: "interested" }).select("id").single();
+    .from("deals").insert({ user_id: uid, listing_id: listing.id, stage: "interested", autonomy: "auto_info_requests" }).select("id").single();
   if (dErr) throw dErr;
   try {
     const { error: tErr } = await supabase.from("deal_tasks").insert(buildTasks(deal.id, listing, profile));
@@ -161,20 +161,14 @@ export async function startDeal(listing: FeedRow): Promise<string> {
   return deal.id;
 }
 
-type ListingContact = { name?: string | null; role?: string | null; email?: string | null; pec?: string | null; phone?: string | null };
-
-/** Right after a deal opens, Argos writes the first message to whoever sells the house, so the buyer
- * only has to read it and approve. Uses the listing's own contact when it has one. */
-export async function draftFirstMessage(dealId: string, listing: FeedRow) {
-  const all = (Array.isArray(listing.contacts) ? listing.contacts : []) as ListingContact[];
-  const c = all.find((x) => x?.email || x?.pec) ?? all.find((x) => x?.name) ?? null;
-  const auction = String(listing.sale_type ?? "").startsWith("auction");
-  const purpose = auction
-    ? "First contact about this court auction: say the buyer is interested, ask to view the property, ask whether it is empty or occupied, and ask for the full court survey (perizia) and any costs not in the notice."
-    : "First contact: say the buyer is interested, ask whether it is still available, ask for the floor plan, cadastral documents and energy certificate, and suggest a viewing or a video call.";
-  const contact = c ? { name: c.name || c.role || (auction ? "Custode" : "Agenzia"), email: c.email ?? null, pec: c.pec ?? null } : null;
-  const { error } = await supabase.functions.invoke("draft-message", {
-    body: { deal_id: dealId, purpose, contact_kind: auction ? "other" : "agency", ...(contact ? { contact } : {}) },
-  });
-  if (error) throw error;
+/** Hands the deal to Argos: he writes to the seller and runs the conversation from here.
+ * Pass `email` when the listing has no address for the seller. */
+export async function startAutopilot(dealId: string, email?: string) {
+  const { data, error } = await supabase.functions.invoke("autopilot", { body: { action: "start", deal_id: dealId, ...(email ? { email } : {}) } });
+  if (error) {
+    const ctx = (error as { context?: Response }).context;
+    const j = ctx ? await ctx.json().catch(() => null) : null;
+    throw new Error(j?.error ?? error.message);
+  }
+  return data as { sent?: string; waiting?: string; skipped?: string; next?: string };
 }

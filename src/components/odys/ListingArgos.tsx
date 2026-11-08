@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import type { FeedRow } from "@/lib/feed";
 import { speechLang, useLang } from "@/lib/i18n";
-import { startDeal, draftFirstMessage, UpgradeRequired } from "@/lib/listing";
+import { startAutopilot, startDeal, UpgradeRequired } from "@/lib/listing";
 import { cn } from "@/lib/utils";
 
 /** 1 день, 2 дня, 5 дней */
@@ -79,8 +79,8 @@ export function ArgosHandleButton({ l, userId, className }: { l: FeedRow; userId
     setBusy(true);
     try {
       const id = await startDeal(l);
-      // Argos drafts the first message while the deal page opens; the page shows it when ready.
-      void draftFirstMessage(id, l).catch(() => {});
+      // Argos writes to the seller while the deal page opens; the page follows along.
+      void startAutopilot(id).catch(() => {});
       navigate({ to: "/deals/$id", params: { id } });
     } catch (e) {
       if (e instanceof UpgradeRequired)

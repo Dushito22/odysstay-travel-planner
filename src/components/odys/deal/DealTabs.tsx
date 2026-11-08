@@ -968,11 +968,13 @@ export function ActivityTab({ bundle }: { bundle: DealBundle }) {
     <ol className="space-y-3">
       {bundle.events.map((e) => {
         const Icon = e.actor === "agent" ? Bot : e.actor === "system" ? Wrench : User;
-        const d = (e.detail ?? {}) as { from?: string; to?: string; purpose?: string };
+        const d = (e.detail ?? {}) as { from?: string; to?: string; purpose?: string; summary?: string; facts?: string[] };
         let text = ACTION_LABEL[e.action] ?? e.action.replace(/_/g, " ");
         if (e.action === "stage_changed" && d.from && d.to)
           text = `Stage: ${stageLabel(d.from)} to ${stageLabel(d.to)}`;
         if (e.action === "request_created" && d.purpose) text = `Request created: ${d.purpose}`;
+        if (typeof d.summary === "string" && d.summary) text = d.summary;
+        if (e.action === "agent_learned" && Array.isArray(d.facts)) text = `Learned: ${d.facts.join(" · ")}`;
         return (
           <li key={e.id} className="flex items-start gap-3">
             <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
