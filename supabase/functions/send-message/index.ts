@@ -43,7 +43,7 @@ serve(async (req, body) => {
   if (!key) throw new HttpError(503, "Sending is not switched on yet.");
   const r = await fetch("https://api.resend.com/emails", {
     method: "POST", headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-    body: JSON.stringify({ from: `${name.replace(/[<>"]/g, "")} via Odysstay <${FROM}>`, to: [to], reply_to: replyTo, subject: msg.subject || thread.subject || "Richiesta informazioni", text: msg.body_original }),
+    body: JSON.stringify({ from: `${(Deno.env.get("AGENT_NAME_IT") || "Argo").trim()} per ${name.replace(/[<>"]/g, "")} <${FROM}>`, to: [to], reply_to: replyTo, subject: msg.subject || thread.subject || "Richiesta informazioni", text: msg.body_original }),
   });
   const res = await r.json().catch(() => ({}));
   if (!r.ok) throw new HttpError(502, `The email didn't go out: ${res?.message ?? r.status}`);

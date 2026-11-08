@@ -8,6 +8,7 @@
 //   { action: "step", deal_id, why }        inbound-email after a reply (x-drop-secret)
 //   { action: "sweep" }                     every few hours: follow-ups (x-drop-secret)
 import { adminClient, callClaude, corsHeaders, HttpError } from "../_shared/runtime.ts";
+import { signature, STYLE, tidy } from "../_shared/signature.ts";
 
 type Row = Record<string, any>;
 type Admin = ReturnType<typeof adminClient>;
@@ -56,7 +57,8 @@ You decide the single next move. Return JSON only:
  "learned": ["each new fact the seller gave, in BUYER_LANGUAGE, very short"]}
 How you work:
 - Mission: confirm it's still available, get the floor plan, cadastral records (visura, planimetria) and energy certificate (APE), learn whether it's empty or occupied, any extra costs (condominium, debts, works), the reason for selling and how flexible the price is, and arrange a viewing or video call.
-- Email style: formal Italian (Lei), warm and brief, at most three questions per email. First line says you are Argos, the digital assistant of the buyer (use their name), writing on their behalf. Sign "Argos, assistente digitale di <name>" with "via Odysstay". Never pretend to be human. Never give the buyer's phone or address.
+- You write on behalf of the buyer (use their name, e.g. "Le scrivo per conto di <name>, interessato all'immobile..."). At most three questions per email. If someone asks directly whether you are a person, say plainly you are a digital assistant. Never give the buyer's phone or address.
+- ${STYLE}
 - next = "send" when there is something useful to ask or answer. If the seller replied, answer what they asked if you can and continue the mission. If there was no reply for a while (FOLLOW_UP in the input), write a short, polite follow-up.
 - binding = true for anything that offers or accepts a price, makes or accepts an offer, mentions a deposit (caparra), commits to a date or a visit time, or agrees to any condition. Those wait for the buyer.
 - next = "ask_buyer" when the seller asks something only the buyer can answer (an offer, a visit date, their phone number, financing) or when a decision is needed. Put the question in "question" and still draft the reply you'd send once they answer, marked binding.
@@ -82,6 +84,11 @@ async function decide(c: Ctx, thread: Row | null, why: string) {
   const m = text.match(/\{[\s\S]*\}/);
   if (!m) throw new Error(`autopilot: no JSON: ${text.slice(0, 200)}`);
   const o = JSON.parse(m[0]) as Row;
+  if (o.body_it) {
+    const sig = signature(c.name);
+    o.body_it = `${tidy(String(o.body_it))}\n\n${sig.it}`;
+    o.body_en = o.body_en ? `${tidy(String(o.body_en))}\n\n${sig.en}` : o.body_en;
+  }
   // A second safety net on top of the model's own judgement: money words mean it waits for the buyer.
   if (/\b(offr|propost|caparra|accont|€\s?\d|\d+\s?(euro|€)|accett)/i.test(String(o.body_it ?? ""))) o.binding = true;
   return o;
@@ -116,7 +123,7 @@ async function sendEmail(c: Ctx, thread: Row, to: string, subject: string, body:
   const who = (c.name || "Odysstay").replace(/[<>"]/g, "");
   const r = await fetch("https://api.resend.com/emails", {
     method: "POST", headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-    body: JSON.stringify({ from: `Argos per ${who} <${FROM}>`, to: [to], reply_to: INBOUND ? `r-${thread.id}@${INBOUND}` : c.email, subject, text: body }),
+    body: JSON.stringify({ from: `${(Deno.env.get("AGENT_NAME_IT") || "Argo").trim()} per ${who} <${FROM}>`, to: [to], reply_to: INBOUND ? `r-${thread.id}@${INBOUND}` : c.email, subject, text: body }),
   });
   const res = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(`send failed: ${res?.message ?? r.status}`);

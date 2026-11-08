@@ -1,4 +1,5 @@
 // Drafts a formal Italian email for a deal. It always waits for the user's approval.
+import { signature, tidy } from "../_shared/signature.ts";
 import {
   buildDraftContext,
   CONTACT_KINDS,
@@ -138,6 +139,9 @@ serve(async (req, body) => {
   });
   const raw = await callClaude(DRAFT_SYSTEM, [{ role: "user", content: context }], 1500);
   const draft = parseDraft(raw);
+  const sig = signature(fullName);
+  draft.body_it = `${tidy(draft.body_it)}\n\n${sig.it}`;
+  if (draft.body_en) draft.body_en = `${tidy(draft.body_en)}\n\n${sig.en}`;
   const bodyIt = ensureDisclosure(draft.body_it, fullName);
 
   if (!threadId) {
