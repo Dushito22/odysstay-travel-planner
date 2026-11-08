@@ -1,0 +1,20 @@
+name: Autopilot
+
+# Every three hours Argos checks quiet conversations and follows up on his own.
+on:
+  schedule:
+    - cron: "17 */3 * * *"
+  workflow_dispatch:
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    env:
+      SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+    steps:
+      - name: Sweep
+        run: |
+          R=$(curl -sS --max-time 300 -X POST https://nryhvtxprjiylajolcef.supabase.co/functions/v1/autopilot \
+            -H "content-type: application/json" -H "x-drop-secret: $SECRET" -d '{"action":"sweep"}')
+          echo "$R"
+          echo "::notice title=Sweep::$(echo "$R" | head -c 900)"

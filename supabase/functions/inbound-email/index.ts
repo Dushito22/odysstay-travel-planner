@@ -80,7 +80,13 @@ Deno.serve(async (req) => {
     subject: d.subject ?? thread.subject, body_original: text, body_en: english || null, attachments: d.attachments ?? [], ai_generated: false, sent_to: d.from ?? null,
   });
   await admin.from("threads").update({ status: "needs_you" }).eq("id", thread.id);
-  await admin.from("deal_events").insert({ deal_id: deal.id, actor: "contact", action: "reply_received", detail: { thread_id: thread.id, from: d.from } });
+  await admin.from("deal_events").insert({ deal_id: deal.id, actor: "contact", action: "reply_received", detail: { thread_id: thread.id, from: d.from, summary } });
+
+  // Argos reads the reply and takes the next step himself (answers, or asks the buyer).
+  const autopilot = fetch(`${(Deno.env.get("SUPABASE_URL") ?? "").replace(/\/$/, "")}/functions/v1/autopilot`, {
+    method: "POST", headers: { "content-type": "application/json", "x-drop-secret": Deno.env.get("TELEGRAM_WEBHOOK_SECRET") ?? "" },
+    body: JSON.stringify({ action: "step", deal_id: deal.id, why: "The seller replied. Read it, update the buyer and decide the next move." }),
+  }).catch((e) => console.error("autopilot call", e));
 
   // Tell the buyer where they'll see it.
   const { data: l } = await admin.from("listings").select("comune").eq("id", deal.listing_id).maybeSingle();
@@ -102,5 +108,6 @@ Deno.serve(async (req) => {
       body: JSON.stringify({ from: Deno.env.get("DROP_FROM") || "Argos at Odysstay <argos@odysstay.xyz>", to: [u.user.email], subject: lang === "ru" ? `Ответ продавца${town ? `: ${town}` : ""}` : `The seller replied${town ? `: ${town}` : ""}`, text: `${line}\n\n${link}` }),
     }).catch(() => {});
   }
+  await autopilot;
   return ok({ saved: true });
 });
