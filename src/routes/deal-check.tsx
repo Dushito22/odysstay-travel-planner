@@ -75,6 +75,7 @@ function DealCheck() {
   );
   return (
     <PublicShell>
+      {order.dialog}
       <div className="mx-auto max-w-3xl">
         <p className="text-[12px] uppercase tracking-[0.12em] text-azure">{c.kicker}</p>
         <h1 className="mt-3 type-h1">{c.title}</h1>
