@@ -119,6 +119,23 @@ def _price(l: dict, reasons: list[str]) -> float:
                 pts += p
                 reasons.append(f"+{p} €{ppsqm:,.0f}/m²")
                 break
+    lo, hi = l.get("omi_eur_m2_min"), l.get("omi_eur_m2_max")
+    if price and sqm and sqm > 10 and lo and hi and l.get("property_type") in RESIDENTIAL:
+        ppsqm, mid = price / sqm, (float(lo) + float(hi)) / 2
+        gap = round(100 * (1 - ppsqm / mid))
+        rng = f"official OMI range here €{float(lo):,.0f} to €{float(hi):,.0f}/m² (2018)"
+        if gap >= 50:
+            pts += 6
+            reasons.append(f"+6 {gap}% under the {rng}")
+        elif gap >= 30:
+            pts += 4
+            reasons.append(f"+4 {gap}% under the {rng}")
+        elif gap >= 10:
+            pts += 2
+            reasons.append(f"+2 {gap}% under the {rng}")
+        elif gap <= -40:
+            pts -= 4
+            reasons.append(f"-4 {-gap}% above the {rng}")
     disc = l.get("discount_pct")
     if disc is not None:
         for limit, p in ((60, 6), (45, 4), (30, 3), (15, 1)):
@@ -196,7 +213,8 @@ def score_listing(l: dict, red_flags: int | dict[str, int], today: date | None =
 
 def run(db: Supa, log=print) -> int:
     listings = db.select("listings", {"select": "id,price_eur,surface_sqm,property_type,sale_type,discount_pct,lat,lng,condition,"
-                                      "previous_auction_failed,occupancy,deadline_at,auction_at,status,score,score_reasons,photo_urls",
+                                      "previous_auction_failed,occupancy,deadline_at,auction_at,status,score,score_reasons,photo_urls,"
+                                      "omi_eur_m2_min,omi_eur_m2_max",
                                       "is_demo": "eq.false", "status": "neq.withdrawn", "order": "id"})
     flags: dict[str, dict[str, int]] = {}
     for f in db.select("listing_red_flags", {"select": "listing_id,severity"}):

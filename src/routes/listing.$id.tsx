@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { AuctionBenchmark } from "@/components/odys/AuctionBenchmark";
+import { OmiValue } from "@/components/odys/OmiValue";
 import { SellerIntel } from "@/components/odys/SellerIntel";
 import { useSignedIn } from "@/lib/signed-in";
 import {
@@ -562,6 +563,7 @@ function HeroPanel({ data, userId }: { data: ListingBundle; userId: string | nul
 
       <CatchAndCost l={l} />
       <SellerIntel listingId={l.id!} />
+      {l.id && <OmiValue listingId={l.id} price={l.price_eur} sqm={l.surface_sqm} />}
       {String(l.sale_type ?? "").startsWith("auction") && <AuctionBenchmark region={l.region} type={l.property_type} price={l.price_eur} />}
 
       <div className="mt-5">

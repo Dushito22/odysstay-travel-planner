@@ -10,11 +10,12 @@
   python -m odysstay_worker extract [--limit 50]       read candidate notices with AI (needs ANTHROPIC_API_KEY)
   python -m odysstay_worker geocode                    put new listings on the map
   python -m odysstay_worker score                      rank listings and update open/closing/closed
-  python -m odysstay_worker immobiliare                portal listings with photos via Apify (needs APIFY_TOKEN)
+  python -m odysstay_worker immobiliare                portal listings with photos (free, direct; Apify if APIFY_TOKEN is set)
   python -m odysstay_worker costs                      add default renovation estimates
   python -m odysstay_worker perizia [--limit 40]       read court appraisal reports of the best listings with AI
   python -m odysstay_worker grants                     link regional grants to listings as possible fits
   python -m odysstay_worker status                     counts at a glance
+  python -m odysstay_worker omi                        official OMI value per m² for each listing's zone, then rescore
   python -m odysstay_worker deep [--limit 30]          read the appraisal report of starred listings (rules, no AI)
   python -m odysstay_worker daily                      refresh court sales, map, scores and estimates (no AI)
 """
@@ -82,6 +83,8 @@ def main(argv=None):
     im.add_argument("--regions", type=int, default=None)
     im.add_argument("--max-price", type=int, default=None)
     im.add_argument("--per-region", type=int, default=None)
+    sub.add_parser("immobiliare-probe")
+    sub.add_parser("omi")
     ag = sub.add_parser("aste")
     ag.add_argument("--probe", action="store_true")
     ag.add_argument("--limit", type=int, default=4000)
@@ -146,6 +149,13 @@ def main(argv=None):
             aste.probe()
         else:
             print(json.dumps(aste.collect(db, a.limit), indent=2))
+    elif a.cmd == "omi":
+        from . import omi, score
+        omi.run(db)
+        score.run(db)
+    elif a.cmd == "immobiliare-probe":
+        from .collectors import immobiliare_direct
+        immobiliare_direct.probe()
     elif a.cmd == "immobiliare":
         from .collectors import immobiliare
         print(json.dumps(immobiliare.collect(db, a.regions, a.max_price, a.per_region), indent=2))
@@ -188,13 +198,18 @@ def main(argv=None):
         from . import costs, geocode, score
         from .collectors import aste, immobiliare, notary, one_euro, pvp
         for name, step in (("court sales", lambda: pvp.collect(db)), ("notary sales", lambda: notary.collect(db)),
-                           ("immobiliare (private demo, needs APIFY_TOKEN)", lambda: immobiliare.collect(db)),
+                           ("immobiliare", lambda: immobiliare.collect(db)),
                            ("one-euro towns", lambda: one_euro.collect(db)), ("private auctions", lambda: aste.collect(db, 600, max_minutes=40))):
             try:
                 print(name, json.dumps(step(), indent=2))
             except Exception as e:  # noqa: BLE001  one source failing must not stop the others
                 print(f"{name}: error {e}")
         geocode.run(db)
+        from . import omi
+        try:
+            omi.run(db)
+        except Exception as e:  # noqa: BLE001
+            print(f"omi: error {e}")
         score.run(db)
         costs.run(db)
         status(db)
