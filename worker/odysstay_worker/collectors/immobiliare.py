@@ -1,6 +1,9 @@
-"""Immobiliare.it listings with real photos, through a third-party Apify scraper (memo23/immobiliare-scraper).
+"""Immobiliare.it listings with real photos.
 
-Private demo source, off unless the APIFY_TOKEN secret is set. Immobiliare.it has no public listings API
+Two ways in. Free by default: read the portal's own search pages directly (the JSON its site loads, or the
+data embedded in the HTML), slowly, a few pages per run, with a browser-like TLS fingerprint (curl_cffi).
+If APIFY_TOKEN is set, the old paid route through Apify (memo23/immobiliare-scraper) is used instead.
+Private demo source. Immobiliare.it has no public listings API
 and its terms forbid scraping; the owner chose this for his own testing. Every listing links back to the
 original ad. On Apify's free plan a run returns at most 100 results and the free monthly credit covers
 roughly 7,000 results, so each run takes the newest ads under a price cap in a few regions, rotating daily.
@@ -254,8 +257,9 @@ def collect(db: Supa, regions: int | None = None, max_price: int | None = None, 
     max_price = max_price or int(os.environ.get("IMMOBILIARE_MAX_PRICE") or 100000)
     per_region = per_region or int(os.environ.get("IMMOBILIARE_PER_REGION") or 100)
     token = os.environ.get("APIFY_TOKEN")
-    if not token:
-        return {"skipped": "APIFY_TOKEN not set"}
+    if not token or os.environ.get("IMMOBILIARE_MODE") == "direct":
+        from . import immobiliare_direct
+        return immobiliare_direct.collect(db, regions, max_price, log=log)
     picked = pick_regions(min(regions, len(REGIONS)))
     # Price bands, e.g. "0-25000,25000-50000,50000-100000": each band is its own run of up to per_region results,
     # so cheap houses are not crowded out by the €90k ones.
@@ -274,21 +278,27 @@ def collect(db: Supa, regions: int | None = None, max_price: int | None = None, 
             log(f"  {region}: error {e}")
             continue
         seen += len(items)
-        recs = [r for r in (to_row(it, region) for it in items) if r]
-        for i in range(0, len(recs), 50):
-            batch = recs[i:i + 50]
-            docs = db.upsert("documents", [b["document"] for b in batch], on_conflict="url,part")
-            doc_id = {d["url"]: d["id"] for d in docs}
-            rows = db.upsert("listings", [{**b["listing"], "document_id": doc_id.get(b["document"]["url"])} for b in batch], on_conflict="external_id")
-            lid = {r["external_id"]: r["id"] for r in rows}
-            if lid:
-                db.delete("listing_facts", {"listing_id": in_(list(lid.values()))})
-                facts = [{"listing_id": lid[b["listing"]["external_id"]], **f} for b in batch for f in b["facts"] if b["listing"]["external_id"] in lid]
-                if facts:
-                    db.insert("listing_facts", facts, returning=False)
-                db.delete("listing_red_flags", {"listing_id": in_(list(lid.values())), "origin": "eq.listing"})
-                flags = [{"listing_id": lid[b["listing"]["external_id"]], **f} for b in batch for f in b["flags"] if b["listing"]["external_id"] in lid]
-                if flags:
-                    db.insert("listing_red_flags", flags, returning=False)
-            saved += len(lid)
+        saved += save(db, [r for r in (to_row(it, region) for it in items) if r])
     return {"regions": [r for r, _ in picked], "bands": bands, "results": seen, "saved": saved}
+
+
+def save(db: Supa, recs: list[dict]) -> int:
+    """Upserts documents, listings, facts and red flags for to_row() records. Returns listings saved."""
+    saved = 0
+    for i in range(0, len(recs), 50):
+        batch = list({b["listing"]["external_id"]: b for b in recs[i:i + 50]}.values())
+        docs = db.upsert("documents", [b["document"] for b in batch], on_conflict="url,part")
+        doc_id = {d["url"]: d["id"] for d in docs}
+        rows = db.upsert("listings", [{**b["listing"], "document_id": doc_id.get(b["document"]["url"])} for b in batch], on_conflict="external_id")
+        lid = {r["external_id"]: r["id"] for r in rows}
+        if lid:
+            db.delete("listing_facts", {"listing_id": in_(list(lid.values()))})
+            facts = [{"listing_id": lid[b["listing"]["external_id"]], **f} for b in batch for f in b["facts"] if b["listing"]["external_id"] in lid]
+            if facts:
+                db.insert("listing_facts", facts, returning=False)
+            db.delete("listing_red_flags", {"listing_id": in_(list(lid.values())), "origin": "eq.listing"})
+            flags = [{"listing_id": lid[b["listing"]["external_id"]], **f} for b in batch for f in b["flags"] if b["listing"]["external_id"] in lid]
+            if flags:
+                db.insert("listing_red_flags", flags, returning=False)
+        saved += len(lid)
+    return saved

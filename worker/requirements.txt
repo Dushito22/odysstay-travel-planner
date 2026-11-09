@@ -4,3 +4,4 @@ pypdf>=4.2
 anthropic>=0.40
 python-dotenv>=1.0
 fonttools>=4.50
+curl_cffi>=0.7
