@@ -1,0 +1,18 @@
+name: Benchmarks
+
+# Weekly refresh of court auction benchmarks (ImmobilScan observatory, CC BY 4.0).
+on:
+  schedule:
+    - cron: "41 4 * * 1"
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refresh
+        env:
+          SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+        run: |
+          R=$(curl -sS --max-time 120 -X POST https://nryhvtxprjiylajolcef.supabase.co/functions/v1/benchmarks-refresh -H "x-drop-secret: $SECRET")
+          echo "::notice title=Benchmarks::$R"

@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.autopilot]
 verify_jwt = false
+
+[functions.benchmarks-refresh]
+verify_jwt = false
