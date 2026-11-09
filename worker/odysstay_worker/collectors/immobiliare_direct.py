@@ -121,22 +121,26 @@ def adapt(res: dict) -> dict | None:
     }
 
 
+_api_ok = True
+
+
 def search_page(s, slug: str, code: str, lo: int, hi: int, page: int) -> list[dict]:
     """One page of results, newest first. JSON endpoint first, HTML page as the fallback."""
     params = {"fkRegione": code, "idContratto": "1", "idCategoria": "1", "idNazione": "IT", "prezzoMassimo": str(hi),
               "criterio": "dataModifica", "ordine": "desc", "pag": str(page), "__lang": "it", "path": f"/vendita-case/{slug}/"}
     if lo:
         params["prezzoMinimo"] = str(lo)
-    try:
-        r = _get(s, f"{BASE}/api-next/search-list/listings/", params=params, headers={"accept": "application/json", "referer": f"{BASE}/vendita-case/{slug}/"})
-        if r.status_code == 200 and r.headers.get("content-type", "").startswith("application/json"):
-            found = _find_results(r.json())
-            if found is not None:
-                return found
-    except Blocked:
-        raise
-    except Exception:  # noqa: BLE001  fall through to the HTML page
-        pass
+    global _api_ok
+    if _api_ok:
+        try:
+            r = _get(s, f"{BASE}/api-next/search-list/listings/", params=params, headers={"accept": "application/json", "referer": f"{BASE}/vendita-case/{slug}/"})
+            if r.status_code == 200 and r.headers.get("content-type", "").startswith("application/json"):
+                found = _find_results(r.json())
+                if found is not None:
+                    return found
+        except Exception:  # noqa: BLE001  blocked or changed: use the HTML page for the rest of the run
+            _api_ok = False
+        time.sleep(random.uniform(2, 4))
     q = f"prezzoMassimo={hi}" + (f"&prezzoMinimo={lo}" if lo else "") + "&criterio=dataModifica&ordine=desc" + (f"&pag={page}" if page > 1 else "")
     r = _get(s, f"{BASE}/vendita-case/{slug}/?{q}", headers={"accept": "text/html"})
     m = re.search(r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>', r.text, re.S)
@@ -208,6 +212,7 @@ def probe(log=print) -> dict:
         out["home"] = r.status_code
         time.sleep(3)
         res = search_page(s, "sicilia", "sic", 0, 30000, 1)
+        out["api"] = _api_ok
         out["results"] = len(res)
         a = adapt(res[0]) if res else None
         out["sample"] = {k: (a or {}).get("_enhanced", {}).get(k) for k in ("listingUrl", "priceAmount", "surfaceSqm", "city", "latitude")} if a else None

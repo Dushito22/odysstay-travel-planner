@@ -1,7 +1,7 @@
 """Official market values (OMI, Agenzia delle Entrate) for each listing's zone.
 
 Data: the free copy of OMI 2018, second half, published by ondata on GitHub (values and zone maps), bundled
-as data/omi_2018_2.json.gz. Each listing with coordinates is placed in its OMI zone by its map; without
+as static/omi_2018_2.json.gz. Each listing with coordinates is placed in its OMI zone by its map; without
 coordinates, or outside every zone, the comune's central zone is used. The house type picks the value row:
 apartments use "Abitazioni civili", houses "Ville e villini", rural houses the local or economic type.
 Prices in euros per m² for the property in normal condition. Credit: Agenzia delle Entrate - OMI.
@@ -16,7 +16,7 @@ from pathlib import Path
 
 from .supa import Supa
 
-DATA = Path(__file__).resolve().parent.parent / "data" / "omi_2018_2.json.gz"
+DATA = Path(__file__).resolve().parent / "static" / "omi_2018_2.json.gz"
 SEMESTER = "2018-2"
 ORDER = {  # value rows to try, by our property type
     "apartment": ("civ", "eco", "villa", "tip"),
