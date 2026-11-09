@@ -23,7 +23,14 @@ Deno.serve(async (req) => {
   if (!SECRET || req.headers.get("x-drop-secret") !== SECRET) return new Response("forbidden", { status: 403 });
   const r = await fetch(CSV, { headers: { "user-agent": "Odysstay (benchmarks, credited CC BY 4.0)" } });
   if (!r.ok) return new Response(JSON.stringify({ error: `csv ${r.status}` }), { status: 502 });
-  const rows = parse(await r.text()).filter((x) => x.level);
+  // Some rows repeat a key with a month (a monthly series); keep the current snapshot, the row with no month.
+  const seen = new Map<string, Record<string, string>>();
+  for (const x of parse(await r.text()).filter((x) => x.level)) {
+    const k = `${x.level}|${x.code ?? ""}|${x.category ?? ""}`;
+    const prev = seen.get(k);
+    if (!prev || (prev.month && !x.month)) seen.set(k, x);
+  }
+  const rows = [...seen.values()];
   const out = rows.map((x) => ({
     level: x.level, code: x.code ?? "", name: x.name, category: x.category ?? "",
     active_auctions: n(x.active_auctions), new_30d: n(x.new_30d), starting_price_median: n(x.starting_price_median),
