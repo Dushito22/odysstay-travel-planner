@@ -2,7 +2,7 @@
 
 Two ways in. Free by default: read the portal's own search pages directly (the JSON its site loads, or the
 data embedded in the HTML), slowly, a few pages per run, with a browser-like TLS fingerprint (curl_cffi).
-If APIFY_TOKEN is set, the old paid route through Apify (memo23/immobiliare-scraper) is used instead.
+If IMMOBILIARE_MODE=apify and APIFY_TOKEN are set, the old paid route through Apify (memo23/immobiliare-scraper) is used instead.
 Private demo source. Immobiliare.it has no public listings API
 and its terms forbid scraping; the owner chose this for his own testing. Every listing links back to the
 original ad. On Apify's free plan a run returns at most 100 results and the free monthly credit covers
@@ -257,7 +257,7 @@ def collect(db: Supa, regions: int | None = None, max_price: int | None = None, 
     max_price = max_price or int(os.environ.get("IMMOBILIARE_MAX_PRICE") or 100000)
     per_region = per_region or int(os.environ.get("IMMOBILIARE_PER_REGION") or 100)
     token = os.environ.get("APIFY_TOKEN")
-    if not token or os.environ.get("IMMOBILIARE_MODE") == "direct":
+    if not token or os.environ.get("IMMOBILIARE_MODE") != "apify":
         from . import immobiliare_direct
         return immobiliare_direct.collect(db, regions, max_price, log=log)
     picked = pick_regions(min(regions, len(REGIONS)))
