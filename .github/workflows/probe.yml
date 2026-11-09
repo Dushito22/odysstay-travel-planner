@@ -1,0 +1,27 @@
+name: Probe
+
+# Fetches a public page from GitHub's network (the dev sandbox can't reach every site) and prints
+# the links that match a pattern plus the start of the body. For checking data sources.
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "URL"
+        required: true
+      grep:
+        description: "Pattern for links to list"
+        default: "csv|json|download"
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch
+        env:
+          URL: ${{ github.event.inputs.url }}
+          PAT: ${{ github.event.inputs.grep }}
+        run: |
+          curl -sSL -A "Mozilla/5.0 (Odysstay data check)" "$URL" -o page.txt -w "%{http_code} %{content_type}\n" > meta.txt
+          echo "::notice title=Meta::$(cat meta.txt)"
+          echo "::notice title=Links::$(grep -oiE '(href|src)="[^"]+"' page.txt | grep -iE "$PAT" | sort -u | head -40 | tr '\n' ' ' | head -c 2500)"
+          echo "::notice title=Head::$(head -c 1800 page.txt | tr '\n' ' ')"
