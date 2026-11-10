@@ -1,6 +1,7 @@
 // Once a day, while Chrome is open: opens immobiliare.it in a background tab, reads the newest ads in
 // every region through the site's own search API (the same calls the page makes), sends them raw to
-// Odysstay, closes the tab. Slow on purpose: one page every 3 to 6 seconds.
+// Odysstay, closes the tab. Slow on purpose: one page every 4 to 8 seconds. If the site pushes back, it
+// stops and resumes from the same region about 3 hours later.
 const SUPABASE = "https://nryhvtxprjiylajolcef.supabase.co";
 const ANON = "sb_publishable_zdY6uxrouCZN2azT4rxUwQ_kZ6H86b5";
 const REGIONS = [
@@ -31,7 +32,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // Every region, newest ads first. A price band stops as soon as a page is mostly ads already sent,
 // so the first run reads deep (about half an hour) and later runs only pick up what's new.
 async function run() {
-  const { key, running = 0, seen: seenList = [] } = await chrome.storage.local.get(["key", "running", "seen"]);
+  const { key, running = 0, seen: seenList = [], resume = 0 } = await chrome.storage.local.get(["key", "running", "seen", "resume"]);
   if (!key) return setStatus({ error: "Paste your key first." });
   if (Date.now() - running < 40 * 60e3) return { busy: true };
   await chrome.storage.local.set({ running: Date.now() });
@@ -41,11 +42,13 @@ async function run() {
     tab = await chrome.tabs.create({ url: "https://www.immobiliare.it/vendita-case/sicilia/", active: false });
     await chrome.tabs.update(tab.id, { autoDiscardable: false }).catch(() => {});
     await loaded(tab.id);
-    for (const [region, slug, code] of REGIONS) {
+    // Start where the last run was cut off, so every region gets its turn.
+    const order = REGIONS.map((_, i) => REGIONS[(resume + i) % REGIONS.length]);
+    for (const [region, slug, code] of order) {
       const rows = [];
       for (const [lo, hi] of BANDS) {
         for (let pag = 1; pag <= MAX_PAGES; pag++) {
-          await sleep(2500 + Math.random() * 2500);
+          await sleep(4000 + Math.random() * 4000);
           const q = new URLSearchParams({ fkRegione: code, idContratto: "1", idCategoria: "1", idNazione: "IT", prezzoMassimo: String(hi), criterio: "dataModifica", ordine: "desc", pag: String(pag), __lang: "it", path: `/vendita-case/${slug}/` });
           if (lo) q.set("prezzoMinimo", String(lo));
           const r = await pageFetch(tab.id, `/api-next/search-list/listings/?${q}`);
@@ -66,8 +69,10 @@ async function run() {
       await setStatus({ running: true, sent, region, done, of: REGIONS.length });
       if (blocked) break;
     }
-    await chrome.storage.local.set({ lastRun: Date.now() });
-    await setStatus({ sent, pages, blocked, done, of: REGIONS.length });
+    // Blocked: pick up from that region in about 3 hours instead of tomorrow.
+    const next = blocked ? (resume + done - 1 + REGIONS.length) % REGIONS.length : 0;
+    await chrome.storage.local.set({ resume: next, lastRun: blocked ? Date.now() - (EVERY_H - 3) * 3600e3 : Date.now() });
+    await setStatus({ sent, pages, blocked, done: blocked ? done - 1 : done, of: REGIONS.length });
     return { sent, blocked };
   } catch (e) {
     await setStatus({ sent, done, of: REGIONS.length, error: String(e.message || e) });
