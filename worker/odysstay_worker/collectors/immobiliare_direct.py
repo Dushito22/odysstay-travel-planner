@@ -92,11 +92,11 @@ def adapt(res: dict) -> dict | None:
         u = (p.get("urls") or {})
         url = u.get("large") or u.get("medium") or u.get("small")
         if isinstance(url, str) and url.startswith("https://"):
-            photos.append(url)
+            photos.append(re.sub(r"/(xxs|xs|s|m)-c\.jpg$", "/xxl.jpg", url))
     plans = [((p.get("urls") or {}).get("large") or (p.get("urls") or {}).get("medium")) for p in ((props.get("multimedia") or {}).get("floorplans") or [])]
     agency = ((re_.get("advertiser") or {}).get("agency") or {})
     phones = [p.get("value") for p in (agency.get("phones") or []) if isinstance(p, dict) and p.get("value")]
-    typology = ((props.get("typology") or re_.get("typology") or {}).get("name")) or props.get("typologyGA4Translation") or ""
+    typology = props.get("typologyGA4Translation") or ((props.get("typology") or re_.get("typology") or {}).get("name")) or ""
     url = (res.get("seo") or {}).get("url") or f"{BASE}/annunci/{rid}/"
     if url.startswith("/"):
         url = BASE + url
@@ -108,7 +108,7 @@ def adapt(res: dict) -> dict | None:
             "priceAmount": price.get("value") if price.get("visible", True) else None,
             "surfaceSqm": _num(props.get("surface")),
             "photoUrlsHd": photos[:15], "floorplanUrlsHd": [u for u in plans if isinstance(u, str)][:3],
-            "descriptionText": props.get("description") or props.get("caption") or "",
+            "descriptionText": props.get("description") or re_.get("title") or props.get("caption") or "",
             "city": loc.get("city"), "province": loc.get("province"), "region": loc.get("region"),
             "latitude": loc.get("latitude"), "longitude": loc.get("longitude"), "address": loc.get("address"),
             "rooms": props.get("rooms"), "bathrooms": props.get("bathrooms"),
@@ -223,3 +223,30 @@ def probe(log=print) -> dict:
         out["error"] = repr(e)
     log(json.dumps(out, indent=2))
     return out
+
+
+def import_raw(db: Supa, log=print) -> int:
+    """Turns ads the Chrome feeder dropped in raw_imports into listings."""
+    from .immobiliare import save, to_row
+    done = 0
+    while True:
+        raw = db.select("raw_imports", {"select": "id,region,payload", "source": "eq.immobiliare", "processed_at": "is.null", "order": "id", "limit": "300"})
+        if not raw:
+            break
+        recs, ids = [], []
+        for r in raw:
+            ids.append(r["id"])
+            try:
+                a = adapt(r["payload"])
+                row = to_row(a, r.get("region") or "") if a else None
+                if row:
+                    recs.append(row)
+            except Exception as e:  # noqa: BLE001
+                log(f"  raw {r['id']}: {e}")
+        saved = save(db, recs) if recs else 0
+        done += saved
+        from datetime import datetime, timezone
+        db.update("raw_imports", {"id": f"in.({','.join(map(str, ids))})"}, {"processed_at": datetime.now(timezone.utc).isoformat()})
+        log(f"  feeder batch: {len(raw)} raw ads, {saved} listings saved")
+    log(f"Feeder: {done} Immobiliare.it listings saved")
+    return done

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -71,6 +72,8 @@ function AdminPage() {
         ))}
       </div>
 
+      <FeederCard />
+
       <Section title="Service requests" empty="No requests yet." rows={o.purchases.length}>
         {o.purchases.map((p) => (
           <div key={p.id}>
@@ -129,5 +132,46 @@ function Row({ a, b, c }: { a: string; b: React.ReactNode; c: string }) {
       <span className="text-foreground/70">{b}</span>
       <span className="text-foreground/50 sm:text-right">{c}</span>
     </div>
+  );
+}
+
+type Feeder = { last: string | null; today: number; pending: number; keys: number };
+
+/** The Chrome extension that reads Immobiliare.it from the owner's own browser: its activity, and a key for it. */
+function FeederCard() {
+  const [key, setKey] = useState<string | null>(null);
+  const f = useQuery({
+    queryKey: ["admin-feeder"],
+    refetchInterval: 30_000,
+    queryFn: async (): Promise<Feeder | null> => {
+      const { data } = await supabase.rpc("admin_feeder_status" as never);
+      return (data ?? null) as unknown as Feeder | null;
+    },
+  });
+  const make = async () => {
+    const { data, error } = await supabase.rpc("admin_feeder_key" as never);
+    if (error) toast.error(error.message); else { setKey(String(data)); void f.refetch(); }
+  };
+  const s = f.data;
+  return (
+    <section className="mb-10 rounded-[10px] border p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="type-h3">Immobiliare.it feeder</h2>
+          <p className="mt-1 text-[13px] text-foreground/60">
+            {s?.last ? `Last ads received ${d(s.last)} · ${s.today} in the last 24h · ${s.pending} waiting to be added` : "Nothing received yet."}
+          </p>
+        </div>
+        <button type="button" onClick={() => void make()} className="rounded-full border px-3 py-1.5 text-[13px] hover:border-foreground/40">
+          {s?.keys ? "Make a new key" : "Make a key for the extension"}
+        </button>
+      </div>
+      {key && (
+        <button type="button" onClick={() => { void navigator.clipboard?.writeText(key); toast.success("Copied. Paste it in the extension."); }}
+          className="mt-3 block w-full break-all rounded-[8px] bg-muted px-3 py-2 text-left font-mono text-[12px]">
+          {key} <span className="ml-2 font-sans text-azure">copy</span>
+        </button>
+      )}
+    </section>
   );
 }

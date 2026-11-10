@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Odysstay feeder",
+  "version": "1.0.0",
+  "description": "Reads new Immobiliare.it ads once a day in your own browser and sends them to Odysstay.",
+  "permissions": ["alarms", "storage", "scripting", "tabs"],
+  "host_permissions": ["https://www.immobiliare.it/*", "https://nryhvtxprjiylajolcef.supabase.co/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_popup": "popup.html", "default_title": "Odysstay feeder" }
+}
