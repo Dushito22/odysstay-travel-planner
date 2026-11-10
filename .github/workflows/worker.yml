@@ -104,7 +104,7 @@ jobs:
             one-euro)        { python -m odysstay_worker one-euro && python -m odysstay_worker geocode && python -m odysstay_worker score && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             aste)            { python -m odysstay_worker aste --limit ${{ github.event.inputs.limit != '25000' && github.event.inputs.limit || '4000' }} && python -m odysstay_worker geocode && python -m odysstay_worker score && python -m odysstay_worker costs && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             aste-probe)      python -m odysstay_worker aste --probe 2>&1 | tee run.log ;;
-            feeder)          { python -m odysstay_worker feeder && python -m odysstay_worker geocode && python -m odysstay_worker omi && python -m odysstay_worker costs && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
+            feeder)          { python -m odysstay_worker feeder; python -m odysstay_worker geocode; python -m odysstay_worker omi; python -m odysstay_worker costs; python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             immobiliare-probe) python -m odysstay_worker immobiliare-probe 2>&1 | tee run.log ;;
             omi)             { python -m odysstay_worker omi && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             notary-probe)    python -m odysstay_worker notary --probe 2>&1 | tee run.log ;;
