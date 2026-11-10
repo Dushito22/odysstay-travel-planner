@@ -5,9 +5,9 @@ async function show() {
   const when = (t) => new Date(t).toLocaleString();
   let s = key ? "Key saved." : "No key yet.";
   if (status) {
-    if (status.running) s = `Working: ${status.sent} ads sent so far (${status.region}).`;
+    if (status.running) s = `Working: ${status.done} of ${status.of} regions, ${status.sent} ads sent (just did ${status.region}).`;
     else if (status.error) s = `Last try ${when(status.at)}: ${status.error}`;
-    else s = `Last run ${when(status.at)}: ${status.sent} ads sent.${status.blocked ? ` Stopped early: ${status.blocked}.` : ""}`;
+    else s = `Last run ${when(status.at)}: ${status.sent} ads from ${status.done ?? "?"} regions.${status.blocked ? ` Stopped early: ${status.blocked}.` : ""}`;
   }
   if (lastRun) s += ` Next run about ${when(lastRun + 20 * 3600e3)}.`;
   $("status").textContent = s;
@@ -19,7 +19,7 @@ $("save").onclick = async () => {
   show();
 };
 $("run").onclick = () => {
-  $("status").textContent = "Running. This takes a few minutes; you can close this.";
+  $("status").textContent = "Running. The first run takes about half an hour, later ones a few minutes. You can close this and keep browsing.";
   chrome.runtime.sendMessage("run", () => show());
 };
 setInterval(show, 3000);
