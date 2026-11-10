@@ -14,7 +14,7 @@ on:
       task:
         description: "What to run"
         type: choice
-        options: [daily, deep, notary, one-euro, immobiliare, immobiliare-probe, omi, immobiliare-all, aste, aste-probe, notary-probe, sources-probe, pvp, perizia, rescore, retry-errors, check, pvp-probe, comuni-crawl, comuni-discover, status]
+        options: [daily, deep, notary, one-euro, immobiliare, immobiliare-probe, omi, feeder, immobiliare-all, aste, aste-probe, notary-probe, sources-probe, pvp, perizia, rescore, retry-errors, check, pvp-probe, comuni-crawl, comuni-discover, status]
         default: daily
       limit:
         description: "pvp: max lots to read. perizia: max reports to read. deep: listings to read"
@@ -55,8 +55,10 @@ jobs:
         working-directory: .
         run: |
           N=$(curl -s "$SUPABASE_URL/rest/v1/deep_dives?status=eq.pending&select=listing_id&limit=1" -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" | grep -c listing_id || true)
-          echo "Pending deep dives: $N"
-          echo "skip=$([ "$N" = "0" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          F=$(curl -s "$SUPABASE_URL/rest/v1/raw_imports?processed_at=is.null&select=id&limit=1" -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" -H "authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" | grep -c '"id"' || true)
+          echo "Pending deep dives: $N, feeder ads: $F"
+          echo "deep=$N" >> "$GITHUB_OUTPUT"
+          echo "skip=$([ "$N" = "0" ] && [ "$F" = "0" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         if: steps.secrets.outputs.ok == 'true' && steps.queue.outputs.skip != 'true'
       - uses: actions/setup-python@v5
@@ -83,7 +85,9 @@ jobs:
         run: |
           TASK="${{ github.event.inputs.task }}"
           if [ -z "$TASK" ]; then
-            if [ "${{ github.event.schedule }}" = "23 6-22 * * *" ]; then TASK=deep; else TASK=daily; fi
+            if [ "${{ github.event.schedule }}" = "23 6-22 * * *" ]; then
+              if [ "${{ steps.queue.outputs.deep }}" = "0" ]; then TASK=feeder; else TASK=deep; fi
+            else TASK=daily; fi
           fi
           set -o pipefail
           case "$TASK" in
@@ -100,6 +104,7 @@ jobs:
             one-euro)        { python -m odysstay_worker one-euro && python -m odysstay_worker geocode && python -m odysstay_worker score && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             aste)            { python -m odysstay_worker aste --limit ${{ github.event.inputs.limit != '25000' && github.event.inputs.limit || '4000' }} && python -m odysstay_worker geocode && python -m odysstay_worker score && python -m odysstay_worker costs && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             aste-probe)      python -m odysstay_worker aste --probe 2>&1 | tee run.log ;;
+            feeder)          { python -m odysstay_worker feeder && python -m odysstay_worker geocode && python -m odysstay_worker omi && python -m odysstay_worker costs && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             immobiliare-probe) python -m odysstay_worker immobiliare-probe 2>&1 | tee run.log ;;
             omi)             { python -m odysstay_worker omi && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
             notary-probe)    python -m odysstay_worker notary --probe 2>&1 | tee run.log ;;

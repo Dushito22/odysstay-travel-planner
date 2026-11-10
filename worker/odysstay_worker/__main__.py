@@ -85,6 +85,7 @@ def main(argv=None):
     im.add_argument("--per-region", type=int, default=None)
     sub.add_parser("immobiliare-probe")
     sub.add_parser("omi")
+    sub.add_parser("feeder")
     ag = sub.add_parser("aste")
     ag.add_argument("--probe", action="store_true")
     ag.add_argument("--limit", type=int, default=4000)
@@ -149,6 +150,9 @@ def main(argv=None):
             aste.probe()
         else:
             print(json.dumps(aste.collect(db, a.limit), indent=2))
+    elif a.cmd == "feeder":
+        from .collectors import immobiliare_direct
+        immobiliare_direct.import_raw(db)
     elif a.cmd == "omi":
         from . import omi, score
         omi.run(db)
@@ -198,7 +202,7 @@ def main(argv=None):
         from . import costs, geocode, score
         from .collectors import aste, immobiliare, notary, one_euro, pvp
         for name, step in (("court sales", lambda: pvp.collect(db)), ("notary sales", lambda: notary.collect(db)),
-                           ("immobiliare", lambda: immobiliare.collect(db)),
+                           ("immobiliare", lambda: __import__("odysstay_worker.collectors.immobiliare_direct", fromlist=["x"]).import_raw(db)),
                            ("one-euro towns", lambda: one_euro.collect(db)), ("private auctions", lambda: aste.collect(db, 600, max_minutes=40))):
             try:
                 print(name, json.dumps(step(), indent=2))
