@@ -9,7 +9,7 @@ async function show() {
     else if (status.error) s = `Last try ${when(status.at)}: ${status.error}`;
     else s = `Last run ${when(status.at)}: ${status.sent} ads from ${status.done ?? "?"} regions.${status.blocked ? ` Stopped early: ${status.blocked}.` : ""}`;
   }
-  if (lastRun) s += ` Next run about ${when(lastRun + 20 * 3600e3)}.`;
+  if (lastRun) s += ` Next run about ${when(lastRun + 20 * 3600e3)}${status?.blocked ? ", picking up where it stopped" : ""}.`;
   $("status").textContent = s;
 }
 $("save").onclick = async () => {
