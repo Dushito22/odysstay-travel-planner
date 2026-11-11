@@ -62,8 +62,10 @@ async function run() {
         }
         if (blocked) break;
       }
-      for (let i = 0; i < rows.length; i += 100) await send(key, rows.slice(i, i + 100));
-      sent += rows.length;
+      // The same ad can show up in two price bands or on two pages; send each once.
+      const unique = [...new Map(rows.map((r) => [r.external_id, r])).values()];
+      for (let i = 0; i < unique.length; i += 100) await send(key, unique.slice(i, i + 100));
+      sent += unique.length;
       done++;
       await chrome.storage.local.set({ seen: [...seen].slice(-SEEN_CAP) });
       await setStatus({ running: true, sent, region, done, of: REGIONS.length });

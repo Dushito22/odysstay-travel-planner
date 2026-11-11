@@ -14,7 +14,33 @@ const PAID = ["pro", "explorer", "buyer"];
 
 type Admin = ReturnType<typeof adminClient>;
 type Row = Record<string, any>;
-type Pick = { id: string; comune: string; region: string; price_eur: number | null; surface_sqm: number | null; photo: string | null; why: string; tradeoff: string };
+type Pick = { id: string; comune: string; region: string; price_eur: number | null; surface_sqm: number | null; photo: string | null; why: string; tradeoff: string;
+  why_en?: string; why_ru?: string; tradeoff_en?: string; tradeoff_ru?: string };
+
+/** The why and catch lines in the other language, so the site shows the drop in whatever language it's in. */
+async function translateLines(lines: { why: string; tradeoff: string }[], to: "en" | "ru") {
+  if (!lines.length) return lines;
+  const system = `Translate each why and tradeoff line into ${to === "ru" ? "Russian (town names stay as they are)" : "English"}. Keep the meaning and length, plain and warm, no em dashes, no emojis. Return JSON only: {"lines":[{"why":"...","tradeoff":"..."}]} in the same order.`;
+  try {
+    const text = await callClaude(system, [{ role: "user", content: JSON.stringify({ lines }) }], 1500);
+    const j = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
+    const out = (j.lines ?? []) as { why: string; tradeoff: string }[];
+    return lines.map((l, i) => ({ why: String(out[i]?.why ?? "").slice(0, 160) || l.why, tradeoff: String(out[i]?.tradeoff ?? "").slice(0, 140) || l.tradeoff }));
+  } catch (e) {
+    console.error("translate drop", e);
+    return null;
+  }
+}
+
+/** Both languages on every pick: what was written plus its translation. */
+function bilingual(picks: Pick[], lang: string, other: { why: string; tradeoff: string }[] | null): Pick[] {
+  const o = lang === "ru" ? "en" : "ru";
+  return picks.map((p, i) => ({
+    ...p,
+    [`why_${lang}`]: p.why, [`tradeoff_${lang}`]: p.tradeoff,
+    ...(other?.[i] ? { [`why_${o}`]: other[i]!.why, [`tradeoff_${o}`]: other[i]!.tradeoff } : {}),
+  }));
+}
 
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "content-type": "application/json" } });
 
@@ -212,6 +238,23 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (!SECRET || req.headers.get("x-drop-secret") !== SECRET) return json({ error: "forbidden" }, 403);
   const body = await req.json().catch(() => ({})) as Row;
+  if (body.action === "translate") {
+    // Fill in the missing language on recent drops.
+    const adm = adminClient();
+    const { data: drops } = await adm.from("weekly_drops").select("id, lang, picks").order("week", { ascending: false }).limit(50);
+    let fixed = 0;
+    for (const d of drops ?? []) {
+      const picks = (d.picks ?? []) as Pick[];
+      const lang = d.lang === "ru" ? "ru" : "en";
+      const o = lang === "ru" ? "en" : "ru";
+      if (!picks.length || picks.every((p) => p[`why_${o}` as keyof Pick])) continue;
+      const other = await translateLines(picks.map((p) => ({ why: p.why, tradeoff: p.tradeoff })), o);
+      if (!other) continue;
+      await adm.from("weekly_drops").update({ picks: bilingual(picks, lang, other) }).eq("id", d.id);
+      fixed++;
+    }
+    return json({ translated: fixed });
+  }
   const tier = body.tier === "pro" ? "pro" : "all";
   const onlyEmail = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   const force = body.force === true;
@@ -295,7 +338,8 @@ Deno.serve(async (req) => {
       }
 
       await admin.from("weekly_drops").upsert({
-        user_id: u.id, week, lang, listing_ids: picks.map((p) => p.id), picks, script: note.script, audio_url: audioUrl, sent_telegram: sent,
+        user_id: u.id, week, lang, listing_ids: picks.map((p) => p.id),
+        picks: bilingual(picks, lang, await translateLines(picks.map((p) => ({ why: p.why, tradeoff: p.tradeoff })), lang === "ru" ? "en" : "ru")), script: note.script, audio_url: audioUrl, sent_telegram: sent,
       }, { onConflict: "user_id,week" });
       report.push({ email: u.email, houses: picks.length, telegram: sent, emailed, voice: !!audioUrl, lang });
     } catch (e) {

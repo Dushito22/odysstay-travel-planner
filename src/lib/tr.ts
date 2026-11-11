@@ -4,6 +4,14 @@ import { useLang } from "./i18n";
 
 /** Interface strings outside the landing page. English is the key; a missing entry shows the English. */
 export const RU: Record<string, string> = {
+  // discover filter bar
+  "Any type": "Любой тип",
+  Town: "Город",
+  "New this week": "Новые за неделю",
+  "Private sales": "Частные продажи",
+  Auctions: "Аукционы",
+  "More filters": "Ещё фильтры",
+  Clear: "Сбросить",
   // navigation and shells
   Discover: "Поиск", Map: "Карта", Deals: "Сделки", Inbox: "Входящие", Saved: "Избранное", Profile: "Профиль",
   Documents: "Документы", "Sign out": "Выйти", Explore: "Обзор", Pricing: "Тарифы", Privacy: "Конфиденциальность",

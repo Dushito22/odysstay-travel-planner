@@ -23,6 +23,9 @@ export const feedSearchSchema = z.object({
   unsold: fallback(z.boolean(), false).default(false),
   hideClosed: fallback(z.boolean(), true).default(true),
   prefs: fallback(z.boolean(), false).default(false),
+  q: fallback(z.string(), "").default(""),
+  newDays: fallback(z.number(), 0).default(0),
+  kind: fallback(z.string(), "all").default("all"),
 });
 
 export type FeedSearch = z.infer<typeof feedSearchSchema>;
@@ -30,16 +33,16 @@ export type FeedFilters = Omit<FeedSearch, "sort" | "prefs">;
 
 export const DEFAULT_FILTERS: FeedFilters = {
   regions: [], types: [], minPrice: 0, maxPrice: 0, minSurface: 0, minScore: 0, minDiscount: 0, condition: [], realPhotos: false,
-  leases: false, oneEuro: true, unsold: false, hideClosed: true,
+  leases: false, oneEuro: true, unsold: false, hideClosed: true, q: "", newDays: 0, kind: "all",
 };
 
 export const SORTS = [
   { value: "best", label: "Best value" },
+  { value: "newest", label: "Newest" },
   { value: "cheapest", label: "Cheapest" },
+  { value: "foryou", label: "For you" },
   { value: "closing", label: "Closing soon" },
   { value: "discount", label: "Furthest below appraisal" },
-  { value: "newest", label: "Newest" },
-  { value: "foryou", label: "For you" },
 ];
 
 export const SALE_TYPE_LABELS: Record<string, string> = {
@@ -105,6 +108,11 @@ export async function fetchFeed(f: FeedFilters, sort = "best"): Promise<{ rows: 
   if (f.minScore > 0) q = q.gte("score", f.minScore);
   if (f.unsold) q = q.eq("previous_auction_failed", true);
   if (f.hideClosed) q = q.not("status", "in", "(closed,withdrawn)");
+  const town = (f.q ?? "").replace(/[%*,()\\]/g, " ").trim();
+  if (town) q = q.ilike("comune", `%${town}%`);
+  if (f.newDays > 0) q = q.gte("created_at", new Date(Date.now() - f.newDays * 864e5).toISOString());
+  if (f.kind === "auction") q = q.in("sale_type", ["auction_judicial", "auction_notary"]);
+  if (f.kind === "private") q = q.eq("sale_type", "sale");
   q = q.or(`sale_type.in.(${allowedSaleTypes(f).join(",")}),sale_type.is.null`);
   const { data, error, count } = await q;
   if (error) throw error;

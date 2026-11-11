@@ -18,7 +18,7 @@ jobs:
         run: |
           [ -n "$TOKEN" ] && [ -n "$SECRET" ] || { echo "::warning::Add TELEGRAM_BOT_TOKEN and TELEGRAM_WEBHOOK_SECRET as repository secrets"; exit 0; }
           api() { curl -sS -X POST "https://api.telegram.org/bot$TOKEN/$1" -H 'content-type: application/json' -d "$2"; echo; }
-          api setWebhook "{\"url\":\"$HOOK\",\"secret_token\":\"$SECRET\",\"allowed_updates\":[\"message\"],\"drop_pending_updates\":true}"
+          api setWebhook "{\"url\":\"$HOOK\",\"secret_token\":\"$SECRET\",\"allowed_updates\":[\"message\",\"my_chat_member\"],\"drop_pending_updates\":false}"
           api setMyCommands '{"commands":[{"command":"start","description":"Meet Argos"},{"command":"voice","description":"Voice replies on or off"}]}'
           api setMyCommands '{"language_code":"ru","commands":[{"command":"start","description":"Познакомиться с Argos"},{"command":"voice","description":"Голосовые ответы вкл/выкл"}]}'
           api setMyDescription '{"description":"Argos finds homes in Italy for you: court auctions, private sales and €1 houses, explained in your language. Write or send a voice note."}'

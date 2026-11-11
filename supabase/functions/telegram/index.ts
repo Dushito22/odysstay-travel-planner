@@ -177,6 +177,20 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (!BOT || !SECRET || req.headers.get("x-telegram-bot-api-secret-token") !== SECRET) return new Response("forbidden", { status: 403 });
   const update = await req.json().catch(() => ({}));
+  // The bot was made admin of a channel: that's our public channel, remember it for daily posts.
+  const mcm = update.my_chat_member;
+  if (mcm?.chat?.type === "channel") {
+    const st = mcm.new_chat_member?.status;
+    const adm = adminClient();
+    if (st === "administrator") {
+      await adm.from("app_settings").upsert({ key: "telegram_channel_id", value: String(mcm.chat.id), updated_at: new Date().toISOString() });
+      await adm.from("app_settings").upsert({ key: "telegram_channel_title", value: String(mcm.chat.title ?? ""), updated_at: new Date().toISOString() });
+    } else if (st === "left" || st === "kicked") {
+      const { data } = await adm.from("app_settings").select("value").eq("key", "telegram_channel_id").maybeSingle();
+      if (data?.value === String(mcm.chat.id)) await adm.from("app_settings").delete().eq("key", "telegram_channel_id");
+    }
+    return new Response("ok");
+  }
   const msg = update.message;
   if (!msg?.chat?.id) return new Response("ok");
   const chatId = msg.chat.id as number;

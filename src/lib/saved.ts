@@ -105,6 +105,9 @@ export function searchFromFilters(j: Json): FeedSearch {
   const bool = (v: unknown, d: boolean) => (typeof v === "boolean" ? v : d);
   return {
     sort: typeof f["sort"] === "string" ? f["sort"] : "best",
+    q: typeof f["q"] === "string" ? f["q"] : "",
+    newDays: num(f["newDays"]),
+    kind: typeof f["kind"] === "string" ? f["kind"] : "all",
     regions: arr(f["regions"]),
     types: arr(f["types"]),
     minPrice: num(f["minPrice"]),
