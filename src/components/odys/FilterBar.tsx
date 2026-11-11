@@ -102,8 +102,8 @@ export function FilterBar({ value: v, onChange, onReset, right, className }: Pro
           </SheetTrigger>
           <SheetContent side="right" className="flex w-full flex-col p-0 sm:max-w-[400px]">
             <SheetHeader className="border-b px-5 py-4"><SheetTitle className="font-display text-[24px] font-normal">{t("Filters")}</SheetTitle></SheetHeader>
-            <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5">
-              <div className="space-y-6 md:hidden">
+            <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
+              <div className="space-y-5 md:hidden">
                 <Section title={t("Region")}>{regionPicker}</Section>
                 <Section title={t("Price")}>{pricePicker}</Section>
                 <Section title={t("Property type")}>{typePicker}</Section>
@@ -156,8 +156,8 @@ export function FilterBar({ value: v, onChange, onReset, right, className }: Pro
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section>
-      <h3 className="mb-2.5 text-[13px] font-medium text-foreground/70">{title}</h3>
+    <section className="border-b border-foreground/10 pb-5">
+      <h3 className="mb-3 text-[13px] font-medium text-foreground/75">{title}</h3>
       {children}
     </section>
   );
