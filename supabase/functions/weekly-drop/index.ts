@@ -238,6 +238,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (!SECRET || req.headers.get("x-drop-secret") !== SECRET) return json({ error: "forbidden" }, 403);
   const body = await req.json().catch(() => ({})) as Row;
+  if (body.action === "fresh") return json(await freshFinds(body));
   if (body.action === "translate") {
     // Fill in the missing language on recent drops.
     const adm = adminClient();
@@ -349,3 +350,62 @@ Deno.serve(async (req) => {
   }
   return json({ week, tier, count: report.length, report });
 });
+
+
+/** Between the weekly picks: up to three houses that arrived in the last few days and fit the buyer's
+ * brief, as one album in their Argos chat. Nothing new, nothing sent. Never the same house twice. */
+async function freshFinds(body: Row) {
+  const admin = adminClient();
+  const onlyEmail = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  const days = Number(body.days) > 0 ? Number(body.days) : 4;
+  const { data: chats } = await admin.from("telegram_chats").select("chat_id, user_id, lang").not("user_id", "is", null);
+  const report: Row[] = [];
+  for (const chat of chats ?? []) {
+    try {
+      const { data: profile } = await admin.from("profiles").select("id, full_name, budget_max_eur, preferred_regions, property_types, language, languages").eq("id", chat.user_id).maybeSingle();
+      if (!profile) continue;
+      if (onlyEmail) {
+        const { data: u } = await admin.auth.admin.getUserById(chat.user_id);
+        if (u?.user?.email?.toLowerCase() !== onlyEmail) continue;
+      }
+      const lang = profile.language === "ru" || profile.language === "en" ? profile.language : chat.lang === "ru" ? "ru" : "en";
+      const ru = lang === "ru";
+      const { data: pushed } = await admin.from("bot_pushes").select("listing_id").eq("user_id", chat.user_id);
+      const { data: drops } = await admin.from("weekly_drops").select("listing_ids").eq("user_id", chat.user_id).order("week", { ascending: false }).limit(6);
+      const seen = new Set<string>([...(pushed ?? []).map((p) => p.listing_id as string), ...(drops ?? []).flatMap((d) => d.listing_ids as string[])]);
+      const rows = (await candidates(admin, profile, seen, days)).filter((r) => (r.score ?? 0) >= 60 && r.hero_image_path);
+      const picks: Row[] = [];
+      const towns = new Set<string>();
+      for (const r of rows) { if (towns.has(r.comune)) continue; towns.add(r.comune); picks.push(r); if (picks.length === 3) break; }
+      if (!picks.length) { report.push({ user: chat.user_id, sent: 0 }); continue; }
+
+      const system = `You are Argos, a buyer's agent in Italy, texting a client about houses that just came on the market.
+Write in ${ru ? "Russian (town names stay as they are)" : "English"} only. Plain, warm, a little wry. No emojis, no em dashes, no exclamation marks, no markdown.
+Return JSON only: {"intro": "...", "lines": ["...", "..."]}. intro: one short sentence${profile.full_name ? `, using their first name (${String(profile.full_name).split(" ")[0]})` : ""}, saying these are new since you last wrote. lines: one per house, under 16 words each, the honest reason it's worth a look, from the data only.`;
+      const data = picks.map((r) => ({ town: r.comune, region: r.region, price_eur: r.price_eur, sqm: r.surface_sqm, type: r.property_type, condition: r.condition, sale: r.sale_type, notes: (r.score_reasons ?? []).slice(0, 4) }));
+      let intro = ru ? "Новые дома под ваш запрос, появились за последние дни." : "New houses for your brief, listed in the last few days.";
+      let lines: string[] = [];
+      try {
+        const text = await callClaude(system, [{ role: "user", content: JSON.stringify(data) }], 700);
+        const j = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
+        if (j.intro) intro = String(j.intro);
+        lines = (j.lines ?? []).map(String);
+      } catch (e) { console.error("fresh note", e); }
+      const caption = `<b>${esc(intro)}</b>\n\n${picks.map((r, i) => `<b>${esc(r.comune)}</b>, ${esc(r.region)} · ${money(r.price_eur, ru)}${r.surface_sqm ? ` · ${Math.round(r.surface_sqm)} m²` : ""}${lines[i] ? `\n${esc(lines[i]!)}` : ""}`).join("\n\n")}`.slice(0, 1024);
+      const photos = picks.map((r) => photoUrl(r.hero_image_path)).filter(Boolean) as string[];
+      let ok = false;
+      if (photos.length >= 2) ok = !!(await tg("sendMediaGroup", { chat_id: Number(chat.chat_id), media: photos.map((u, i) => ({ type: "photo", media: u, ...(i === 0 ? { caption, parse_mode: "HTML" } : {}) })) })).ok;
+      if (!ok && photos[0]) ok = !!(await tg("sendPhoto", { chat_id: Number(chat.chat_id), photo: photos[0], caption, parse_mode: "HTML" })).ok;
+      if (!ok) ok = !!(await tg("sendMessage", { chat_id: Number(chat.chat_id), text: caption, parse_mode: "HTML", disable_web_page_preview: true })).ok;
+      if (ok) {
+        await tg("sendMessage", { chat_id: Number(chat.chat_id), text: ru ? "Открыть или спросить меня о любом:" : "Open one, or ask me about any of them:",
+          reply_markup: { inline_keyboard: picks.map((r) => [{ text: `${r.comune} · ${money(r.price_eur, ru)}`, url: `${SITE}/listing/${r.id}?utm_source=tg_bot` }]) } });
+        await admin.from("bot_pushes").upsert(picks.map((r) => ({ user_id: chat.user_id, listing_id: r.id })));
+      }
+      report.push({ user: chat.user_id, sent: ok ? picks.length : 0 });
+    } catch (e) {
+      report.push({ user: chat.user_id, error: String(e) });
+    }
+  }
+  return { fresh: report };
+}

@@ -34,7 +34,7 @@ export function WeeklyDrop() {
     return (
       <section ref={box} id="drop" className="mt-8 flex flex-wrap items-center justify-between gap-3 rounded-[12px] bg-muted px-4 py-3">
         <p className="text-[14px] font-light text-foreground/75">
-          {ru ? "Каждую субботу Argos присылает 5 лучших домов под ваш запрос, с голосовым сообщением." : "Every Saturday Argos sends you his 5 best houses for your brief, with a voice note."}
+          {ru ? "Каждый четверг Argos присылает 5 лучших домов под ваш запрос, с голосовым сообщением." : "Every Thursday Argos sends you his 5 best houses for your brief, with a voice note."}
         </p>
         <Link to="/profile" className="inline-flex h-8 items-center gap-1.5 rounded-full bg-foreground px-3.5 text-[13px] text-background">
           <Send className="h-3.5 w-3.5" /> {ru ? "Получать в Telegram" : "Get it on Telegram"}

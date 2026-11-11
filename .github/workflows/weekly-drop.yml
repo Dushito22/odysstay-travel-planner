@@ -1,9 +1,11 @@
 name: Weekly drop
 
-# Argos's weekly picks. Paid plans on Thursday, everyone else on Saturday, 09:00 Rome time.
+# Argos in each buyer's Telegram, 09:00 Rome time: weekly picks for everyone on Thursday, and fresh finds
+# (new houses that fit their brief, only when there are some) on Monday and Saturday.
 # Run by hand with an email to send one person their drop now (force=true re-sends this week's).
 on:
   schedule:
+    - cron: "7 7 * * 1"
     - cron: "7 7 * * 4"
     - cron: "7 7 * * 6"
   workflow_dispatch:
@@ -21,7 +23,7 @@ on:
         description: "Email only, skip Telegram (for testing)"
         default: "false"
       action:
-        description: "translate = add the missing language to recent drops, nothing sent"
+        description: "fresh = new houses for each buyer now; translate = add the missing language to recent drops"
         required: false
 
 jobs:
@@ -35,10 +37,12 @@ jobs:
       - name: Send
         run: |
           TIER="${{ github.event.inputs.tier }}"
+          ACTION="${{ github.event.inputs.action }}"
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            [ "$(date -u +%u)" = "4" ] && TIER=pro || TIER=all
+            TIER=all
+            [ "$(date -u +%u)" = "4" ] || ACTION=fresh
           fi
-          BODY=$(jq -nc --arg t "${TIER:-all}" --arg e "${{ github.event.inputs.email }}" --arg f "${{ github.event.inputs.force }}" --arg eo "${{ github.event.inputs.email_only }}" --arg a "${{ github.event.inputs.action }}" \
+          BODY=$(jq -nc --arg t "${TIER:-all}" --arg e "${{ github.event.inputs.email }}" --arg f "${{ github.event.inputs.force }}" --arg eo "${{ github.event.inputs.email_only }}" --arg a "$ACTION" \
             '{tier:$t, email:(if $e=="" then null else $e end), force:($f=="true"), email_only:($eo=="true"), action:(if $a=="" then null else $a end)}')
           R=$(curl -sS --max-time 1500 -X POST "$URL" -H "content-type: application/json" -H "x-drop-secret: $SECRET" -d "$BODY")
           echo "$R"
