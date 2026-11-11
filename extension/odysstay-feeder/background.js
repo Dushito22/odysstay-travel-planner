@@ -37,11 +37,9 @@ async function run() {
   if (Date.now() - running < 40 * 60e3) return { busy: true };
   await chrome.storage.local.set({ running: Date.now() });
   const seen = new Set(seenList);
-  let tab, sent = 0, pages = 0, blocked = null, done = 0;
+  let sent = 0, pages = 0, blocked = null, done = 0;
   try {
-    tab = await chrome.tabs.create({ url: "https://www.immobiliare.it/vendita-case/sicilia/", active: false });
-    await chrome.tabs.update(tab.id, { autoDiscardable: false }).catch(() => {});
-    await loaded(tab.id);
+    await openWorker();
     // Start where the last run was cut off, so every region gets its turn.
     const order = REGIONS.map((_, i) => REGIONS[(resume + i) % REGIONS.length]);
     for (const [region, slug, code] of order) {
@@ -51,7 +49,7 @@ async function run() {
           await sleep(4000 + Math.random() * 4000);
           const q = new URLSearchParams({ fkRegione: code, idContratto: "1", idCategoria: "1", idNazione: "IT", prezzoMassimo: String(hi), criterio: "dataModifica", ordine: "desc", pag: String(pag), __lang: "it", path: `/vendita-case/${slug}/` });
           if (lo) q.set("prezzoMinimo", String(lo));
-          const r = await pageFetch(tab.id, `/api-next/search-list/listings/?${q}`);
+          const r = await pageFetch(`/api-next/search-list/listings/?${q}`);
           pages++;
           if (r.status === 403 || r.status === 429) { blocked = `${r.status} on ${region}`; break; }
           if (r.status !== 200) break; // this band or region didn't answer: skip it, keep going
@@ -80,9 +78,28 @@ async function run() {
     await setStatus({ sent, done, of: REGIONS.length, error: String(e.message || e) });
     return { sent, error: String(e) };
   } finally {
-    if (tab) chrome.tabs.remove(tab.id).catch(() => {});
+    await closeWorker();
     await chrome.storage.local.set({ running: 0 });
   }
+}
+
+// The reading happens in its own small minimized window, so it never sits among your tabs. If that
+// window or tab gets closed while it works, a new one opens and the run carries on.
+let worker = null; // { windowId, tabId }
+async function openWorker() {
+  const w = await chrome.windows.create({ url: "https://www.immobiliare.it/vendita-case/sicilia/", focused: false, state: "minimized", type: "normal" });
+  worker = { windowId: w.id, tabId: w.tabs[0].id };
+  await chrome.tabs.update(worker.tabId, { autoDiscardable: false }).catch(() => {});
+  await loaded(worker.tabId);
+}
+async function closeWorker() {
+  if (worker) await chrome.windows.remove(worker.windowId).catch(() => {});
+  worker = null;
+}
+async function alive() {
+  try { if (worker) { await chrome.tabs.get(worker.tabId); return; } } catch { /* closed */ }
+  await closeWorker();
+  await openWorker();
 }
 
 async function loaded(tabId) {
@@ -96,9 +113,11 @@ async function loaded(tabId) {
 
 // One request made from inside the immobiliare.it page, so it's the site's own call with its cookies.
 // If the page reloads in between (the site sometimes does), wait for it and try again.
-async function pageFetch(tabId, url) {
+async function pageFetch(url) {
   for (let attempt = 0; attempt < 4; attempt++) {
     try {
+      await alive();
+      const tabId = worker.tabId;
       const [{ result }] = await chrome.scripting.executeScript({
         target: { tabId }, world: "MAIN",
         func: async (u) => {
@@ -112,7 +131,7 @@ async function pageFetch(tabId, url) {
       if (result && result.status !== 0) return result;
     } catch (e) { /* frame removed or tab busy */ }
     await sleep(3000);
-    await loaded(tabId);
+    try { await alive(); await loaded(worker.tabId); } catch { /* next attempt reopens */ }
   }
   return { status: 0 };
 }
