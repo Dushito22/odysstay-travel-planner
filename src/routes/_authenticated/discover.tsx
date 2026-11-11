@@ -66,7 +66,7 @@ function DiscoverPage() {
       <WeeklyDrop />
 
       <div className="mt-6">
-        <FilterBar value={search} onChange={patch} onReset={() => replace(RESET_SEARCH)} right={<SaveSearchButton filters={filters} sort={sort} />} />
+        <FilterBar value={search} onChange={patch} onReset={() => replace(RESET_SEARCH)} right={<SaveSearchButton filters={filters} sort={sort} compact />} />
       </div>
 
       <div className="mt-6">

@@ -73,6 +73,7 @@ function AdminPage() {
       </div>
 
       <FeederCard />
+      <LanguageRequests />
 
       <Section title="Service requests" empty="No requests yet." rows={o.purchases.length}>
         {o.purchases.map((p) => (
@@ -172,6 +173,29 @@ function FeederCard() {
           {key} <span className="ml-2 font-sans text-azure">copy</span>
         </button>
       )}
+    </section>
+  );
+}
+
+/** Languages people asked Argos to learn next, most asked first. */
+function LanguageRequests() {
+  const q = useQuery({
+    queryKey: ["admin-lang-requests"],
+    queryFn: async () => {
+      const { data } = await supabase.from("language_requests" as never).select("language").limit(1000);
+      const counts = new Map<string, number>();
+      for (const r of (data ?? []) as { language: string }[]) {
+        const k = r.language.trim().toLowerCase();
+        counts.set(k, (counts.get(k) ?? 0) + 1);
+      }
+      return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    },
+  });
+  if (!q.data?.length) return null;
+  return (
+    <section className="mb-10 rounded-[10px] border p-4">
+      <h2 className="type-h3">Languages people want next</h2>
+      <p className="mt-2 text-[14px] text-foreground/70">{q.data.map(([l, n]) => `${l.charAt(0).toUpperCase()}${l.slice(1)} (${n})`).join(", ")}</p>
     </section>
   );
 }

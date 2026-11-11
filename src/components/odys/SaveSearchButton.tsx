@@ -1,3 +1,4 @@
+import { Bookmark } from "lucide-react";
 import { useT } from "@/lib/tr";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -9,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import type { FeedFilters } from "@/lib/feed";
 
-export function SaveSearchButton({ filters, sort, variant = "outline" }: { filters: FeedFilters; sort: string; variant?: "outline" | "default" }) {
+export function SaveSearchButton({ filters, sort, variant = "outline", compact = false }: { filters: FeedFilters; sort: string; variant?: "outline" | "default"; compact?: boolean }) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -39,7 +40,11 @@ export function SaveSearchButton({ filters, sort, variant = "outline" }: { filte
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button variant={variant}>{t("Save this search")}</Button></DialogTrigger>
+      <DialogTrigger asChild>
+        {compact
+          ? <button type="button" aria-label={t("Save this search")} title={t("Save this search")} className="inline-flex h-10 items-center gap-1.5 rounded-full border border-foreground/15 bg-card px-3.5 text-[14px] hover:border-foreground/40"><Bookmark className="h-4 w-4" /><span className="hidden xl:inline">{t("Save")}</span></button>
+          : <Button variant={variant}>{t("Save this search")}</Button>}
+      </DialogTrigger>
       <DialogContent>
         <DialogHeader><DialogTitle className="font-display">{t("Save this search")}</DialogTitle></DialogHeader>
         <div className="space-y-2">

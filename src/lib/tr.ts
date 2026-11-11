@@ -5,6 +5,7 @@ import { useLang } from "./i18n";
 /** Interface strings outside the landing page. English is the key; a missing entry shows the English. */
 export const RU: Record<string, string> = {
   // discover filter bar
+  Save: "Сохранить",
   "Any type": "Любой тип",
   Town: "Город",
   "New this week": "Новые за неделю",
