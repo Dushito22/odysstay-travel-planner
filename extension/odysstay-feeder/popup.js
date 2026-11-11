@@ -10,7 +10,7 @@ async function show() {
     else s = `Last run ${when(status.at)}: ${status.sent} ads from ${status.done ?? "?"} regions.${status.blocked ? ` Stopped early: ${status.blocked}.` : ""}`;
   }
   if (lastRun) s += ` Next run about ${when(lastRun + 20 * 3600e3)}${status?.blocked ? ", picking up where it stopped" : ""}.`;
-  $("status").textContent = s;
+  $("status").textContent = `${s} (v${chrome.runtime.getManifest().version})`;
 }
 $("save").onclick = async () => {
   const k = $("key").value.trim();
