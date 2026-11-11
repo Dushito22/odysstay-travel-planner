@@ -42,7 +42,7 @@ export function FilterBar({ value: v, onChange, onReset, right }: Props) {
 
   return (
     <div className="sticky top-0 z-20 -mx-5 border-b border-foreground/10 bg-background/95 px-5 py-3 backdrop-blur md:-mx-10 md:px-10">
-      <div className="flex items-center gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none]">
+      <div className="flex items-center gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] xl:flex-wrap xl:overflow-visible">
         <label className="flex h-9 min-w-[150px] max-w-[220px] flex-1 items-center gap-2 rounded-full border border-foreground/15 bg-card px-3 focus-within:border-foreground/40">
           <Search className="h-3.5 w-3.5 shrink-0 text-foreground/45" />
           <input value={town} onChange={(e) => setTown(e.target.value)} placeholder={t("Town")}
