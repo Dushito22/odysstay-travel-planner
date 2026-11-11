@@ -53,21 +53,28 @@ export function WeeklyDrop() {
   const call = () => openArgos({ mode: "call", context, hello: ru ? "Ciao, это Argos. Какой из домов этой недели вам понравился?" : "Ciao, Argos here. Which of this week's houses caught your eye?" });
 
   return (
-    <section ref={box} id="drop" className="mt-8 scroll-mt-20 rounded-[14px] border border-border bg-card p-4 sm:p-5">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-display text-[24px] leading-tight sm:text-[28px]">
-          {ru ? <>Дома недели от <em className="italic text-azure">Argos</em></> : <>This week from <em className="italic text-azure">Argos</em></>}
-        </h2>
-        <span className="text-[12px] text-foreground/50">{ru ? `неделя с ${date}` : `week of ${date}`}</span>
+    <section ref={box} id="drop" className="mt-6 scroll-mt-20 rounded-[14px] border border-border bg-card px-4 py-4 sm:px-5">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <h2 className="font-display text-[24px] leading-none sm:text-[26px]">
+            {ru ? <>Дома недели от <em className="italic text-azure">Argos</em></> : <>This week from <em className="italic text-azure">Argos</em></>}
+          </h2>
+          {d.audio_url && sameLang && (
+            <audio controls preload="none" src={d.audio_url} className="mt-3 h-9 w-full max-w-sm" />
+          )}
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <span className="text-[12px] text-foreground/50">{ru ? `неделя с ${date}` : `week of ${date}`}</span>
+          <button type="button" onClick={call} className="inline-flex h-9 items-center gap-2 rounded-full bg-azure px-4 text-[13px] text-white transition-colors hover:bg-azure/90">
+            <Phone className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{ru ? "Обсудить с Argos" : "Talk them through with Argos"}</span><span className="sm:hidden">{ru ? "Обсудить" : "Talk them through"}</span>
+          </button>
+        </div>
       </div>
-      {d.audio_url && sameLang && (
-        <audio controls preload="none" src={d.audio_url} className="mt-3 h-10 w-full max-w-md" />
-      )}
-      <ol className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <ol className="mt-3 grid grid-cols-1 gap-x-2 gap-y-0.5 sm:grid-cols-2 lg:grid-cols-3">
         {d.picks.map((p, i) => (
           <li key={p.id}>
-            <Link to="/listing/$id" params={{ id: p.id }} className="flex gap-3 rounded-[10px] p-2 transition-colors hover:bg-muted">
-              <div className="h-16 w-20 shrink-0 overflow-hidden rounded-lg bg-muted">
+            <Link to="/listing/$id" params={{ id: p.id }} className="flex items-center gap-3 rounded-[10px] p-1.5 transition-colors hover:bg-muted">
+              <div className="h-14 w-[72px] shrink-0 overflow-hidden rounded-lg bg-muted">
                 {p.photo && <img src={p.photo} alt="" loading="lazy" className="h-full w-full object-cover" />}
               </div>
               <div className="min-w-0 text-[13px] leading-snug">
@@ -79,9 +86,6 @@ export function WeeklyDrop() {
           </li>
         ))}
       </ol>
-      <button type="button" onClick={call} className="mt-4 inline-flex h-9 items-center gap-2 rounded-full bg-azure px-4 text-[14px] text-white">
-        <Phone className="h-4 w-4" /> {ru ? "Обсудить с Argos по звонку" : "Talk them through with Argos"}
-      </button>
     </section>
   );
 }

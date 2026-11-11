@@ -375,7 +375,7 @@ function Hero() {
       <HeroVideo />
       <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col items-center justify-center px-5 pb-16 pt-24 text-center">
         <p className="font-display text-[24px] italic leading-none text-white/90 md:text-[30px]">
-          <span className="text-[#F5C842] [text-shadow:0_1px_14px_rgba(0,0,0,0.35)]">{c.eyebrow.split(/[,:]/)[0]}</span>{c.eyebrow.slice(c.eyebrow.split(/[,:]/)[0]!.length)}
+          <span className="text-[oklch(0.84_0.085_236)]">{c.eyebrow.split(/[,:]/)[0]}</span>{c.eyebrow.slice(c.eyebrow.split(/[,:]/)[0]!.length)}
         </p>
         <h1 className="mt-6 type-h1 text-[38px] md:mt-7 md:text-[52px]">{c.hero}</h1>
         <div className="mt-7 flex w-full max-w-[640px] items-center gap-2 sm:mt-9 sm:gap-2.5">
