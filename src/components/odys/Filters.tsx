@@ -34,11 +34,12 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
 
 const toggleIn = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
-export function FilterPanel({ value: v, onChange }: Props) {
+export function FilterPanel({ value: v, onChange, extrasOnly = false }: Props & { extrasOnly?: boolean }) {
   const t = useT();
   const set = (p: Partial<FeedSearch>) => onChange({ ...p, prefs: false });
   return (
     <div className="space-y-5">
+      {!extrasOnly && <>
       <Group title={t("Region")}>
         <div className="flex flex-wrap gap-1.5">
           {REGIONS.map((r) => (
@@ -65,6 +66,7 @@ export function FilterPanel({ value: v, onChange }: Props) {
           ))}
         </div>
       </Group>
+      </>}
       <Group title={t("State of the property")}>
         <div className="flex flex-wrap gap-1.5">
           {Object.entries(CONDITION_LABELS).map(([k, label]) => (
@@ -73,24 +75,24 @@ export function FilterPanel({ value: v, onChange }: Props) {
         </div>
         <Toggle label={t("Real photos only")} checked={v.realPhotos} onChange={(c) => set({ realPhotos: c })} />
       </Group>
-      <Group title={t("Min surface m²")}>
+      {!extrasOnly && <Group title={t("Min surface m²")}>
         <Input
           type="number" inputMode="numeric" min={0} step={10} placeholder={t("Any size")}
           value={v.minSurface || ""} onChange={(e) => set({ minSurface: Math.max(0, Number(e.target.value) || 0) })}
         />
-      </Group>
+      </Group>}
       <Group title={t("Sale type")}>
-        <p className="text-[14px] font-light text-foreground/60">Outright sales always included</p>
-        <Toggle label="Include concessions and leases" checked={v.leases} onChange={(c) => set({ leases: c })} />
-        <Toggle label="One-euro schemes" checked={v.oneEuro} onChange={(c) => set({ oneEuro: c })} />
+        <p className="text-[14px] font-light text-foreground/60">{t("Outright sales always included")}</p>
+        <Toggle label={t("Include concessions and leases")} checked={v.leases} onChange={(c) => set({ leases: c })} />
+        <Toggle label={t("One-euro schemes")} checked={v.oneEuro} onChange={(c) => set({ oneEuro: c })} />
       </Group>
       <Group title={t("Status")}>
-        <Toggle label="Previously unsold only" checked={v.unsold} onChange={(c) => set({ unsold: c })} />
-        <Toggle label="Hide closed" checked={v.hideClosed} onChange={(c) => set({ hideClosed: c })} />
+        <Toggle label={t("Previously unsold only")} checked={v.unsold} onChange={(c) => set({ unsold: c })} />
+        <Toggle label={t("Hide closed")} checked={v.hideClosed} onChange={(c) => set({ hideClosed: c })} />
       </Group>
-      <Group title={v.minDiscount ? `Below court appraisal: ${v.minDiscount}%+` : t("Below court appraisal")}>
+      <Group title={v.minDiscount ? `${t("Below court appraisal")}: ${v.minDiscount}%+` : t("Below court appraisal")}>
         <Slider value={[v.minDiscount]} min={0} max={70} step={5} onValueChange={([d]) => set({ minDiscount: d ?? 0 })} aria-label="Minimum discount below the court appraisal" />
-        <p className="text-[12px] font-light leading-relaxed text-foreground/55">Court sales only: how far the minimum offer sits below the court expert's valuation.</p>
+        <p className="text-[12px] font-light leading-relaxed text-foreground/55">{t("Court sales only: how far the minimum offer sits below the court expert's valuation.")}</p>
       </Group>
       <Group title={`${t("Min score")}: ${v.minScore}`}>
         <Slider value={[v.minScore]} min={0} max={100} step={5} onValueChange={([s]) => set({ minScore: s ?? 0 })} aria-label="Minimum score" />

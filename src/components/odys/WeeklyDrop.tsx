@@ -7,8 +7,9 @@ import { openArgos } from "@/components/odys/ArgosDock";
 import { supabase } from "@/integrations/supabase/client";
 import { useLang } from "@/lib/i18n";
 
-type Pick = { id: string; comune: string; region: string; price_eur: number | null; surface_sqm: number | null; photo: string | null; why: string; tradeoff: string };
-type Drop = { week: string; script: string | null; audio_url: string | null; picks: Pick[] };
+type Pick = { id: string; comune: string; region: string; price_eur: number | null; surface_sqm: number | null; photo: string | null; why: string; tradeoff: string;
+  why_en?: string; why_ru?: string; tradeoff_en?: string; tradeoff_ru?: string };
+type Drop = { week: string; lang: string | null; script: string | null; audio_url: string | null; picks: Pick[] };
 
 /** Argos's five picks of the week, with his voice note and a way to talk them through. */
 export function WeeklyDrop() {
@@ -17,7 +18,7 @@ export function WeeklyDrop() {
   const q = useQuery({
     queryKey: ["weekly-drop"],
     queryFn: async () => {
-      const { data } = await supabase.from("weekly_drops" as never).select("week, script, audio_url, picks").order("week", { ascending: false }).limit(1).maybeSingle();
+      const { data } = await supabase.from("weekly_drops" as never).select("week, lang, script, audio_url, picks").order("week", { ascending: false }).limit(1).maybeSingle();
       return (data ?? null) as Drop | null;
     },
   });
@@ -42,8 +43,13 @@ export function WeeklyDrop() {
     );
   }
 
+  // Lines in the site's language; the original only when it is already in that language.
+  const L = ru ? "ru" : "en";
+  const sameLang = (d.lang ?? "en") === L;
+  const why = (p: Pick) => p[`why_${L}`] ?? (sameLang ? p.why : "");
+  const catchOf = (p: Pick) => p[`tradeoff_${L}`] ?? (sameLang ? p.tradeoff : "");
   const date = new Date(`${d.week}T12:00:00Z`).toLocaleDateString(ru ? "ru-RU" : "en-GB", { day: "numeric", month: "long" });
-  const context = `${d.script ?? ""}\n${d.picks.map((p, i) => `${i + 1}. ${p.comune}, ${p.region}, ${money(p.price_eur)}. ${p.why} ${ru ? "Минус" : "Catch"}: ${p.tradeoff}`).join("\n")}`;
+  const context = `${d.script ?? ""}\n${d.picks.map((p, i) => `${i + 1}. ${p.comune}, ${p.region}, ${money(p.price_eur)}. ${why(p)} ${ru ? "Минус" : "Catch"}: ${catchOf(p)}`).join("\n")}`;
   const call = () => openArgos({ mode: "call", context, hello: ru ? "Ciao, это Argos. Какой из домов этой недели вам понравился?" : "Ciao, Argos here. Which of this week's houses caught your eye?" });
 
   return (
@@ -54,7 +60,7 @@ export function WeeklyDrop() {
         </h2>
         <span className="text-[12px] text-foreground/50">{ru ? `неделя с ${date}` : `week of ${date}`}</span>
       </div>
-      {d.audio_url && (
+      {d.audio_url && sameLang && (
         <audio controls preload="none" src={d.audio_url} className="mt-3 h-10 w-full max-w-md" />
       )}
       <ol className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -66,8 +72,8 @@ export function WeeklyDrop() {
               </div>
               <div className="min-w-0 text-[13px] leading-snug">
                 <div className="truncate font-medium">{i + 1}. {p.comune} <span className="font-normal text-foreground/60">· {money(p.price_eur)}</span></div>
-                <div className="mt-0.5 line-clamp-2 font-light text-foreground/75">{p.why}</div>
-                {p.tradeoff && <div className="mt-0.5 line-clamp-1 font-light text-foreground/50">{ru ? "Минус" : "Catch"}: {p.tradeoff}</div>}
+                {why(p) && <div className="mt-0.5 line-clamp-2 font-light text-foreground/75">{why(p)}</div>}
+                {catchOf(p) && <div className="mt-0.5 line-clamp-1 font-light text-foreground/50">{ru ? "Минус" : "Catch"}: {catchOf(p)}</div>}
               </div>
             </Link>
           </li>

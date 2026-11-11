@@ -20,6 +20,9 @@ on:
       email_only:
         description: "Email only, skip Telegram (for testing)"
         default: "false"
+      action:
+        description: "translate = add the missing language to recent drops, nothing sent"
+        required: false
 
 jobs:
   drop:
@@ -35,8 +38,8 @@ jobs:
           if [ "${{ github.event_name }}" = "schedule" ]; then
             [ "$(date -u +%u)" = "4" ] && TIER=pro || TIER=all
           fi
-          BODY=$(jq -nc --arg t "${TIER:-all}" --arg e "${{ github.event.inputs.email }}" --arg f "${{ github.event.inputs.force }}" --arg eo "${{ github.event.inputs.email_only }}" \
-            '{tier:$t, email:(if $e=="" then null else $e end), force:($f=="true"), email_only:($eo=="true")}')
+          BODY=$(jq -nc --arg t "${TIER:-all}" --arg e "${{ github.event.inputs.email }}" --arg f "${{ github.event.inputs.force }}" --arg eo "${{ github.event.inputs.email_only }}" --arg a "${{ github.event.inputs.action }}" \
+            '{tier:$t, email:(if $e=="" then null else $e end), force:($f=="true"), email_only:($eo=="true"), action:(if $a=="" then null else $a end)}')
           R=$(curl -sS --max-time 1500 -X POST "$URL" -H "content-type: application/json" -H "x-drop-secret: $SECRET" -d "$BODY")
           echo "$R"
           echo "::notice title=Drop::$(echo "$R" | head -c 900)"
