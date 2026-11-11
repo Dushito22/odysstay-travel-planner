@@ -65,9 +65,8 @@ function DiscoverPage() {
 
       <WeeklyDrop />
 
-      <div className="mt-6">
-        <FilterBar value={search} onChange={patch} onReset={() => replace(RESET_SEARCH)} right={<SaveSearchButton filters={filters} sort={sort} compact />} />
-      </div>
+      {/* Directly in the page column, so it stays pinned while the results scroll. */}
+      <FilterBar className="mt-6" value={search} onChange={patch} onReset={() => replace(RESET_SEARCH)} right={<SaveSearchButton filters={filters} sort={sort} compact />} />
 
       <div className="mt-6">
         {error ? (

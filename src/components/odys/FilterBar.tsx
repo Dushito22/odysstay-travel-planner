@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { FilterPanel } from "./Filters";
 import { formatEur } from "./primitives";
 
-type Props = { value: FeedSearch; onChange: (patch: Partial<FeedSearch>) => void; onReset: () => void; right?: ReactNode };
+type Props = { value: FeedSearch; onChange: (patch: Partial<FeedSearch>) => void; onReset: () => void; right?: ReactNode; className?: string };
 
 const toggleIn = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 const PRICE_PRESETS = [15000, 30000, 50000, 80000, 120000];
@@ -20,7 +20,7 @@ const SIZE_PRESETS = [50, 80, 100, 150];
 
 /** One line of search over the results: town, region, price, type, a blue Filters button for everything
  * else, then sort and save. On a phone: town, Filters and nothing more; the rest moves into the panel. */
-export function FilterBar({ value: v, onChange, onReset, right }: Props) {
+export function FilterBar({ value: v, onChange, onReset, right, className }: Props) {
   const t = useT();
   const ru = useLang() === "ru";
   const set = (p: Partial<FeedSearch>) => onChange({ ...p, prefs: false });
@@ -71,7 +71,7 @@ export function FilterBar({ value: v, onChange, onReset, right }: Props) {
   );
 
   return (
-    <div className="sticky top-0 z-20 -mx-5 border-b border-foreground/10 bg-background/95 px-5 py-3 backdrop-blur md:-mx-10 md:px-10">
+    <div className={cn("sticky top-0 z-20 -mx-5 border-b border-foreground/10 bg-background/95 px-5 py-3 backdrop-blur md:-mx-10 md:px-10", className)}>
       <div className="flex items-center gap-2">
         <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-full border border-foreground/15 bg-card px-3.5 focus-within:border-foreground/40 md:max-w-[240px]">
           <Search className="h-4 w-4 shrink-0 text-foreground/45" />
