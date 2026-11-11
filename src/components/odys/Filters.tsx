@@ -17,7 +17,7 @@ type Props = { value: FeedSearch; onChange: (patch: Partial<FeedSearch>) => void
 function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="space-y-3 border-b border-foreground/10 pb-5 last:border-0 last:pb-0">
-      <p className="type-label text-[11px] text-foreground/55">{title}</p>
+      <p className="text-[13px] font-medium text-foreground/75">{title}</p>
       {children}
     </div>
   );
