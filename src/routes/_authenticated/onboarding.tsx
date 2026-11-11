@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { Wordmark } from "@/components/odys/primitives";
 import { Slider } from "@/components/ui/slider";
+import { supabase } from "@/integrations/supabase/client";
 import { callFunction } from "@/lib/agent";
 import { chooseLang, speechLang, useLang, type Lang } from "@/lib/i18n";
 import { profileQuery, REGIONS, saveProfile, type ProfileUpdate } from "@/lib/profile";
@@ -182,6 +183,38 @@ function LangStep({ onPick }: { onPick: (l: Lang) => void }) {
           </button>
         ))}
       </div>
+      <NextLanguage />
+    </div>
+  );
+}
+
+/** Asks which language Argos should learn next, and saves the answer. */
+function NextLanguage() {
+  const [open, setOpen] = useState(false);
+  const [lang, setLang] = useState("");
+  const [sent, setSent] = useState(false);
+  async function send() {
+    const l = lang.trim().slice(0, 40);
+    if (l.length < 2) return;
+    const { data } = await supabase.auth.getUser();
+    const { error } = await supabase.from("language_requests" as never).insert({ language: l, user_id: data.user?.id } as never);
+    if (error) toast.error("Couldn't send it. Try again."); else setSent(true);
+  }
+  if (sent) return <p className="mt-6 text-[14px] font-light text-foreground/65">Noted. Argos is already practising. Meanwhile, pick English or Russian above.</p>;
+  return (
+    <div className="mt-6">
+      {!open ? (
+        <button type="button" onClick={() => setOpen(true)} className="text-left text-[14px] font-light text-foreground/60 transition-colors hover:text-foreground">
+          Argos is learning a new language as we speak. <span className="text-azure underline-offset-4 hover:underline">Which should be next?</span>
+          <span className="mt-0.5 block text-[13px] text-foreground/45">Argos учит новые языки. Какой выучить следующим?</span>
+        </button>
+      ) : (
+        <form onSubmit={(e) => { e.preventDefault(); void send(); }} className="flex max-w-md gap-2">
+          <input autoFocus value={lang} onChange={(e) => setLang(e.target.value)} placeholder="Italiano, Deutsch, 中文, Српски…" maxLength={40}
+            className="h-11 min-w-0 flex-1 rounded-full border bg-card px-4 text-[14px] outline-none focus:border-foreground/40" />
+          <button type="submit" disabled={lang.trim().length < 2} className="h-11 rounded-full bg-azure px-5 text-[14px] text-white disabled:opacity-40">Teach him</button>
+        </form>
+      )}
     </div>
   );
 }
