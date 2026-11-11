@@ -14,8 +14,9 @@ const REGIONS = [
 const BANDS = [[0, 30000], [30000, 60000], [60000, 100000]];
 const MAX_PAGES = 5, EVERY_H = 20, SEEN_CAP = 30000;
 
-chrome.runtime.onInstalled.addListener(() => chrome.alarms.create("tick", { periodInMinutes: 60 }));
-chrome.runtime.onStartup.addListener(() => { chrome.alarms.create("tick", { periodInMinutes: 60 }); maybeRun(); });
+// A reload or update kills a run mid-way; clear its "running" mark so the next run isn't refused as busy.
+chrome.runtime.onInstalled.addListener(() => { chrome.storage.local.set({ running: 0 }); chrome.alarms.create("tick", { periodInMinutes: 60 }); });
+chrome.runtime.onStartup.addListener(() => { chrome.storage.local.set({ running: 0 }); chrome.alarms.create("tick", { periodInMinutes: 60 }); maybeRun(); });
 chrome.alarms.onAlarm.addListener((a) => { if (a.name === "tick") maybeRun(); });
 chrome.runtime.onMessage.addListener((m, _s, reply) => {
   if (m === "run") { run().then(reply, (e) => reply({ error: String(e) })); return true; }
@@ -34,8 +35,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function run() {
   const { key, running = 0, seen: seenList = [], resume = 0 } = await chrome.storage.local.get(["key", "running", "seen", "resume"]);
   if (!key) return setStatus({ error: "Paste your key first." });
-  if (Date.now() - running < 40 * 60e3) return { busy: true };
+  if (Date.now() - running < 40 * 60e3) {
+    await setStatus({ running: true, sent: 0, done: 0, of: REGIONS.length, region: "starting" });
+    return { busy: true };
+  }
   await chrome.storage.local.set({ running: Date.now() });
+  await setStatus({ running: true, sent: 0, done: 0, of: REGIONS.length, region: "starting" });
   const seen = new Set(seenList);
   let sent = 0, pages = 0, blocked = null, done = 0;
   try {
