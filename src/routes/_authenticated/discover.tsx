@@ -58,7 +58,7 @@ function DiscoverPage() {
         </div>
         <div className="w-full shrink-0 lg:w-[460px]">
           <ArgosComposer tone="light" lang={speechLang(ru ? "ru" : "en")}
-            placeholder={ru ? "Или скажите Argos: каменный дом в Абруццо до €50 тыс.…" : "Or tell Argos: a stone house in Abruzzo under €50k…"}
+            placeholder={ru ? "Или просто скажите Argos, что ищете…" : "Or just tell Argos what you want…"}
             onSubmit={(q, spoken) => navigate({ to: "/argos", search: { q, ...(spoken ? { voice: true } : {}) } })} />
         </div>
       </div>
