@@ -30,7 +30,8 @@ const CITIES: [string, string, number, number][] = [
 const S = {
   ru: {
     price: "Ваша цена", tap: "Коснитесь шкалы или ведите пальцем", go: "Угадать", real: "Цена на самом деле", you: "Вы", house: "Дом", pts: "очков", total: "всего",
-    houses: "домов", next: "Ещё дом", wait: "Секунду", err: "Не вышло, ещё раз",
+    houses: "домов", best: "рекорд", nb: "новый рекорд", next: "Ещё дом", end: "Закончить игру", again: "Играть снова", otherShort: "Другая игра",
+    over: "Игра окончена", houseN: "Домов", pointsN: "Очков", record: "Ваш рекорд", ask: "А если хотите настоящий дом, просто напишите мне, что ищете.", wait: "Секунду", err: "Не вышло, ещё раз",
     t: ["Как будто сами продавали", "Глаз намётан", "Неплохо", "Италия умеет удивлять"],
     where: "Где этот дом?", pin: "Коснитесь карты, чтобы поставить метку", miss: "Вы промахнулись на", kmu: "км", bull: "В точку",
     type: { house: "Дом", rural_house: "Загородный дом" } as Record<string, string>, sqm: "м²", look: "Смотреть этот дом",
@@ -40,7 +41,8 @@ const S = {
   },
   en: {
     price: "Your price", tap: "Tap the scale or drag", go: "Guess", real: "Actual price", you: "You", house: "House", pts: "points", total: "total",
-    houses: "houses", next: "Another house", wait: "One moment", err: "Didn't work, try again",
+    houses: "houses", best: "best", nb: "new best", next: "Another house", end: "End game", again: "Play again", otherShort: "Other game",
+    over: "Game over", houseN: "Houses", pointsN: "Points", record: "Your best", ask: "And if you want a real house, just tell me what you are looking for.", wait: "One moment", err: "Didn't work, try again",
     t: ["Could have sold it yourself", "Sharp eye", "Not bad", "Italy loves to surprise"],
     where: "Where is this house?", pin: "Tap the map to drop a pin", miss: "You missed by", kmu: "km", bull: "Spot on",
     type: { house: "House", rural_house: "Country house" } as Record<string, string>, sqm: "m²", look: "See this house",
@@ -63,7 +65,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px -apple-system,syst
 #a{display:flex;flex-direction:column;align-items:center;justify-content:center}
 .k{font-size:13px;color:var(--mut);letter-spacing:.01em}
 .s{font:400 20px/1.1 Georgia,serif;letter-spacing:-.3px}
-.b{font:600 16px -apple-system,system-ui,sans-serif;border:0;border-radius:24px;background:var(--ink);color:var(--bg);height:48px;width:240px;transition:transform .12s,opacity .2s}
+.b{font:600 16px -apple-system,system-ui,sans-serif;border:0;border-radius:24px;background:var(--ink);color:var(--bg);height:48px;width:200px;transition:transform .12s,opacity .2s}
 .b:active{transform:scale(.97)}.b:disabled{opacity:.35}
 `;
 const CSSP = `.v{font:400 46px/1 Georgia,'Times New Roman',serif;letter-spacing:-1.5px;margin:6px 0 2px}
@@ -106,7 +108,7 @@ B.onclick=function(){B.disabled=true;B.textContent=T.wait;var g=val(pos);
 W.request('g:'+g).then(function(a){res(JSON.parse(a.result))},function(){B.disabled=false;B.textContent=T.err})}}
 function res(o){
 var i=o.s>=90?0:o.s>=70?1:o.s>=40?2:3,a=pp(o.p)*100,b=pp(o.g)*100;
-A.innerHTML='<div class=k>'+T.real+'</div><div class=v>'+eur(o.p)+'</div><div class=tr style="width:240px;margin:8px 0 2px"><i></i><q style="left:'+Math.min(a,b)+'%;width:'+Math.abs(a-b)+'%"></q><s style="left:'+a+'%"></s><em style="left:'+b+'%"></em></div><div class=lg><span><b style="background:var(--te)"></b>'+T.house+'</span><span><b style="background:var(--ac)"></b>'+T.you+' '+eur(o.g)+'</span></div><div class=n>+'+o.s+' <small>'+T.pts+', '+T.t[i].toLowerCase()+'</small></div><div class=k style="margin:2px 0 12px">'+T.total+' '+o.t+' / '+o.n+' '+T.houses+'</div><button class=b id=x>'+T.next+'</button>';
+A.innerHTML='<div class=k>'+T.real+'</div><div class=v>'+eur(o.p)+'</div><div class=tr style="width:240px;margin:8px 0 2px"><i></i><q style="left:'+Math.min(a,b)+'%;width:'+Math.abs(a-b)+'%"></q><s style="left:'+a+'%"></s><em style="left:'+b+'%"></em></div><div class=lg><span><b style="background:var(--te)"></b>'+T.house+'</span><span><b style="background:var(--ac)"></b>'+T.you+' '+eur(o.g)+'</span></div><div class=n>+'+o.s+' <small>'+T.pts+', '+T.t[i].toLowerCase()+'</small></div><div class=k style="margin:2px 0 12px">'+T.total+' '+o.t+' \\u00b7 '+T.best+' '+o.b+(o.nb?' \\u2191':'')+'</div><button class=b id=x>'+T.next+'</button>';
 W.HapticFeedback&&W.HapticFeedback.notificationOccurred(o.s>=70?'success':'warning');
 var X=document.getElementById('x');X.onclick=function(){X.disabled=true;X.textContent=T.wait;W.request('n').then(function(){X.textContent='\\u2713'},function(){X.disabled=false;X.textContent=T.err})}}
 var c=null;try{c=JSON.parse(W.chatData)}catch(e){}
@@ -124,11 +126,9 @@ body,#a{height:472px}
 .h .s{margin-bottom:5px}
 svg{display:block;width:276px;height:${Math.round((276 * MH) / MW)}px;border-radius:16px;background:var(--sea);touch-action:none;margin-top:6px}
 .land{fill:var(--soft);stroke:var(--ln)}
-.p{transform-box:fill-box;transform-origin:center;animation:pl 1.8s ease-out infinite}
-@keyframes pl{0%{transform:scale(1);opacity:.55}100%{transform:scale(3.2);opacity:0}}
 .ct{fill:var(--mut);font-family:-apple-system,system-ui,sans-serif}
 </style><div id=a></div><script>
-var T=${JSON.stringify({ where: s.where, pin: s.pin, go: s.go, wait: s.wait, err: s.err, next: s.next, miss: s.miss, kmu: s.kmu, bull: s.bull, pts: s.pts, total: s.total, houses: s.houses })},C=${JSON.stringify(cities)},D=${JSON.stringify(ITALY)},W=TelegramWidget,A=document.getElementById('a'),NS='http://www.w3.org/2000/svg',MW=${MW},MH=${MH};
+var T=${JSON.stringify({ where: s.where, pin: s.pin, go: s.go, wait: s.wait, err: s.err, next: s.next, miss: s.miss, kmu: s.kmu, bull: s.bull, pts: s.pts, total: s.total, best: s.best })},C=${JSON.stringify(cities)},D=${JSON.stringify(ITALY)},W=TelegramWidget,A=document.getElementById('a'),NS='http://www.w3.org/2000/svg',MW=${MW},MH=${MH};
 document.documentElement.className=W.colorScheme;
 function el(n,at,p){var e=document.createElementNS(NS,n);for(var k in at)e.setAttribute(k,at[k]);if(p)p.appendChild(e);return e}
 function mk(){
@@ -140,7 +140,7 @@ C.forEach(function(c,i){ct[i][1].textContent=c[0]});
 function view(){var s=vb[2]/276;sv.setAttribute('viewBox',vb.join(' '));ld.style.strokeWidth=s*.8;cg.style.fontSize=(10*s)+'px';
 ct.forEach(function(c){c[0].setAttribute('r',2*s);c[1].setAttribute('x',+c[0].getAttribute('cx')+5*s);c[1].setAttribute('y',+c[0].getAttribute('cy')+3.5*s)});return s}
 view();return{sv:sv,pg:pg,vb:vb,view:view,el:el}}
-function pin(g,x,y,col,s,pulse){g.innerHTML='';if(pulse)el('circle',{cx:x,cy:y,r:7*s,fill:col,class:'p'},g);el('circle',{cx:x,cy:y,r:7*s,fill:col,stroke:'#fff','stroke-width':2.2*s},g)}
+function pin(g,x,y,col,s,pulse){g.innerHTML='';if(pulse)el('circle',{cx:x,cy:y,r:15*s,fill:col,opacity:.22},g);el('circle',{cx:x,cy:y,r:7*s,fill:col,stroke:'#fff','stroke-width':2.2*s},g)}
 function play(){
 var m=mk(),sv=m.sv,gx=null,gy=null;
 document.getElementById('ti').textContent=T.where;document.getElementById('su').textContent=T.pin;
@@ -155,7 +155,7 @@ W.request('l:'+gx+','+gy).then(function(a){reveal(m,JSON.parse(a.result),1)},fun
 function reveal(m,o,anim){
 document.getElementById('ti').textContent=o.tw;
 document.getElementById('su').textContent=o.d<4?T.bull:T.miss+' '+o.d+' '+T.kmu+', +'+o.s+' '+T.pts;
-var fx=A.lastChild;fx.style.cssText='margin-top:12px;text-align:center';fx.innerHTML='<div class=k style="margin-bottom:6px">'+T.total+' '+o.t+' / '+o.n+' '+T.houses+'</div><button class=b id=x>'+T.next+'</button>';
+var fx=A.lastChild;fx.style.cssText='margin-top:12px;text-align:center';fx.innerHTML='<div class=k style="margin-bottom:6px">'+T.total+' '+o.t+' \\u00b7 '+T.best+' '+o.b+(o.nb?' \\u2191':'')+'</div><button class=b id=x>'+T.next+'</button>';
 var vb=m.vb,x0=Math.min(o.x,o.gx),x1=Math.max(o.x,o.gx),y0=Math.min(o.y,o.gy),y1=Math.max(o.y,o.gy),q=276/${Math.round((276 * MH) / MW)};
 var w=Math.max(110,(x1-x0)*1.9),h=Math.max(w/q,(y1-y0)*1.9);w=h*q;
 var tx=Math.max(0,Math.min(MW-w,(x0+x1)/2-w/2)),ty=Math.max(0,Math.min(MH-h,(y0+y1)/2-h/2));
@@ -173,21 +173,58 @@ if(c&&c.s!=null){var m=mk();var f=document.createElement('div');A.appendChild(f)
 </script>`;
 }
 
-async function stats(admin: Admin, chatId: number, kind: Kind) {
-  const { data } = await admin.from("tg_games").select("points").eq("chat_id", chatId).eq("kind", kind).not("answered_at", "is", null);
+const del = (tg: Tg, chat_id: number, message_id?: number | null) => (message_id ? tg("deleteMessage", { chat_id, message_id }) : Promise.resolve());
+
+/** A session is everything played since the last "end game" (or since a long break). Returns its points, rounds and the best session so far. */
+async function session(admin: Admin, chatId: number, bump = false) {
+  let { data: pl } = await admin.from("tg_players").select("*").eq("chat_id", chatId).maybeSingle();
+  if (!pl) { await admin.from("tg_players").insert({ chat_id: chatId }); pl = { chat_id: chatId, session_start: new Date().toISOString(), best: 0, summary_msg: null }; }
+  const { data } = await admin.from("tg_games").select("points").eq("chat_id", chatId).not("answered_at", "is", null).gte("answered_at", pl.session_start);
   const pts = (data ?? []).map((r) => Number(r.points ?? 0));
-  return { t: pts.reduce((a, b) => a + b, 0), n: pts.length };
+  const t = pts.reduce((a, b) => a + b, 0);
+  let nb = false, best = Number(pl.best ?? 0);
+  if (bump && t > best) { best = t; nb = true; await admin.from("tg_players").update({ best }).eq("chat_id", chatId); }
+  return { t, n: pts.length, b: best, nb, pl };
+}
+
+/** Removes the photos and widgets of earlier rounds so the chat doesn't fill up with games. */
+async function cleanup(admin: Admin, tg: Tg, chatId: number, exceptId?: number) {
+  const { data } = await admin.from("tg_games").select("id, message_id, photo_message_id").eq("chat_id", chatId).eq("cleared", false);
+  const old = (data ?? []).filter((r) => r.id !== exceptId);
+  await Promise.all(old.flatMap((r) => [del(tg, chatId, r.message_id as number), del(tg, chatId, r.photo_message_id as number)]));
+  if (old.length) await admin.from("tg_games").update({ cleared: true }).in("id", old.map((r) => r.id));
 }
 
 /** The menu: two games, one tap each. */
-export async function menu(tg: Tg, chatId: number, lang: Lang) {
+export async function menu(admin: Admin, tg: Tg, chatId: number, lang: Lang) {
   const s = S[lang] ?? S.ru;
+  const { data: pl } = await admin.from("tg_players").select("summary_msg").eq("chat_id", chatId).maybeSingle();
+  await del(tg, chatId, pl?.summary_msg as number);
   await tg("sendMessage", { chat_id: chatId, text: s.pick, reply_markup: { inline_keyboard: [[{ text: s.pPrice, callback_data: "g:price" }], [{ text: s.pWhere, callback_data: "g:where" }]] } });
 }
 
-/** Sends one round: the photo, then the widget. `only` pins a specific house (from the channel post). */
+/** End of the game: everything from it is deleted, one short summary stays. */
+export async function endGame(admin: Admin, tg: Tg, chatId: number, lang: Lang) {
+  const s = S[lang] ?? S.ru;
+  const ses = await session(admin, chatId, true);
+  await cleanup(admin, tg, chatId);
+  const text = ses.n ? `${s.over}\n${s.houseN}: ${ses.n}\n${s.pointsN}: ${ses.t}\n${s.record}: ${ses.b}${ses.nb ? ` (${s.nb})` : ""}\n\n${s.ask}` : `${s.over}\n\n${s.ask}`;
+  const sent = await tg("sendMessage", { chat_id: chatId, text, reply_markup: { inline_keyboard: [[{ text: s.again, callback_data: "g:menu" }]] } });
+  await admin.from("tg_players").update({ session_start: new Date().toISOString(), summary_msg: sent.result?.message_id ?? null }).eq("chat_id", chatId);
+}
+
+/** Sends one round: the photo, then the widget; the previous round is removed. `only` pins a specific house (from the channel post). */
 export async function startRound(admin: Admin, tg: Tg, chatId: number, lang: Lang, kind: Kind = "price", only?: string) {
   const s = S[lang] ?? S.ru;
+  const { data: pl0 } = await admin.from("tg_players").select("session_start, summary_msg").eq("chat_id", chatId).maybeSingle();
+  if (!pl0) await admin.from("tg_players").insert({ chat_id: chatId });
+  else {
+    await del(tg, chatId, pl0.summary_msg as number);
+    const { data: last } = await admin.from("tg_games").select("answered_at").eq("chat_id", chatId).not("answered_at", "is", null).order("answered_at", { ascending: false }).limit(1).maybeSingle();
+    // After a long break a new session starts, so the score means "this sitting".
+    if (last?.answered_at && Date.now() - new Date(last.answered_at as string).getTime() > 3 * 3600e3) await admin.from("tg_players").update({ session_start: new Date().toISOString(), summary_msg: null }).eq("chat_id", chatId);
+    else if (pl0.summary_msg) await admin.from("tg_players").update({ summary_msg: null }).eq("chat_id", chatId);
+  }
   const { data: played } = await admin.from("tg_games").select("listing_id").eq("chat_id", chatId).eq("kind", kind);
   const seen = new Set((played ?? []).map((p) => p.listing_id as string));
   let r: Row | null = null;
@@ -213,13 +250,13 @@ export async function startRound(admin: Admin, tg: Tg, chatId: number, lang: Lan
     : [s.type[r.property_type as string] ?? s.type.house, r.surface_sqm ? `${Math.round(Number(r.surface_sqm))} ${s.sqm}` : null, `€${Math.round(Number(r.price_eur)).toLocaleString("en-GB")}`];
   const ph = photo(r.hero_image_path as string | null);
   const caption = facts.filter(Boolean).join(" · ");
-  if (ph) await tg("sendPhoto", { chat_id: chatId, photo: ph, caption });
-  else await tg("sendMessage", { chat_id: chatId, text: caption });
+  const pm = ph ? await tg("sendPhoto", { chat_id: chatId, photo: ph, caption }) : await tg("sendMessage", { chat_id: chatId, text: caption });
   const sent = await tg("sendWidget", kind === "price"
     ? { chat_id: chatId, html: priceHtml(lang), allow_queries: true, width: 300, height: 284 }
     : { chat_id: chatId, html: whereHtml(lang), allow_queries: true, width: 300, height: 472 });
-  if (!sent.ok) { await tg("sendMessage", { chat_id: chatId, text: s.fail }); return; }
-  await admin.from("tg_games").insert({ chat_id: chatId, message_id: sent.result?.message_id ?? null, listing_id: r.id, kind });
+  if (!sent.ok) { await del(tg, chatId, pm.result?.message_id); await tg("sendMessage", { chat_id: chatId, text: s.fail }); return; }
+  const { data: ins } = await admin.from("tg_games").insert({ chat_id: chatId, message_id: sent.result?.message_id ?? null, photo_message_id: pm.result?.message_id ?? null, listing_id: r.id, kind }).select("id").single();
+  await cleanup(admin, tg, chatId, ins?.id as number);
 }
 
 /** A tap inside the widget. Always answered, within 15 seconds. */
@@ -240,38 +277,37 @@ export async function widgetQuery(admin: Admin, tg: Tg, q: Row, lang: (chatId: n
   }
   const { data: h } = await admin.from("listing_feed").select("price_eur, comune, region, lat, lng").eq("id", row.listing_id).maybeSingle();
   if (!h) { await answer(); return; }
-  let out: Row, saved: Row;
+  if (row.answered_at && row.result) { await answer(String(row.result)); return; }
+  let out: Row;
+  let pts: number, guess: number;
   if (kind === "price") {
     const m = data.match(/^g:(\d{3,7})$/);
     const real = Number(h.price_eur);
     if (!m || !real) { await answer(); return; }
-    if (row.answered_at && row.result) { await answer(String(row.result)); return; }
-    const guess = Number(m[1]), pts = scorePrice(guess, real);
-    await admin.from("tg_games").update({ guess, points: pts, answered_at: new Date().toISOString() }).eq("id", row.id);
-    const st = await stats(admin, chatId, kind);
-    out = { p: Math.round(real), g: guess, s: pts, ...st };
-    saved = out;
+    guess = Number(m[1]); pts = scorePrice(guess, real);
+    out = { p: Math.round(real), g: guess, s: pts };
   } else {
     const m = data.match(/^l:(\d{1,3}),(\d{1,3})$/);
     if (!m || h.lat == null || h.lng == null) { await answer(); return; }
     const [rx, ry] = toXY(Number(h.lat), Number(h.lng));
-    const tw = `${h.comune}${h.region ? `, ${h.region}` : ""}`;
-    if (row.answered_at && row.result) { await answer(String(row.result)); return; }
     const gx = Math.min(MW, Number(m[1])), gy = Math.min(MH, Number(m[2]));
-    const d = Math.round(km(fromXY(gx, gy), [Number(h.lat), Number(h.lng)]));
-    const pts = scoreWhere(d);
-    await admin.from("tg_games").update({ guess: d, points: pts, answered_at: new Date().toISOString() }).eq("id", row.id);
-    const st = await stats(admin, chatId, kind);
-    out = { x: rx, y: ry, gx, gy, d, s: pts, tw, ...st };
-    saved = out;
+    guess = Math.round(km(fromXY(gx, gy), [Number(h.lat), Number(h.lng)]));
+    pts = scoreWhere(guess);
+    out = { x: rx, y: ry, gx, gy, d: guess, s: pts, tw: `${h.comune}${h.region ? `, ${h.region}` : ""}` };
   }
+  await admin.from("tg_games").update({ guess, points: pts, answered_at: new Date().toISOString() }).eq("id", row.id);
+  const ses = await session(admin, chatId, true);
+  out = { ...out, t: ses.t, n: ses.n, b: ses.b, nb: ses.nb };
   await admin.from("tg_games").update({ result: JSON.stringify(out) }).eq("id", row.id);
-  await answer(JSON.stringify(out));
-  // Keep the result in the message so it survives reopening the chat, and unlock the link to the house.
-  await tg("editMessageWidgetData", { chat_id: chatId, message_id: messageId, chat_data: JSON.stringify(saved) });
+  // Edits first, answer last: editing the message can reload the widget, so it must not happen after the player has seen the result.
   const other = kind === "price" ? "where" : "price";
-  await tg("editMessageReplyMarkup", { chat_id: chatId, message_id: messageId, reply_markup: { inline_keyboard: [
-    [{ text: S[l].look, url: `${SITE}/listing/${row.listing_id}?utm_source=tg_game` }],
-    [{ text: S[l].other[kind], callback_data: `g:${other}` }],
-  ] } });
+  await Promise.all([
+    tg("editMessageWidgetData", { chat_id: chatId, message_id: messageId, chat_data: JSON.stringify(out) }),
+    tg("editMessageReplyMarkup", { chat_id: chatId, message_id: messageId, reply_markup: { inline_keyboard: [
+      [{ text: S[l].next, callback_data: `g:${kind}` }],
+      [{ text: S[l].look, url: `${SITE}/listing/${row.listing_id}?utm_source=tg_game` }],
+      [{ text: S[l].otherShort, callback_data: `g:${other}` }, { text: S[l].end, callback_data: "g:end" }],
+    ] } }),
+  ]);
+  await answer(JSON.stringify(out));
 }
