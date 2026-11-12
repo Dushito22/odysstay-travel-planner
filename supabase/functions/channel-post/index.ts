@@ -90,6 +90,13 @@ async function channelId(admin: ReturnType<typeof adminClient>) {
   return (data?.value as string | undefined) ?? "";
 }
 
+let botName: string | null = null;
+/** The bot's @username, for deep links into the price game. */
+async function botUser() {
+  if (botName === null) botName = (await fetch(`https://api.telegram.org/bot${BOT}/getMe`).then((x) => x.json()).catch(() => ({})))?.result?.username ?? "";
+  return botName;
+}
+
 async function send(chat: string, photoUrl: string | null, caption: string, markup: unknown, replyTo?: number | null) {
   const method = photoUrl ? "sendPhoto" : "sendMessage";
   caption = `${caption.slice(0, 990).trimEnd()}\n\nhttps://odysstay.xyz/`; // every post ends with the site
@@ -143,7 +150,7 @@ async function guessPost(admin: ReturnType<typeof adminClient>) {
 Return JSON only: {"line": "1 or 2 sentences inviting people to guess what this house costs, with a light dream-of-living-there touch, no price or price range"}`,
     JSON.stringify({ town: r.comune, region: r.region, type: r.property_type, sqm: r.surface_sqm }), 300).catch(() => ({} as Row)); // the game works without the writer too
   const facts = [`${TYPE_RU[r.property_type] ?? "Дом"}`, r.surface_sqm ? `${Math.round(r.surface_sqm)} м²` : null, `${r.comune}, ${r.region}`].filter(Boolean).join(" · ");
-  const caption = `<b>Угадайте цену</b>\n${esc(facts)}\n\n${esc(o.line ?? "Сколько, по-вашему, стоит этот дом?")}\n\nПишите свою цифру в комментариях. Ответ завтра утром.`.slice(0, 1024);
+  const caption = `<b>Угадайте цену</b>\n${esc(facts)}\n\n${esc(o.line ?? "Сколько, по-вашему, стоит этот дом?")}\n\nПишите цифру в комментариях или сыграйте в боте: там шкала и очки. Ответ завтра утром.`.slice(0, 1024);
   return { r, caption };
 }
 
@@ -241,7 +248,8 @@ Deno.serve(async (req) => {
       const g = await guessPost(admin);
       if (!g) return null;
       caption = g.caption; photoUrl = photo(g.r.hero_image_path); listingId = g.r.id;
-      markup = { inline_keyboard: [[home]] };
+      const bu = await botUser();
+      markup = { inline_keyboard: [...(bu ? [[{ text: "Сыграть в боте: угадать цену", url: `https://t.me/${bu}?start=g_${String(g.r.id)}` }]] : []), [home]] };
     } else if (kind === "word") {
       caption = (await wordPost(lastTexts.slice(0, 12))).caption;
       const h = await prettyHouse(admin);

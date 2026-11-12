@@ -3,6 +3,7 @@
 // and replies with a voice note when the buyer spoke (or turned voice on with /voice).
 // Needs TELEGRAM_BOT_TOKEN and TELEGRAM_WEBHOOK_SECRET; voice needs ELEVENLABS_API_KEY.
 import { adminClient, corsHeaders } from "../_shared/runtime.ts";
+import { startRound, widgetQuery } from "./game.ts";
 
 const BOT = Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "";
 const SECRET = Deno.env.get("TELEGRAM_WEBHOOK_SECRET") ?? "";
@@ -154,7 +155,7 @@ async function keep(admin: ReturnType<typeof adminClient>, userId: string, said:
 
 const T = {
   en: {
-    hello: "Ciao, I'm Argos, your agent for finding and buying a home in Italy. Tell me where you'd like to wake up, your budget and how much work you'll take on. Write or send me a voice note, I answer in your language.",
+    hello: "Ciao, I'm Argos, your agent for finding and buying a home in Italy. Tell me where you'd like to wake up, your budget and how much work you'll take on. Write or send me a voice note, I answer in your language. Want a game? Send /game and guess house prices.",
     voiceOn: "Voice replies on. I'll answer with voice notes.", voiceOff: "Voice replies off. I'll write.",
     busy: "I've talked a lot today. Let's continue tomorrow, or on the website.", error: "Something went wrong on my side. Try again in a minute.",
     deaf: "I couldn't make out that voice note. Could you say it again, or write it?", open: "Open",
@@ -163,7 +164,7 @@ const T = {
     connect: `To keep this conversation with your account, press Connect Telegram on ${SITE}/profile.`,
   },
   ru: {
-    hello: "Ciao, я Argos, ваш агент по поиску и покупке дома в Италии. Расскажите, где хотите просыпаться, какой бюджет и сколько ремонта готовы взять на себя. Пишите или присылайте голосовые, отвечаю на вашем языке.",
+    hello: "Ciao, я Argos, ваш агент по поиску и покупке дома в Италии. Расскажите, где хотите просыпаться, какой бюджет и сколько ремонта готовы взять на себя. Пишите или присылайте голосовые, отвечаю на вашем языке. А ещё есть игра: /game, угадайте цену дома.",
     voiceOn: "Голосовые ответы включены.", voiceOff: "Голосовые ответы выключены, буду писать.",
     busy: "Сегодня мы много поговорили. Продолжим завтра или на сайте.", error: "У меня что-то сломалось. Попробуйте через минуту.",
     deaf: "Не разобрал голосовое. Повторите, пожалуйста, или напишите.", open: "Открыть",
@@ -189,6 +190,16 @@ Deno.serve(async (req) => {
       const { data } = await adm.from("app_settings").select("value").eq("key", "telegram_channel_id").maybeSingle();
       if (data?.value === String(mcm.chat.id)) await adm.from("app_settings").delete().eq("key", "telegram_channel_id");
     }
+    return new Response("ok");
+  }
+  if (update.widget_query) {
+    try {
+      const adm = adminClient();
+      await widgetQuery(adm, tg as never, update.widget_query, async (id) => {
+        const { data: c } = await adm.from("telegram_chats").select("lang").eq("chat_id", id).maybeSingle();
+        return c?.lang === "en" ? "en" : "ru";
+      });
+    } catch (e) { console.error("widget", e); }
     return new Response("ok");
   }
   const msg = update.message;
@@ -219,6 +230,13 @@ Deno.serve(async (req) => {
 
   try {
     const text: string = typeof msg.text === "string" ? msg.text.trim() : "";
+    // The price game: /game, or the channel button (/start g_<listing id>). Widgets need a private chat.
+    const gm = text.match(/^\/(?:game|start\s+g(?:_([0-9a-f-]{32,36}))?)$/i);
+    if (gm && msg.chat.type === "private") {
+      if (!chat) await save(history);
+      await startRound(admin, tg as never, chatId, lang === "en" ? "en" : "ru", gm[1]);
+      return new Response("ok");
+    }
     if (text.startsWith("/start")) {
       // "/start link_<code>" comes from the Connect Telegram button on the site.
       const code = text.match(/^\/start\s+link_([a-z0-9]{8,40})$/i)?.[1];
