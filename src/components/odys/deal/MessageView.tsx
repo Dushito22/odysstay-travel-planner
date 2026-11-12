@@ -88,7 +88,9 @@ export function ApprovalCard({
   const [draft, setDraft] = useState(msg.body_original);
   const busy = pending?.startsWith(msg.id) ?? false;
 
-  const [needEmail, setNeedEmail] = useState(false);
+  const noAddr = !!thread?.contacts && !thread.contacts.email && !thread.contacts.pec;
+  const [needEmail, setNeedEmail] = useState(noAddr);
+  const [copied, setCopied] = useState(false);
   const [email, setEmail] = useState("");
   const [typedSaved, setTypedSaved] = useState("");
   const approve = (typed = "", to?: string) =>
@@ -171,19 +173,25 @@ export function ApprovalCard({
       </div>
 
       {needEmail && (
-        <div className="mt-4 rounded-xl border border-dashed p-3">
-          <p className="text-sm text-muted-foreground">We don't have this person's email yet. Portals often hide it: copy it from the listing or the agency's site.</p>
-          <div className="mt-2 flex flex-wrap gap-2">
+        <div className="mt-4 rounded-xl border border-dashed p-4">
+          <p className="text-[15px] font-medium">No email for this seller yet</p>
+          <p className="mt-1 text-[14.5px] text-muted-foreground">
+            Argos already tried the listing and a web search. Add the address if you have it and Argos sends this. Or send the Italian text yourself through the portal's contact form.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@agency.it"
-              className="h-9 min-w-0 flex-1 rounded-lg border bg-background px-3 text-sm outline-none focus:border-foreground/40" />
+              className="h-10 min-w-0 flex-1 rounded-lg border bg-background px-3 text-[15px] outline-none focus:border-foreground/40" />
             <Button size="sm" disabled={busy || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)} onClick={() => approve(typedSaved, email)}>Send</Button>
+            <Button size="sm" variant="outline" onClick={async () => { try { await navigator.clipboard.writeText(`${msg.subject ? msg.subject + "\n\n" : ""}${msg.body_original}`); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { /* clipboard blocked */ } }}>
+              {copied ? "Copied" : "Copy the Italian text"}
+            </Button>
           </div>
         </div>
       )}
 
-      {!editing && !needEmail && (
+      {!editing && (!needEmail || noAddr) && (
         <div className="mt-5 flex flex-wrap items-center gap-2">
-          {msg.is_binding ? (
+          {noAddr ? null : msg.is_binding ? (
             <ConfirmBinding
               trigger={<Button disabled={busy}>Approve</Button>}
               title="Approve a binding message?"

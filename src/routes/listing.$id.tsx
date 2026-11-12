@@ -104,8 +104,8 @@ function Shell({ children }: { children: ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-5 pb-16">{children}</main>
-      <footer className="mx-auto max-w-6xl border-t px-5 py-8 text-xs text-muted-foreground">{LEGAL_LINE}</footer>
+      <main className="mx-auto max-w-6xl px-5 pb-12">{children}</main>
+      <footer className="mx-auto max-w-6xl border-t px-5 py-8 text-[13px] text-muted-foreground">{LEGAL_LINE}</footer>
     </div>
   );
 }
@@ -113,9 +113,9 @@ function Shell({ children }: { children: ReactNode }) {
 function Section({ title, kicker, children, id }: { title: string; kicker?: string; children: ReactNode; id?: string }) {
   const t = useT();
   return (
-    <section id={id} className="border-t py-10">
-      {kicker && <p className="mb-2 text-xs font-normal uppercase tracking-[0.18em] text-muted-foreground">{t(kicker)}</p>}
-      <h2 className="mb-6 text-2xl md:text-3xl">{t(title)}</h2>
+    <section id={id} className="border-t py-7 md:py-8">
+      {kicker && <p className="mb-2 text-[13px] font-normal uppercase tracking-[0.18em] text-muted-foreground">{t(kicker)}</p>}
+      <h2 className="mb-4 text-[27px] leading-tight md:text-[33px]">{t(title)}</h2>
       {children}
     </section>
   );
@@ -144,7 +144,7 @@ function RedFlags({ data }: { data: ListingBundle }) {
             <li key={f.id} className="flex gap-4 rounded-2xl border bg-card p-5">
               <AlertTriangle className={cn("mt-0.5 h-5 w-5 shrink-0", f.severity === "low" ? "text-caution" : "text-warning")} />
               <div className="min-w-0">
-                <span className={cn("mb-2 inline-block rounded-full px-2.5 py-0.5 text-xs font-normal capitalize",
+                <span className={cn("mb-2 inline-block rounded-full px-2.5 py-0.5 text-[13px] font-normal capitalize",
                   f.severity === "high" ? "bg-warning text-background" : f.severity === "medium" ? "bg-warning-soft text-warning" : "bg-caution-soft text-caution")}>
                   {f.severity}
                 </span>
@@ -155,7 +155,7 @@ function RedFlags({ data }: { data: ListingBundle }) {
                   </SourceQuote>
                 </div>
                 {f.origin === "rules" && (
-                  <p className="mt-2 text-sm text-muted-foreground" lang="it">
+                  <p className="mt-2 text-[15px] text-muted-foreground" lang="it">
                     {f.page ? `Page ${f.page}: ` : ""}"{f.quote.length > 220 ? f.quote.slice(0, 220) + "..." : f.quote}"
                   </p>
                 )}
@@ -250,8 +250,8 @@ function ListingPage() {
         <HeroPanel data={data} userId={userId} />
       </section>
 
-      <div className="mt-6 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-12">
-        <aside className="lg:order-last lg:pt-10">
+      <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-10">
+        <aside className="lg:order-last lg:pt-8">
           <div className="lg:sticky lg:top-24"><AskArgos l={l} userId={userId} /></div>
         </aside>
         <div className="min-w-0">
@@ -276,7 +276,7 @@ function ListingPage() {
                 l.sale_type !== "sale" || byKey["deadline"] ? ["Offer deadline", <FactValue key="dl" fact={byKey["deadline"]} sourceUrl={src} />] : null,
               ].filter(Boolean) as [string, ReactNode][]).map(([label, node], i, all) => (
                 <div key={label} className={cn("bg-card px-4 py-3", fillClass(i, all.length))}>
-                  <dt className="text-[11px] font-normal uppercase tracking-wide text-muted-foreground">{t(label)}</dt>
+                  <dt className="text-[12.5px] font-normal uppercase tracking-wide text-muted-foreground">{t(label)}</dt>
                   <dd className="mt-1 font-display text-[18px] leading-snug tnum">{node}</dd>
                 </div>
               ))}
@@ -296,7 +296,7 @@ function ListingPage() {
                   </Suspense>
                 </ClientOnly>
               </div>
-            ) : <p className="text-sm text-muted-foreground">No coordinates in the notice.</p>}
+            ) : <p className="text-[15px] text-muted-foreground">No coordinates in the notice.</p>}
             {l.lat != null && l.lng != null && (
               <ClientOnly fallback={null}>
                 <Nearby lat={l.lat} lng={l.lng} comune={l.comune} listingId={l.id!} />
@@ -318,13 +318,13 @@ function ListingPage() {
               <dl className="divide-y rounded-2xl border bg-card">
                 {facts.filter((f) => f.key !== "description").map((f) => (
                   <div key={f.id} className="grid gap-1 p-4 sm:grid-cols-[220px_1fr] sm:gap-6">
-                    <dt className="text-sm text-muted-foreground">{t(f.label_en)}</dt>
+                    <dt className="text-[15px] text-muted-foreground">{t(f.label_en)}</dt>
                     <dd className="font-medium"><FactValue fact={f} sourceUrl={src} /></dd>
                   </div>
                 ))}
               </dl>
             ) : <NotStated />}
-            <p className="mt-3 text-sm text-muted-foreground">
+            <p className="mt-3 text-[15px] text-muted-foreground">
               Every fact above is quoted word for word from the official notice. Tap "Source" to see the Italian original.
             </p>
           </Section>
@@ -343,7 +343,7 @@ function ListingPage() {
                 <FileText className="h-6 w-6 shrink-0 text-brand" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-normal">{l.source_title ?? "Official notice"}</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-[15px] text-muted-foreground">
                     {l.source_published_at ? `Published ${new Date(l.source_published_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}` : "Publication date not stated"}
                   </p>
                 </div>
@@ -372,7 +372,7 @@ function Appraisal({ fact, discount, sourceUrl }: { fact: Fact | undefined; disc
     <span>
       <FactValue fact={fact} sourceUrl={sourceUrl} />
       {discount != null && discount > 0 && (
-        <span className="mt-1 block text-xs font-normal text-success">{ru ? `Минимальная ставка на ${discount}% ниже оценки` : `Minimum offer is ${discount}% below it`}</span>
+        <span className="mt-1 block text-[13px] font-normal text-success">{ru ? `Минимальная ставка на ${discount}% ниже оценки` : `Minimum offer is ${discount}% below it`}</span>
       )}
     </span>
   );
@@ -401,14 +401,14 @@ function OfficialDocuments({ data }: { data: ListingBundle }) {
               <FileText className="h-5 w-5 shrink-0 text-brand" />
               <div className="min-w-0 flex-1">
                 <p className="font-medium">{DOC_LABEL[d.kind] ?? "Document"}</p>
-                <p className="truncate text-sm text-muted-foreground">{d.name}</p>
+                <p className="truncate text-[15px] text-muted-foreground">{d.name}</p>
               </div>
               <ExternalLink className="h-4 w-4 text-muted-foreground" />
             </a>
           </li>
         ))}
       </ul>
-      <p className="mt-3 text-sm text-muted-foreground">
+      <p className="mt-3 text-[15px] text-muted-foreground">
         The appraisal report is the most important read: it describes the condition, legal issues, building irregularities and occupancy in detail. In Italian.
       </p>
     </Section>
@@ -447,7 +447,7 @@ function ArgosContact({ data, userId }: { data: ListingBundle; userId: string | 
           <p className="font-display text-[26px] leading-tight md:text-[30px]">
             {t("Argos can contact them for you")}
           </p>
-          <p className="mt-2 font-light leading-relaxed text-foreground/70">
+          <p className="mt-2 font-normal leading-relaxed text-foreground/70">
             {t("Argos writes to the sale delegate, the notary or the agency in Italian, on your behalf. He asks for the viewing, the documents and the exact rules, then brings you the answer in your language. You read every message before it goes out.")}
           </p>
         </div>
@@ -472,14 +472,14 @@ function SaleContacts({ data, userId }: { data: ListingBundle; userId: string | 
           {l.court}{l.case_ref ? `, ${l.case_ref}` : ""}{l.sale_mode ? `. Bidding: ${l.sale_mode}` : ""}
         </p>
       )}
-      {people.length > 0 && <p className="mb-3 text-sm text-foreground/55">{t("Or reach them yourself")}</p>}
+      {people.length > 0 && <p className="mb-3 text-[15px] text-foreground/55">{t("Or reach them yourself")}</p>}
       {people.length > 0 && (
         <ul className="grid gap-3 sm:grid-cols-2">
           {people.map((c, i) => (
             <li key={i} className="rounded-2xl border bg-card p-5">
-              <p className="text-xs font-normal uppercase tracking-wide text-muted-foreground">{c.role}</p>
+              <p className="text-[13px] font-normal uppercase tracking-wide text-muted-foreground">{c.role}</p>
               {c.name && <p className="mt-1 font-normal">{c.name}</p>}
-              <div className="mt-3 space-y-1.5 text-sm">
+              <div className="mt-3 space-y-1.5 text-[15px]">
                 {c.email && <a href={`mailto:${c.email}`} className="flex items-center gap-2 text-brand hover:underline"><Mail className="h-4 w-4" />{c.email}</a>}
                 {c.phone && <a href={`tel:${c.phone}`} className="flex items-center gap-2 text-brand hover:underline"><Phone className="h-4 w-4" />{c.phone}</a>}
                 {c.url && /^https?:\/\//.test(c.url) && <a href={c.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 break-all text-brand hover:underline"><ExternalLink className="h-4 w-4 shrink-0" />{c.url.replace(/^https?:\/\//, "").slice(0, 60)}</a>}
@@ -488,7 +488,7 @@ function SaleContacts({ data, userId }: { data: ListingBundle; userId: string | 
           ))}
         </ul>
       )}
-      <p className="mt-4 text-sm text-muted-foreground">
+      <p className="mt-4 text-[15px] text-muted-foreground">
         {l.sale_type === "auction_judicial"
           ? 'As published on the court portal. Viewings of court-sale properties are requested through the portal itself, using the "Prenota visita" button on the official page.'
           : l.sale_type === "auction_notary" || l.sale_type === "sale"
@@ -508,7 +508,7 @@ function PricePerSqm({ facts }: { facts: Record<string, Fact | undefined> }) {
   return (
     <span>
       {formatEur(Math.round(p / s))}
-      <span className="mt-1 block text-xs font-normal text-muted-foreground">Price ÷ surface, both quoted</span>
+      <span className="mt-1 block text-[13px] font-normal text-muted-foreground">Price ÷ surface, both quoted</span>
     </span>
   );
 }
@@ -522,10 +522,10 @@ function HeroPanel({ data, userId }: { data: ListingBundle; userId: string | nul
   return (
     <div className="flex min-w-0 flex-col">
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        {l.is_demo && <span className="rounded-full bg-sea px-2.5 py-1 text-[11px] font-normal uppercase tracking-wide text-white">Demo</span>}
+        {l.is_demo && <span className="rounded-full bg-sea px-2.5 py-1 text-[12.5px] font-normal uppercase tracking-wide text-white">Demo</span>}
         <DeadlinePill deadline={l.deadline_at ?? l.auction_at} />
-        {l.property_type && <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-normal text-muted-foreground">{t(TYPE_LABELS[l.property_type] ?? l.property_type)}</span>}
-        {l.sale_type && <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-normal text-brand">{t(SALE_TYPE_LABELS[l.sale_type] ?? l.sale_type)}</span>}
+        {l.property_type && <span className="rounded-full bg-muted px-2.5 py-1 text-[13px] font-normal text-muted-foreground">{t(TYPE_LABELS[l.property_type] ?? l.property_type)}</span>}
+        {l.sale_type && <span className="rounded-full bg-brand-soft px-2.5 py-1 text-[13px] font-normal text-brand">{t(SALE_TYPE_LABELS[l.sale_type] ?? l.sale_type)}</span>}
       </div>
       <h1 data-notranslate className="text-[34px] leading-[0.98] sm:text-[44px] md:text-[52px]">{l.comune ?? t("Unknown comune")}</h1>
       <p className="mt-2 text-muted-foreground">
@@ -533,10 +533,10 @@ function HeroPanel({ data, userId }: { data: ListingBundle; userId: string | nul
         {l.title_en && <span className="text-foreground/70"> · {l.title_en}</span>}
       </p>
 
-      <div className="mt-6 flex items-end justify-between gap-4 border-t border-foreground/10 pt-5">
+      <div className="mt-5 flex items-end justify-between gap-4 border-t border-foreground/10 pt-4">
         <div>
           <Money value={l.price_eur} className="text-[30px] leading-none sm:text-[38px]" />
-          <p className="mt-2 text-sm text-muted-foreground tnum">
+          <p className="mt-2 text-[15px] text-muted-foreground tnum">
             {[
               l.min_offer_eur != null && l.price_eur != null && l.min_offer_eur < l.price_eur ? `${t("Offers valid from")} ${formatEur(l.min_offer_eur)}` : null,
               l.surface_sqm ? `${Math.round(l.surface_sqm)} m²` : null,
@@ -550,11 +550,11 @@ function HeroPanel({ data, userId }: { data: ListingBundle; userId: string | nul
         </div>
       </div>
 
-      <div className="mt-5 rounded-[12px] border border-foreground/10 bg-card p-5">
+      <div className="mt-4 rounded-[12px] border border-foreground/10 bg-card p-5">
         <p className="font-display text-[19px] italic text-azure">{r ? "Мнение Argos" : "Argos's take"}</p>
         <ul className="mt-3 space-y-2.5">
           {take.map((x) => (
-            <li key={x} className="flex gap-2.5 text-[15px] font-light leading-snug text-foreground/80">
+            <li key={x} className="flex gap-2.5 text-[16px] font-normal leading-snug text-foreground/80">
               <span aria-hidden className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-azure" />{x}
             </li>
           ))}
@@ -566,9 +566,9 @@ function HeroPanel({ data, userId }: { data: ListingBundle; userId: string | nul
       {l.id && <OmiValue listingId={l.id} price={l.price_eur} sqm={l.surface_sqm} />}
       {String(l.sale_type ?? "").startsWith("auction") && <AuctionBenchmark region={l.region} type={l.property_type} price={l.price_eur} />}
 
-      <div className="mt-5">
+      <div className="mt-4">
         <ArgosHandleButton l={l} userId={userId} className="w-full" />
-        <p className="mt-2 text-center text-[12px] font-light text-muted-foreground">
+        <p className="mt-2 text-center text-[13.5px] font-normal text-muted-foreground">
           {r ? "Argos пишет продавцу по-итальянски. Обычные вопросы уходят сами, цена и визит ждут вашего «да»." : "Argos writes to the seller in Italian. Routine questions go out on their own; price and visits wait for your yes."}
         </p>
         <ListingServiceLinks listingId={l.id!} price={l.price_eur} />
@@ -588,22 +588,22 @@ function CatchAndCost({ l }: { l: ListingBundle["listing"] }) {
     <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
       {bad.length > 0 && (
         <div className="rounded-[12px] border border-foreground/10 bg-card p-4">
-          <p className="text-[12px] uppercase tracking-[0.1em] text-[oklch(0.6_0.13_45)]">{r ? "Минусы" : "The catch"}</p>
+          <p className="text-[13px] uppercase tracking-[0.1em] text-[oklch(0.6_0.13_45)]">{r ? "Минусы" : "The catch"}</p>
           <ul className="mt-2 space-y-1.5">
-            {bad.slice(0, 4).map((x) => <li key={x} className="text-[14px] font-light leading-snug text-foreground/80">{x}</li>)}
+            {bad.slice(0, 4).map((x) => <li key={x} className="text-[15.5px] font-normal leading-snug text-foreground/80">{x}</li>)}
           </ul>
         </div>
       )}
       {cost && (
         <div className="rounded-[12px] border border-foreground/10 bg-card p-4">
-          <p className="text-[12px] uppercase tracking-[0.1em] text-foreground/55">{r ? "Сколько выйдет всего" : "What it really costs"}</p>
+          <p className="text-[13px] uppercase tracking-[0.1em] text-foreground/55">{r ? "Сколько выйдет всего" : "What it really costs"}</p>
           <p className="mt-1.5 font-display text-[26px] leading-none tnum">≈ {formatEur(cost.total)}</p>
-          <dl className="mt-3 space-y-1 text-[13px] font-light">
+          <dl className="mt-3 space-y-1 text-[14.5px] font-normal">
             {cost.parts.map((x) => (
               <div key={x.label} className="flex justify-between gap-3"><dt className="text-foreground/60">{x.label}</dt><dd className="tnum">{formatEur(x.eur)}</dd></div>
             ))}
           </dl>
-          <p className="mt-2 text-[11px] font-light text-foreground/45">{r ? "Оценка. Точные суммы подтверждает нотариус." : "An estimate. The notary confirms the exact figures."}</p>
+          <p className="mt-2 text-[12.5px] font-normal text-foreground/45">{r ? "Оценка. Точные суммы подтверждает нотариус." : "An estimate. The notary confirms the exact figures."}</p>
         </div>
       )}
     </div>
@@ -671,7 +671,7 @@ function Gallery({ data, userId }: { data: ListingBundle; userId: string | null 
           ))}
         </div>
       )}
-      {img?.caption_en && <p className="mt-2 text-sm text-muted-foreground">{img.kind === "scan" ? img.caption_en : t(img.caption_en)}</p>}
+      {img?.caption_en && <p className="mt-2 text-[15px] text-muted-foreground">{img.kind === "scan" ? img.caption_en : t(img.caption_en)}</p>}
     </div>
   );
 }
@@ -720,7 +720,7 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
             <div className="mb-5 inline-flex rounded-full border bg-card p-1">
               {estimates.map((e) => (
                 <button key={e.id} onClick={() => setScenario(e.scenario)}
-                  className={cn("rounded-full px-4 py-1.5 text-sm font-normal transition-colors",
+                  className={cn("rounded-full px-4 py-1.5 text-[15px] font-normal transition-colors",
                     sel?.id === e.id ? "bg-sea text-white" : "text-muted-foreground hover:text-foreground")}>
                   {tier(e.scenario)}
                 </button>
@@ -729,10 +729,10 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
             {sel && (
               <div className="rounded-2xl border bg-card p-6">
                 <p className="font-display text-[26px] leading-none tnum sm:text-[36px]">{range(sel.low_eur, sel.high_eur)}</p>
-                {sel.user_id && <p className="mt-1 text-xs text-brand">Your own estimate</p>}
+                {sel.user_id && <p className="mt-1 text-[13px] text-brand">Your own estimate</p>}
                 <ul className="mt-5 divide-y">
                   {asItems(sel.items).map((it) => (
-                    <li key={it.item_en} className="flex justify-between gap-4 py-2.5 text-sm">
+                    <li key={it.item_en} className="flex justify-between gap-4 py-2.5 text-[15px]">
                       <span>{it.item_en}</span>
                       <span className="shrink-0 text-muted-foreground tnum">{range(it.low_eur, it.high_eur)}</span>
                     </li>
@@ -740,20 +740,20 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
                 </ul>
                 {asStrings(sel.assumptions).length > 0 && (
                   <div className="mt-5">
-                    <p className="text-xs font-normal uppercase tracking-wide text-muted-foreground">Assumptions</p>
-                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                    <p className="text-[13px] font-normal uppercase tracking-wide text-muted-foreground">Assumptions</p>
+                    <ul className="mt-2 list-disc space-y-1 pl-5 text-[15px] text-muted-foreground">
                       {asStrings(sel.assumptions).map((a) => <li key={a}>{a}</li>)}
                     </ul>
                   </div>
                 )}
                 {sel.price_list && (
-                  <p className="mt-4 text-sm text-muted-foreground">
+                  <p className="mt-4 text-[15px] text-muted-foreground">
                     Based on: {sel.price_list_url ? <a href={sel.price_list_url} target="_blank" rel="noreferrer" className="text-brand hover:underline">{sel.price_list}</a> : sel.price_list}
                   </p>
                 )}
               </div>
             )}
-            <div className="mt-4 rounded-[12px] bg-azure-soft/50 p-4 text-[15px] font-light leading-relaxed">
+            <div className="mt-4 rounded-[12px] bg-azure-soft/50 p-4 text-[16px] font-normal leading-relaxed">
               <span className="font-display italic text-azure">Argos · </span>
               {r
                 ? "Это примерный расчёт: цена за м², умноженная на всю площадь, поэтому считайте его потолком. Многим домам нужно гораздо меньше, жилому порой хватает покраски и пары мелочей. Перед решением я проверю реальное состояние по фото, видеозвонку или через местного геометра, соберу предложения строителей и буду торговаться за лучшую цену, и за ремонт, и за сам дом."
@@ -769,7 +769,7 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
           <Row label={sel ? `Renovation, ${tier(sel.scenario).toLowerCase()}` : "Renovation"}>{sel ? <span className="tnum">{range(sel.low_eur, sel.high_eur)}</span> : <span className="text-muted-foreground">No estimate yet</span>}</Row>
           <div className="my-3 border-t" />
           <Row label="Total" strong>
-            {price != null && sel ? <span className="tnum">{range(price + sel.low_eur, price + sel.high_eur)}</span> : <span className="text-sm font-normal text-muted-foreground">Needs a price and an estimate</span>}
+            {price != null && sel ? <span className="tnum">{range(price + sel.low_eur, price + sel.high_eur)}</span> : <span className="text-[15px] font-normal text-muted-foreground">Needs a price and an estimate</span>}
           </Row>
         </div>
 
@@ -785,23 +785,23 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
                 <div key={g.id} className="rounded-2xl border bg-card p-6">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <p className="font-semibold">{g.name}</p>
-                    <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-normal", lg.fit === "likely" ? "bg-success-soft text-success" : "bg-caution-soft text-caution")}>
+                    <span className={cn("rounded-full px-2.5 py-0.5 text-[13px] font-normal", lg.fit === "likely" ? "bg-success-soft text-success" : "bg-caution-soft text-caution")}>
                       {lg.fit === "likely" ? "Likely fit" : "Possible fit"}
                     </span>
                   </div>
-                  <p className="mt-2 text-sm">{g.summary_en}</p>
-                  <p className="mt-2 text-sm text-muted-foreground">{lg.reason_en}</p>
-                  {g.max_eur != null && <p className="mt-3 text-sm">Up to <Money value={g.max_eur} showOneEuroChip={false} />{g.pct != null && ` · ${g.pct}% of eligible works`}</p>}
-                  {g.conditions_en && <p className="mt-2 text-sm text-muted-foreground">Conditions: {g.conditions_en}</p>}
-                  <p className="mt-3 text-xs text-muted-foreground">
+                  <p className="mt-2 text-[15px]">{g.summary_en}</p>
+                  <p className="mt-2 text-[15px] text-muted-foreground">{lg.reason_en}</p>
+                  {g.max_eur != null && <p className="mt-3 text-[15px]">Up to <Money value={g.max_eur} showOneEuroChip={false} />{g.pct != null && ` · ${g.pct}% of eligible works`}</p>}
+                  {g.conditions_en && <p className="mt-2 text-[15px] text-muted-foreground">Conditions: {g.conditions_en}</p>}
+                  <p className="mt-3 text-[13px] text-muted-foreground">
                     <a href={g.source_url} target="_blank" rel="noreferrer" className="text-brand hover:underline">Official source</a>
                     {" · "}Checked {new Date(g.checked_at).toLocaleDateString("en-GB")}
                   </p>
                   {price != null && sel && dLo != null && dHi != null && (
-                    <div className="mt-4 rounded-xl bg-muted p-4 text-sm">
+                    <div className="mt-4 rounded-xl bg-muted p-4 text-[15px]">
                       <p className="font-medium">Total after grant, if approved</p>
                       <p className="mt-1 font-display text-[24px] tnum">{range(price + sel.low_eur - dLo, price + sel.high_eur - dHi)}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">Conditional. Only applies if the grant is approved for you.</p>
+                      <p className="mt-1 text-[13px] text-muted-foreground">Conditional. Only applies if the grant is approved for you.</p>
                     </div>
                   )}
                 </div>
@@ -810,11 +810,11 @@ function CostSection({ data, userId }: { data: ListingBundle; userId: string | n
           </div>
         )}
         {l.min_offer_eur != null && (
-          <p className="mt-4 text-sm text-muted-foreground">
+          <p className="mt-4 text-[15px] text-muted-foreground">
             Uses the minimum offer. If other people bid, the price goes up from there in steps of the minimum raise.
           </p>
         )}
-        <p className="mt-2 text-sm text-muted-foreground">Purchase taxes: ask the agent, they depend on your situation.</p>
+        <p className="mt-2 text-[15px] text-muted-foreground">Purchase taxes: ask the agent, they depend on your situation.</p>
       </Section>
     </>
   );
@@ -876,13 +876,13 @@ function HowBuying({ saleType }: { saleType: string | null }) {
         <ol className="space-y-3">
           {steps.map((s, i) => (
             <li key={s} className="flex gap-4">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sea text-xs font-normal text-white">{i + 1}</span>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sea text-[13px] font-normal text-white">{i + 1}</span>
               <span className="pt-0.5">{s}</span>
             </li>
           ))}
         </ol>
       )}
-      <p className="mt-4 text-sm text-muted-foreground">General guide only. The notice sets the exact rules and dates.</p>
+      <p className="mt-4 text-[15px] text-muted-foreground">General guide only. The notice sets the exact rules and dates.</p>
     </Section>
   );
 }
