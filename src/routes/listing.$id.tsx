@@ -569,7 +569,7 @@ function HeroPanel({ data, userId }: { data: ListingBundle; userId: string | nul
       <div className="mt-5">
         <ArgosHandleButton l={l} userId={userId} className="w-full" />
         <p className="mt-2 text-center text-[12px] font-light text-muted-foreground">
-          {r ? "Argos пишет продавцу по-итальянски, вы одобряете каждое сообщение." : "Argos writes to the seller in Italian. You approve every message."}
+          {r ? "Argos пишет продавцу по-итальянски. Обычные вопросы уходят сами, цена и визит ждут вашего «да»." : "Argos writes to the seller in Italian. Routine questions go out on their own; price and visits wait for your yes."}
         </p>
         <ListingServiceLinks listingId={l.id!} price={l.price_eur} />
       </div>
