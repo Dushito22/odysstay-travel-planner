@@ -249,7 +249,7 @@ Deno.serve(async (req) => {
       if (!g) return null;
       caption = g.caption; photoUrl = photo(g.r.hero_image_path); listingId = g.r.id;
       const bu = await botUser();
-      markup = { inline_keyboard: [...(bu ? [[{ text: "Сыграть в боте: угадать цену", url: `https://t.me/${bu}?start=g_${String(g.r.id)}` }]] : []), [home]] };
+      markup = { inline_keyboard: [...(bu ? [[{ text: "Угадать цену в боте", url: `https://t.me/${bu}?start=g_${String(g.r.id)}` }], [{ text: "Где этот дом? Игра на карте", url: `https://t.me/${bu}?start=w` }]] : []), [home]] };
     } else if (kind === "word") {
       caption = (await wordPost(lastTexts.slice(0, 12))).caption;
       const h = await prettyHouse(admin);
