@@ -245,7 +245,7 @@ function ListingPage() {
 
   return (
     <Shell>
-      <section className="grid grid-cols-1 gap-6 pt-4 sm:pt-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(340px,1fr)] lg:gap-10 lg:pt-10">
+      <section className="grid grid-cols-1 gap-6 pt-4 sm:pt-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(340px,1fr)] lg:items-start lg:gap-10 lg:pt-10">
         <Gallery data={data} userId={userId} />
         <HeroPanel data={data} userId={userId} />
       </section>
@@ -638,7 +638,7 @@ function Gallery({ data, userId }: { data: ListingBundle; userId: string | null 
   const cover = img?.kind === "render" || img?.kind === "satellite";
   const hasReal = official.some((o) => o.kind === "original") || images.some((i) => i.kind === "original");
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 lg:sticky lg:top-24">
       <div className="relative overflow-hidden rounded-[14px]">
         {img ? (
           <div className="relative aspect-[3/2] bg-muted sm:aspect-[4/3]">
