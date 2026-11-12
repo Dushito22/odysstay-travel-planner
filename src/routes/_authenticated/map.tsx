@@ -22,7 +22,7 @@ function MapPage() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/map" });
   const replace = useCallback((s: FeedSearch) => navigate({ search: s, replace: true }), [navigate]);
-  const patch = (p: Partial<FeedSearch>) => navigate({ search: (prev) => ({ ...prev, ...p }), replace: true });
+  const patch = (p: Partial<FeedSearch>) => navigate({ search: (prev: FeedSearch) => ({ ...prev, ...p }), replace: true });
   const { profile, rows } = useFeed(search, replace);
   const [bounds, setBounds] = useState<Bounds | null>(null);
 
