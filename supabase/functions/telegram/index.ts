@@ -3,7 +3,7 @@
 // and replies with a voice note when the buyer spoke (or turned voice on with /voice).
 // Needs TELEGRAM_BOT_TOKEN and TELEGRAM_WEBHOOK_SECRET; voice needs ELEVENLABS_API_KEY.
 import { adminClient, corsHeaders } from "../_shared/runtime.ts";
-import { startRound, widgetQuery } from "./game.ts";
+import { menu, startRound, widgetQuery } from "./game.ts";
 
 const BOT = Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "";
 const SECRET = Deno.env.get("TELEGRAM_WEBHOOK_SECRET") ?? "";
@@ -192,6 +192,15 @@ Deno.serve(async (req) => {
     }
     return new Response("ok");
   }
+  const cb = update.callback_query;
+  if (cb?.data && /^g:(price|where)$/.test(cb.data) && cb.message?.chat?.id) {
+    await tg("answerCallbackQuery", { callback_query_id: cb.id });
+    const adm = adminClient();
+    const id = cb.message.chat.id as number;
+    const { data: c } = await adm.from("telegram_chats").select("lang").eq("chat_id", id).maybeSingle();
+    await startRound(adm, tg as never, id, c?.lang === "en" ? "en" : "ru", cb.data === "g:where" ? "where" : "price");
+    return new Response("ok");
+  }
   if (update.widget_query) {
     try {
       const adm = adminClient();
@@ -230,11 +239,14 @@ Deno.serve(async (req) => {
 
   try {
     const text: string = typeof msg.text === "string" ? msg.text.trim() : "";
-    // The price game: /game, or the channel button (/start g_<listing id>). Widgets need a private chat.
-    const gm = text.match(/^\/(?:game|start\s+g(?:_([0-9a-f-]{32,36}))?)$/i);
+    // The games: /game (menu), the channel buttons (/start g_<listing id>, /start w), widgets need a private chat.
+    const gm = text.match(/^\/(game|where|start\s+g(?:_([0-9a-f-]{32,36}))?|start\s+w)$/i);
     if (gm && msg.chat.type === "private") {
       if (!chat) await save(history);
-      await startRound(admin, tg as never, chatId, lang === "en" ? "en" : "ru", gm[1]);
+      const gl = lang === "en" ? "en" : "ru", w = gm[1].toLowerCase();
+      if (w === "game") await menu(tg as never, chatId, gl);
+      else if (w === "where" || w === "start w") await startRound(admin, tg as never, chatId, gl, "where");
+      else await startRound(admin, tg as never, chatId, gl, "price", gm[2]);
       return new Response("ok");
     }
     if (text.startsWith("/start")) {
