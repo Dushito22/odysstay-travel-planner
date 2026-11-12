@@ -99,6 +99,25 @@ async function send(chat: string, photoUrl: string | null, caption: string, mark
 }
 
 const TYPE_RU: Record<string, string> = { house: "Дом", rural_house: "Сельский дом", apartment: "Квартира", building: "Здание целиком" };
+/** The next post written ahead of time (table channel_queue), with an unused graded photo of its theme and the photo credit. */
+async function queued(admin: ReturnType<typeof adminClient>, slot: string) {
+  const { data } = await admin.from("channel_queue").select("*").is("posted_at", null).in("slot", [slot, "any"]).order("id").limit(1);
+  const q = (data ?? [])[0] as Row | undefined;
+  if (!q) return null;
+  let art: Row | null = null;
+  if (q.art_theme) {
+    const { data: a } = await admin.from("channel_art").select("id, url, author, license").eq("theme", q.art_theme).is("used_at", null).order("id").limit(1);
+    art = (a ?? [])[0] ?? null;
+    if (!art) { const { data: b } = await admin.from("channel_art").select("id, url, author, license").is("used_at", null).order("id").limit(1); art = (b ?? [])[0] ?? null; }
+  }
+  const author = art ? String(art.author ?? "").replace(/^This Photo was taken by\s*/i, "").split(/[.\n]/)[0].slice(0, 48) : "";
+  const credit = art ? `\n\n<i>Фото: ${esc(author)}, ${esc(String(art.license ?? ""))}, Wikimedia Commons</i>` : "";
+  const text = (String(q.text) + credit).slice(0, 1024);
+  const rows: unknown[] = [];
+  if (q.button_text && q.button_url) rows.push([{ text: q.button_text, url: String(q.button_url).replace("{SITE}", SITE) }]);
+  rows.push([{ text: "Все дома в Италии", url: `${SITE}/?utm_source=tg_channel` }]);
+  return { q, art, text, markup: { inline_keyboard: rows } };
+}
 const SALE_FILTER = ["sale", "auction_judicial", "auction_notary", "one_euro"];
 
 async function askJson(system: string, user: string, tokens = 600): Promise<Row> {
@@ -196,8 +215,24 @@ Deno.serve(async (req) => {
         await admin.from("channel_posts").insert({ listing_id: r.id, kind: "reveal", message_id: res.result?.message_id ?? null, text: caption });
         return json({ posted: true, kind: "reveal" });
       }
-      return null; // no guess pending: fall through to a normal find
+      kind = "queue-am"; // no guess pending: a post from the queue, else a normal find
     }
+    if (kind === "evening" && day % 2 === 0) kind = "queue-eve";
+    if (kind === "queue-am" || kind === "queue-eve") {
+      const qd = await queued(admin, kind === "queue-am" ? "am" : "eve");
+      if (qd) {
+        if (dry || !CHANNEL) return json({ posted: false, dry: true, kind: "queue", caption: qd.text, photo: qd.art?.url ?? null });
+        const res = await send(CHANNEL, qd.art?.url ?? null, qd.text, qd.markup);
+        if (!res.ok) return json({ posted: false, error: res.description ?? "telegram refused" }, 502);
+        await admin.from("channel_queue").update({ posted_at: new Date().toISOString(), message_id: res.result?.message_id ?? null }).eq("id", qd.q.id);
+        if (qd.art) await admin.from("channel_art").update({ used_at: new Date().toISOString() }).eq("id", qd.art.id);
+        await admin.from("channel_posts").insert({ listing_id: null, kind: "queue", message_id: res.result?.message_id ?? null, text: qd.text });
+        return json({ posted: true, kind: "queue", message_id: res.result?.message_id });
+      }
+      if (kind === "queue-am") return null;
+      kind = "evening-rest";
+    }
+    if (kind === "evening-rest") kind = (["word", "region"] as const)[Math.floor(day / 2) % 2];
     if (kind === "evening") kind = day % 2 ? "guess" : (["light", "word", "region"] as const)[Math.floor(day / 2) % 3];
     if (kind !== "guess" && kind !== "word" && kind !== "region") return null;
     let photoUrl: string | null = null, caption = "", markup: unknown = { inline_keyboard: [[home]] }, listingId: string | null = null, postKind = kind;
@@ -245,7 +280,11 @@ Deno.serve(async (req) => {
     return json({ posted: true, kind: "light", message_id: res.result?.message_id });
   }
   const total = allIn(r);
-  const o = await write(r, total);
+  const o = await write(r, total).catch(() => ({
+    hook: `${TYPE_RU[r.property_type] ?? "Дом"} за ${eur(r.price_eur)}`,
+    why: `Odysstay оценивает эту находку на ${Math.round(r.score)} из 100.${r.discount_pct ? ` Цена ниже судебной оценки на ${Math.round(r.discount_pct)}%.` : ""}`,
+    catch: undefined as string | undefined,
+  }));
   const sale = String(r.sale_type).startsWith("auction") ? "Судебные торги" : r.sale_type === "one_euro" ? "Дом за €1" : "Продажа";
   const facts = [sale, r.surface_sqm ? `${Math.round(r.surface_sqm)} м²` : null, `со всеми расходами ≈ ${eur(total)}`].filter(Boolean).join(" · ");
   const caption = `<b>${esc(r.comune)}, ${esc(r.region)} · ${eur(r.price_eur)}</b>\n${esc(o.hook)}\n\n${esc(o.why)}${o.catch ? `\n<i>Минус: ${esc(o.catch)}</i>` : ""}\n\n${esc(facts)}`.slice(0, 1024);
