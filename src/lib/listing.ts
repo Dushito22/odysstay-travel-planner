@@ -129,6 +129,9 @@ export function buildTasks(
 
 export const CLOSED_STAGES = ["won", "lost", "withdrawn"];
 
+/** Active deals on the free plan. Enough to see Argos work a few houses before anyone is asked to pay. */
+export const FREE_ACTIVE_DEALS = 3;
+
 export class UpgradeRequired extends Error {}
 
 export async function startDeal(listing: FeedRow): Promise<string> {
@@ -141,7 +144,7 @@ export async function startDeal(listing: FeedRow): Promise<string> {
       .from("deals").select("id", { count: "exact", head: true })
       .not("stage", "in", `(${CLOSED_STAGES.join(",")})`);
     if (error) throw error;
-    if ((count ?? 0) > 0) throw new UpgradeRequired();
+    if ((count ?? 0) >= FREE_ACTIVE_DEALS) throw new UpgradeRequired();
   }
   const { data: deal, error: dErr } = await supabase
     .from("deals").insert({ user_id: uid, listing_id: listing.id, stage: "interested", autonomy: "auto_info_requests" }).select("id").single();

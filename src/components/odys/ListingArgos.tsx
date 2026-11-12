@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import type { FeedRow } from "@/lib/feed";
 import { speechLang, useLang } from "@/lib/i18n";
-import { startAutopilot, startDeal, UpgradeRequired } from "@/lib/listing";
+import { FREE_ACTIVE_DEALS, startAutopilot, startDeal, UpgradeRequired } from "@/lib/listing";
 import { cn } from "@/lib/utils";
 
 /** 1 день, 2 дня, 5 дней */
@@ -84,7 +84,7 @@ export function ArgosHandleButton({ l, userId, className }: { l: FeedRow; userId
       navigate({ to: "/deals/$id", params: { id } });
     } catch (e) {
       if (e instanceof UpgradeRequired)
-        toast(r ? "Бесплатный план: одна активная сделка за раз." : "The free plan includes one active deal at a time.", { action: { label: r ? "Тарифы" : "See plans", onClick: () => navigate({ to: "/pricing" }) } });
+        toast(r ? `Бесплатный план: до ${FREE_ACTIVE_DEALS} активных сделок. Закройте одну или перейдите на тариф.` : `The free plan includes up to ${FREE_ACTIVE_DEALS} active deals. Close one or see plans.`, { action: { label: r ? "Тарифы" : "See plans", onClick: () => navigate({ to: "/pricing" }) } });
       else toast.error(r ? "Не получилось. Попробуйте ещё раз." : "Could not start. Please try again.");
     } finally { setBusy(false); }
   }
