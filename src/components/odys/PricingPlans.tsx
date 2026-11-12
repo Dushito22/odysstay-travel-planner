@@ -35,7 +35,7 @@ const PLANS: Plan[] = [
     features: [
       { en: "Everything in Free", ru: "Всё из бесплатного" },
       { en: "Calls with Argos, 2 hours a month", ru: "Звонки с Argos, 2 часа в месяц" },
-      { en: "Argos writes to sellers in Italian, you approve each message", ru: "Argos пишет продавцам по-итальянски, вы одобряете каждое письмо" },
+      { en: "Argos writes to sellers in Italian; anything about price or visits needs your OK", ru: "Argos пишет продавцам по-итальянски; цена и визиты только с вашего «да»" },
       { en: "Court reports read for you: occupants, debts, risks", ru: "Отчёты суда прочитаны за вас: жильцы, долги, риски" },
       { en: "Your picks on Thursday, two days before everyone", ru: "Подборка в четверг, на два дня раньше всех" },
       { en: "Unlimited illustrations and saved searches", ru: "Безлимит иллюстраций и сохранённых поисков" },
