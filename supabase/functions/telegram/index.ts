@@ -4,6 +4,7 @@
 // Needs TELEGRAM_BOT_TOKEN and TELEGRAM_WEBHOOK_SECRET; voice needs ELEVENLABS_API_KEY.
 import { adminClient, corsHeaders } from "../_shared/runtime.ts";
 import { menu, startRound, widgetQuery } from "./game.ts";
+import { siteQuery, startSite } from "./site.ts";
 
 const BOT = Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "";
 const SECRET = Deno.env.get("TELEGRAM_WEBHOOK_SECRET") ?? "";
@@ -204,6 +205,7 @@ Deno.serve(async (req) => {
   if (update.widget_query) {
     try {
       const adm = adminClient();
+      if (await siteQuery(adm, tg as never, update.widget_query)) return new Response("ok");
       await widgetQuery(adm, tg as never, update.widget_query, async (id) => {
         const { data: c } = await adm.from("telegram_chats").select("lang").eq("chat_id", id).maybeSingle();
         return c?.lang === "en" ? "en" : "ru";
@@ -239,6 +241,12 @@ Deno.serve(async (req) => {
 
   try {
     const text: string = typeof msg.text === "string" ? msg.text.trim() : "";
+    // The mini site: /app, or the channel button (/start app).
+    if (/^\/(app|site|start\s+app)$/i.test(text) && msg.chat.type === "private") {
+      if (!chat) await save(history);
+      await startSite(tg as never, chatId, lang === "en" ? "en" : "ru");
+      return new Response("ok");
+    }
     // The games: /game (menu), the channel buttons (/start g_<listing id>, /start w), widgets need a private chat.
     const gm = text.match(/^\/(game|where|start\s+g(?:_([0-9a-f-]{32,36}))?|start\s+w)$/i);
     if (gm && msg.chat.type === "private") {
