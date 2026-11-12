@@ -15,7 +15,7 @@ export const RU: Record<string, string> = {
   Clear: "Сбросить",
   // navigation and shells
   Discover: "Поиск", Map: "Карта", Deals: "Сделки", Inbox: "Входящие", Saved: "Избранное", Profile: "Профиль",
-  Documents: "Документы", "Sign out": "Выйти", Explore: "Обзор", Pricing: "Тарифы", Privacy: "Конфиденциальность",
+  Documents: "Документы", "Sign out": "Выйти", Guides: "Гайды", "Sign in": "Войти", "Hide menu": "Скрыть меню", "Show menu": "Показать меню", Explore: "Обзор", Pricing: "Тарифы", Privacy: "Конфиденциальность",
   Terms: "Условия", "Back to Discover": "Назад к поиску", "Try again": "Повторить",
   // listing page
   "Key numbers": "Главные цифры", "Location and what is nearby": "Расположение и что рядом", "In plain words": "Простыми словами",

@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { isCourtPhoto, photoUrls, renderUrl, SALE_TYPE_LABELS, TYPE_LABELS } from "@/lib/feed";
 import {
-  factValue, grantDeduction, listingQuery, orderImages, pickEstimates, startDeal, UpgradeRequired,
+  factValue, grantDeduction, listingQuery, orderImages, pickEstimates, startDeal, FREE_ACTIVE_DEALS, UpgradeRequired,
   type CostEstimate, type Fact, type ListingBundle,
 } from "@/lib/listing";
 import { useLang } from "@/lib/i18n";
@@ -436,7 +436,7 @@ function ArgosContact({ data, userId }: { data: ListingBundle; userId: string | 
     try {
       navigate({ to: "/deals/$id", params: { id: await startDeal(l) } });
     } catch (e) {
-      if (e instanceof UpgradeRequired) toast("The free plan includes one active deal at a time.", { action: { label: "See plans", onClick: () => navigate({ to: "/pricing" }) } });
+      if (e instanceof UpgradeRequired) toast(`The free plan includes up to ${FREE_ACTIVE_DEALS} active deals. Close one or see plans.`, { action: { label: "See plans", onClick: () => navigate({ to: "/pricing" }) } });
       else toast.error("Could not start. Please try again.");
     } finally { setBusy(false); }
   }

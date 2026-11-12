@@ -1,10 +1,9 @@
-import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bookmark, Compass, FolderLock, Shield, Handshake, Inbox, LogOut, Map, Sparkles, User } from "lucide-react";
+import { Link, Outlet, useLocation } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { Compass, Handshake, Inbox, Map, User } from "lucide-react";
 
 import { useEffect } from "react";
 
-import { supabase } from "@/integrations/supabase/client";
 import { inboxCountQuery } from "@/lib/deal";
 import { setLang, useLang } from "@/lib/i18n";
 import { profileQuery } from "@/lib/profile";
@@ -12,14 +11,6 @@ import { useInboxRealtime } from "@/lib/use-deal";
 import { useT } from "@/lib/tr";
 import { LangToggle } from "./LangToggle";
 import { LEGAL_LINE, Wordmark } from "./primitives";
-
-const desktopNav = [
-  { to: "/discover", label: "Discover", icon: Compass },
-  { to: "/map", label: "Map", icon: Map },
-  { to: "/deals", label: "Deals", icon: Handshake },
-  { to: "/inbox", label: "Inbox", icon: Inbox },
-  { to: "/saved", label: "Saved", icon: Bookmark },
-] as const;
 
 const mobileNav = [
   { to: "/discover", label: "Discover", icon: Compass },
@@ -32,16 +23,6 @@ const mobileNav = [
 export function AppShell() {
   const t = useT();
   const { pathname } = useLocation();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const isAdmin = useQuery({
-    queryKey: ["is-admin"],
-    staleTime: 30 * 60_000,
-    queryFn: async () => {
-      const { data } = await supabase.rpc("is_admin" as never);
-      return data === true;
-    },
-  }).data === true;
   const inboxCount = useQuery({ ...inboxCountQuery, refetchInterval: 60_000 }).data ?? 0;
   useInboxRealtime();
   // The account's language wins over the browser's, so every device opens in the buyer's language.
@@ -53,71 +34,8 @@ export function AppShell() {
 
   if (pathname === "/onboarding") return <Outlet />;
 
-  async function signOut() {
-    await queryClient.cancelQueries();
-    queryClient.clear();
-    await supabase.auth.signOut();
-    navigate({ to: "/login", search: { mode: "signin" }, replace: true });
-  }
-
   return (
-    <div className="min-h-screen md:flex">
-      <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r bg-sidebar px-3 py-6 md:flex">
-        <Link to="/discover" className="px-3" aria-label="odysstay home">
-          <Wordmark size="md" />
-        </Link>
-        <Link to="/argos" search={{ q: "", voice: false }}
-          className="mx-1 mt-6 flex items-center gap-2.5 rounded-full border border-azure/25 bg-azure-soft/60 px-3 py-2 text-[15px] text-foreground transition-colors hover:bg-azure-soft">
-          <Sparkles className="h-4 w-4 text-azure" /> {t("Ask Argos")}
-        </Link>
-        <nav className="mt-4 flex flex-col gap-0.5">
-          {desktopNav.map(({ to, label, icon: Icon }) => (
-            <Link
-              key={to}
-              to={to}
-              className="flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-[15px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              activeProps={{ className: "!bg-azure-soft !text-foreground" }}
-            >
-              <Icon className="h-4 w-4" />
-              {t(label)}
-              {to === "/inbox" && inboxCount > 0 && <CountBadge n={inboxCount} className="ml-auto" />}
-            </Link>
-          ))}
-        </nav>
-        <div className="mt-auto flex flex-col gap-1 border-t pt-4">
-          <LangToggle className="px-3 pb-2" />
-          <Link
-            to="/profile"
-            className="flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-[15px] text-muted-foreground hover:bg-muted hover:text-foreground"
-            activeProps={{ className: "!bg-azure-soft !text-foreground" }}
-          >
-            <User className="h-4 w-4" /> {t("Profile")}
-          </Link>
-          <Link
-            to="/vault"
-            className="flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-[15px] text-muted-foreground hover:bg-muted hover:text-foreground"
-            activeProps={{ className: "!bg-azure-soft !text-foreground" }}
-          >
-            <FolderLock className="h-4 w-4" /> {t("Documents")}
-          </Link>
-          {isAdmin && (
-            <Link
-              to="/admin"
-              className="flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-[15px] text-muted-foreground hover:bg-muted hover:text-foreground"
-              activeProps={{ className: "!bg-azure-soft !text-foreground" }}
-            >
-              <Shield className="h-4 w-4" /> Admin
-            </Link>
-          )}
-          <button
-            onClick={signOut}
-            className="flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-left text-[15px] text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            <LogOut className="h-4 w-4" /> {t("Sign out")}
-          </button>
-        </div>
-      </aside>
-
+    <div className="flex min-h-screen flex-col">
       <div className="flex min-w-0 flex-1 flex-col pb-20 md:pb-0">
         <header className="sticky top-0 z-30 flex items-center border-b bg-background/85 px-5 py-4 backdrop-blur-xl md:hidden">
           <Wordmark size="sm" />
