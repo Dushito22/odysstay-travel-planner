@@ -105,13 +105,13 @@ export function AskArgos({ className }: { l: FeedRow; userId: string | null; cla
       <p className="font-display text-[22px] leading-tight">
         {r ? <>Спросите <em className="italic text-azure">Argos</em> об этом доме</> : <>Ask <em className="italic text-azure">Argos</em> about this house</>}
       </p>
-      <p className="mt-1 text-[13px] font-light text-foreground/60">
+      <p className="mt-1 text-[14.5px] font-normal text-foreground/60">
         {r ? "Он прочитал объявление. Пишите или звоните, отвечает на вашем языке." : "He has read the listing. Write or call, he answers in your language."}
       </p>
       <div className="mt-4 flex flex-wrap gap-1.5">
         {QUESTIONS[lang].map((q) => (
           <button key={q} type="button" onClick={() => openArgos({ text: q })}
-            className="rounded-full border border-foreground/12 bg-background/70 px-3 py-1.5 text-left text-[13px] font-light transition-colors hover:border-foreground/30 hover:bg-background">
+            className="rounded-full border border-foreground/12 bg-background/70 px-3 py-1.5 text-left text-[14.5px] font-normal transition-colors hover:border-foreground/30 hover:bg-background">
             {q}
           </button>
         ))}
@@ -121,7 +121,7 @@ export function AskArgos({ className }: { l: FeedRow; userId: string | null; cla
           placeholder={r ? "Спросите что угодно…" : "Ask anything…"} />
       </div>
       <button type="button" onClick={() => openArgos({ mode: "call" })}
-        className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-azure py-2.5 text-[15px] text-white transition-opacity hover:opacity-90">
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-azure py-2.5 text-[16px] text-white transition-opacity hover:opacity-90">
         <Phone className="h-4 w-4" /> {r ? "Позвонить Argos про этот дом" : "Call Argos about this house"}
       </button>
     </div>

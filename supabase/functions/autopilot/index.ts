@@ -158,6 +158,74 @@ async function ensureThread(admin: Admin, c: Ctx, givenEmail?: string) {
   return thread as Row;
 }
 
+
+const BAD_MAIL = /(noreply|no-reply|donotreply|sentry|wixpress|example\.|@(idealista|immobiliare|casa|subito|gruppomol|astegiudiziarie|astalegale|pvp\.giustizia)\.|\.(png|jpe?g|gif|svg|webp)$)/i;
+const MAIL = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
+const okMail = (e: string) => !BAD_MAIL.test(e) && e.length < 80;
+
+/** Reads the listing page itself: many ads carry a mailto or an address in the text. Free and fast. */
+async function mailFromListingPage(url: string | null | undefined) {
+  if (!url || !/^https?:/i.test(url)) return null;
+  try {
+    const r = await fetch(url, { headers: { "user-agent": "Mozilla/5.0 (compatible; OdysstayBot/1.0; +https://odysstay.xyz)" }, signal: AbortSignal.timeout(7000) });
+    if (!r.ok) return null;
+    const html = (await r.text()).slice(0, 400_000);
+    const found = [...html.matchAll(MAIL)].map((m) => m[0].toLowerCase()).filter(okMail);
+    return found[0] ?? null;
+  } catch { return null; }
+}
+
+/** Asks Claude with web search for the seller's public contact: the agency's own site, or for auctions the
+ *  custodian's / delegated professional's PEC. Only an address that a source page actually shows is accepted. */
+async function searchContact(c: Ctx, thread: Row) {
+  const key = Deno.env.get("ANTHROPIC_API_KEY");
+  if (!key) return null;
+  const l = (c.listing ?? {}) as Row;
+  const who = thread.contacts?.organisation || thread.contacts?.name || "";
+  const auction = String(l.sale_type ?? "").startsWith("auction");
+  const q = {
+    seller: who || null, kind: auction ? "court auction: find the custode giudiziario or professionista delegato and their PEC or email" : "real estate agency or private seller: find the agency's public contact email",
+    town: l.comune, province: l.province, region: l.region, listing_url: l.source_url, type: l.property_type, price_eur: l.price_eur,
+  };
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST", headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      signal: AbortSignal.timeout(45000),
+      body: JSON.stringify({
+        model: Deno.env.get("ANTHROPIC_MODEL") || "claude-haiku-5-5", max_tokens: 3000,
+        tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }],
+        system: "You find the public contact email of the seller of an Italian property. Search the web (Italian queries work best). Use only an address that appears on a page you found, never guess one. Prefer the exact agency or custodian named; if you cannot be sure it is the right one, return nulls. Reply with JSON only: {\"email\": string|null, \"phone\": string|null, \"source_url\": string|null, \"who\": string|null}.",
+        messages: [{ role: "user", content: JSON.stringify(q) }],
+      }),
+    });
+    if (!r.ok) return null;
+    const data = await r.json();
+    const text = ((data.content ?? []) as Row[]).filter((b) => b.type === "text").map((b) => b.text ?? "").join("");
+    const m = text.match(/\{[\s\S]*\}/);
+    if (!m) return null;
+    const o = JSON.parse(m[0]) as Row;
+    const email = typeof o.email === "string" ? o.email.trim().toLowerCase() : "";
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || !okMail(email) || !o.source_url) return null;
+    return { email, phone: typeof o.phone === "string" ? o.phone : null, source: String(o.source_url) };
+  } catch { return null; }
+}
+
+/** Finds the seller's address when the listing gave none, and remembers it for every later buyer. */
+async function findContact(admin: Admin, c: Ctx, thread: Row) {
+  const ct = thread.contacts;
+  if (!ct || ct.email || ct.pec) return null;
+  // 1. Somebody already found it: same organisation, same town.
+  if (ct.organisation) {
+    const { data } = await admin.from("contacts").select("email").eq("organisation", ct.organisation).eq("comune", (c.listing as Row)?.comune ?? "").not("email", "is", null).limit(1);
+    if (data?.[0]?.email) return { email: data[0].email as string, source: "known" };
+  }
+  // 2. The listing page itself.
+  const page = await mailFromListingPage((c.listing as Row)?.source_url);
+  if (page) return { email: page, source: "listing" };
+  // 3. The web.
+  return await searchContact(c, thread);
+}
+
 /** One move on one deal. */
 async function step(admin: Admin, dealId: string, why: string, givenEmail?: string) {
   const c = await load(admin, dealId);
@@ -166,6 +234,14 @@ async function step(admin: Admin, dealId: string, why: string, givenEmail?: stri
   if (givenEmail && thread.contacts && !thread.contacts.email) {
     await admin.from("contacts").update({ email: givenEmail }).eq("id", thread.contacts.id);
     thread.contacts.email = givenEmail;
+  }
+  if (thread.contacts && !thread.contacts.email && !thread.contacts.pec) {
+    const found = await findContact(admin, c, thread).catch(() => null);
+    if (found) {
+      await admin.from("contacts").update({ email: found.email }).eq("id", thread.contacts.id);
+      thread.contacts.email = found.email;
+      await event(admin, dealId, "agent_update", { summary: c.lang === "ru" ? `Argos нашёл email продавца: ${found.email}.` : `Argos found the seller's email: ${found.email}.`, source: found.source });
+    }
   }
   // Don't double up: one draft waiting for the buyer is enough.
   if (c.messages.some((m: Row) => m.thread_id === thread.id && m.status === "awaiting_approval")) return { skipped: "waiting for buyer" };
