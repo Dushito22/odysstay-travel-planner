@@ -36,6 +36,9 @@ describe("saved search summaries", () => {
     } as never);
     expect(s).toEqual({
       sort: "best",
+      q: "",
+      newDays: 0,
+      kind: "all",
       regions: ["Lazio"],
       types: [],
       minPrice: 0,

@@ -27,7 +27,7 @@ function DiscoverPage() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/discover" });
   const replace = useCallback((s: FeedSearch) => navigate({ search: s, replace: true }), [navigate]);
-  const patch = (p: Partial<FeedSearch>) => navigate({ search: (prev) => ({ ...prev, ...p }), replace: true });
+  const patch = (p: Partial<FeedSearch>) => navigate({ search: (prev: FeedSearch) => ({ ...prev, ...p }), replace: true });
   const { profile, filters, rows, total, isLoading, error } = useFeed(search, replace);
 
   const [shown, setShown] = useState(PAGE);
