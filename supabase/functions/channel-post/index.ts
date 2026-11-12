@@ -121,7 +121,7 @@ async function guessPost(admin: ReturnType<typeof adminClient>) {
   if (!r) return null;
   const o = await askJson(`You write a short teaser for a price-guessing game in Odysstay's Russian-language Telegram channel about houses in Italy. ${STYLE}
 Return JSON only: {"line": "1 or 2 sentences inviting people to guess what this house costs, with a light dream-of-living-there touch, no price or price range"}`,
-    JSON.stringify({ town: r.comune, region: r.region, type: r.property_type, sqm: r.surface_sqm }), 300);
+    JSON.stringify({ town: r.comune, region: r.region, type: r.property_type, sqm: r.surface_sqm }), 300).catch(() => ({} as Row)); // the game works without the writer too
   const facts = [`${TYPE_RU[r.property_type] ?? "Дом"}`, r.surface_sqm ? `${Math.round(r.surface_sqm)} м²` : null, `${r.comune}, ${r.region}`].filter(Boolean).join(" · ");
   const caption = `<b>Угадайте цену</b>\n${esc(facts)}\n\n${esc(o.line ?? "Сколько, по-вашему, стоит этот дом?")}\n\nПишите свою цифру в комментариях. Ответ завтра утром.`.slice(0, 1024);
   return { r, caption };
