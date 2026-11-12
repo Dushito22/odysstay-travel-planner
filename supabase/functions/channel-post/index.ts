@@ -92,6 +92,7 @@ async function channelId(admin: ReturnType<typeof adminClient>) {
 
 async function send(chat: string, photoUrl: string | null, caption: string, markup: unknown, replyTo?: number | null) {
   const method = photoUrl ? "sendPhoto" : "sendMessage";
+  caption = `${caption.slice(0, 990).trimEnd()}\n\nhttps://odysstay.xyz/`; // every post ends with the site
   const reply = replyTo ? { reply_parameters: { message_id: replyTo, allow_sending_without_reply: true } } : {};
   const payload = photoUrl ? { chat_id: chat, photo: photoUrl, caption, parse_mode: "HTML", reply_markup: markup, ...reply }
     : { chat_id: chat, text: caption, parse_mode: "HTML", reply_markup: markup, link_preview_options: { is_disabled: true }, ...reply };
