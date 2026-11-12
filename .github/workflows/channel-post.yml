@@ -1,16 +1,18 @@
 name: Channel post
 
-# One post a day on the public Telegram channel, 10:07 Rome time: mostly a new find, every third day a light one. Run by hand with dry=true to preview.
+# Three posts a day on the public Telegram channel (Rome time): 09:07 the answer to yesterday's price guess (or a find), 13:07 a find, 19:07 a price-guess game on odd days, otherwise a rotating light post (saying, word of the day, region postcard). Run by hand with dry=true to preview.
 on:
   schedule:
-    - cron: "7 9 * * *"
+    - cron: "7 8 * * *"
+    - cron: "7 12 * * *"
+    - cron: "7 18 * * *"
   workflow_dispatch:
     inputs:
       dry:
         description: "Preview only, don't post"
         default: "true"
       kind:
-        description: "house, light, or empty for the normal mix"
+        description: "morning, house, evening, light, guess, word, region, or empty for the normal mix"
         required: false
 
 jobs:
@@ -22,7 +24,13 @@ jobs:
       - name: Post
         run: |
           DRY="${{ github.event.inputs.dry }}"
+          KIND="${{ github.event.inputs.kind }}"
+          if [ -z "$KIND" ] && [ "${{ github.event_name }}" = "schedule" ]; then
+            case "${{ github.event.schedule }}" in
+              "7 8 * * *") KIND=morning ;; "7 12 * * *") KIND=house ;; *) KIND=evening ;;
+            esac
+          fi
           R=$(curl -sS --max-time 120 -X POST https://nryhvtxprjiylajolcef.supabase.co/functions/v1/channel-post \
-            -H "content-type: application/json" -H "x-drop-secret: $SECRET" -d "{\"dry\": ${DRY:-false}, \"kind\": \"${{ github.event.inputs.kind }}\"}")
+            -H "content-type: application/json" -H "x-drop-secret: $SECRET" -d "{\"dry\": ${DRY:-false}, \"kind\": \"$KIND\"}")
           echo "$R"
           echo "::notice title=Post::$(echo "$R" | head -c 1500)"

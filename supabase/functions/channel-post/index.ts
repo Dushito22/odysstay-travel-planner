@@ -90,11 +90,82 @@ async function channelId(admin: ReturnType<typeof adminClient>) {
   return (data?.value as string | undefined) ?? "";
 }
 
-async function send(chat: string, photoUrl: string | null, caption: string, markup: unknown) {
+async function send(chat: string, photoUrl: string | null, caption: string, markup: unknown, replyTo?: number | null) {
   const method = photoUrl ? "sendPhoto" : "sendMessage";
-  const payload = photoUrl ? { chat_id: chat, photo: photoUrl, caption, parse_mode: "HTML", reply_markup: markup }
-    : { chat_id: chat, text: caption, parse_mode: "HTML", reply_markup: markup, link_preview_options: { is_disabled: true } };
+  const reply = replyTo ? { reply_parameters: { message_id: replyTo, allow_sending_without_reply: true } } : {};
+  const payload = photoUrl ? { chat_id: chat, photo: photoUrl, caption, parse_mode: "HTML", reply_markup: markup, ...reply }
+    : { chat_id: chat, text: caption, parse_mode: "HTML", reply_markup: markup, link_preview_options: { is_disabled: true }, ...reply };
   return await fetch(`https://api.telegram.org/bot${BOT}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) }).then((x) => x.json());
+}
+
+const TYPE_RU: Record<string, string> = { house: "Дом", rural_house: "Сельский дом", apartment: "Квартира", building: "Здание целиком" };
+const SALE_FILTER = ["sale", "auction_judicial", "auction_notary", "one_euro"];
+
+async function askJson(system: string, user: string, tokens = 600): Promise<Row> {
+  const text = await callClaude(system, [{ role: "user", content: user }], tokens);
+  const m = text.match(/\{[\s\S]*\}/);
+  return m ? JSON.parse(m[0]) : {};
+}
+const STYLE = `Russian only (Italian words only where asked). Plain, warm, a little wry, dreamy but never syrupy, like a friend who lives in Italy. No emojis, no hashtags, no em dashes, no exclamation marks, no markdown. Never invent facts or figures.`;
+
+/** Evening game: a house with the price hidden. The answer follows next morning as a reply to this post. */
+async function guessPost(admin: ReturnType<typeof adminClient>) {
+  const { data: done } = await admin.from("channel_posts").select("listing_id");
+  const seen = new Set((done ?? []).map((d) => d.listing_id as string));
+  const { data } = await admin.from("listing_feed").select("id, comune, region, price_eur, surface_sqm, property_type, hero_image_path")
+    .eq("is_demo", false).eq("is_scrap", false).eq("has_real_photo", true).not("status", "in", "(closed,withdrawn)")
+    .in("sale_type", ["sale"]).in("property_type", ["house", "rural_house"]).gte("price_eur", 8000).lte("price_eur", 90000)
+    .gte("score", 60).not("hero_image_path", "is", null).order("created_at", { ascending: false }).limit(80);
+  const list = (data ?? []).filter((x) => !seen.has(x.id));
+  const r = list.length ? list[Math.floor(Math.random() * list.length)] as Row : null;
+  if (!r) return null;
+  const o = await askJson(`You write a short teaser for a price-guessing game in Odysstay's Russian-language Telegram channel about houses in Italy. ${STYLE}
+Return JSON only: {"line": "1 or 2 sentences inviting people to guess what this house costs, with a light dream-of-living-there touch, no price or price range"}`,
+    JSON.stringify({ town: r.comune, region: r.region, type: r.property_type, sqm: r.surface_sqm }), 300);
+  const facts = [`${TYPE_RU[r.property_type] ?? "Дом"}`, r.surface_sqm ? `${Math.round(r.surface_sqm)} м²` : null, `${r.comune}, ${r.region}`].filter(Boolean).join(" · ");
+  const caption = `<b>Угадайте цену</b>\n${esc(facts)}\n\n${esc(o.line ?? "Сколько, по-вашему, стоит этот дом?")}\n\nПишите свою цифру в комментариях. Ответ завтра утром.`.slice(0, 1024);
+  return { r, caption };
+}
+
+/** Morning: the answer to yesterday's guess, as a reply under it. */
+async function pendingReveal(admin: ReturnType<typeof adminClient>) {
+  const { data } = await admin.from("channel_posts").select("listing_id, kind, message_id").in("kind", ["guess", "reveal"]).order("posted_at", { ascending: false }).limit(6);
+  const g = (data ?? []).find((p) => p.kind === "guess");
+  if (!g || !g.listing_id) return null;
+  if ((data ?? []).some((p) => p.kind === "reveal" && p.listing_id === g.listing_id)) return null;
+  const { data: r } = await admin.from("listing_feed").select("id, comune, region, price_eur, surface_sqm, sale_type, hero_image_path").eq("id", g.listing_id).maybeSingle();
+  return r ? { r: r as Row, replyTo: g.message_id as number | null } : null;
+}
+
+async function wordPost(recent: string[]) {
+  const o = await askJson(`You write a short "Italian word of the day" post for Odysstay's Russian-language Telegram channel about life in an Italian house. ${STYLE}
+Pick one real Italian word or short phrase from home and village life (for example focolare, piazza, nonna's kitchen, passeggiata, orto), not used recently. Return JSON only: {"it": "the word", "say": "how to read it in Russian letters", "ru": "meaning, one short line", "line": "2 sentences that put the reader inside the scene of living there"}`,
+    `Recently used, don't repeat: ${JSON.stringify(recent)}`, 500);
+  if (!o.it || !o.line) throw new Error("word post not written");
+  return { caption: `<b><i>${esc(o.it)}</i></b>${o.say ? ` (${esc(o.say)})` : ""}\n${esc(o.ru ?? "")}\n\n${esc(o.line)}`.slice(0, 1024) };
+}
+
+/** A postcard from one region, with the real price range of houses there on the site today. */
+async function regionPost(admin: ReturnType<typeof adminClient>, recent: string[]) {
+  const { data } = await admin.from("listing_feed").select("region, price_eur").eq("is_demo", false).not("status", "in", "(closed,withdrawn)")
+    .in("sale_type", SALE_FILTER).in("property_type", ["house", "rural_house"]).gte("price_eur", 1000).lte("price_eur", 200000).limit(3000);
+  const by = new Map<string, number[]>();
+  for (const x of data ?? []) if (x.region) by.set(x.region, [...(by.get(x.region) ?? []), Number(x.price_eur)]);
+  const regs = [...by.entries()].filter(([, v]) => v.length >= 10).map(([k, v]) => ({ k, v: v.sort((a, b) => a - b) }));
+  const fresh = regs.filter((x) => !recent.some((t) => t.startsWith(x.k)));
+  const pool = fresh.length ? fresh : regs;
+  if (!pool.length) return null;
+  const c = pool[Math.floor(Math.random() * pool.length)];
+  const med = c.v[Math.floor(c.v.length / 2)];
+  const o = await askJson(`You write a short postcard about one Italian region for Odysstay's Russian-language Telegram channel, for people dreaming of a house there. ${STYLE}
+Use only well-known, safe general facts about the region (landscape, food, pace of life), no numbers about the region beyond the data given. Return JSON only: {"text": "3 to 4 short sentences, dreamy and specific, ending by pointing to the houses on the site"}`,
+    JSON.stringify({ region: c.k, houses_on_site: c.v.length, cheapest_eur: c.v[0], typical_eur: med }), 600);
+  if (!o.text) throw new Error("region post not written");
+  const { data: ph } = await admin.from("listing_feed").select("id, comune, region, price_eur, hero_image_path").eq("is_demo", false).eq("has_real_photo", true)
+    .eq("region", c.k).gte("score", 60).not("hero_image_path", "is", null).order("created_at", { ascending: false }).limit(30);
+  const h = (ph ?? []).length ? (ph as Row[])[Math.floor(Math.random() * (ph as Row[]).length)] : null;
+  const caption = `<b>${esc(c.k)}</b>\n\n${esc(o.text)}\n\nДомов здесь сейчас: ${c.v.length}. Самый дешёвый: ${eur(c.v[0])}. Обычная цена: около ${eur(med)}.`.slice(0, 1024);
+  return { caption, h, region: c.k };
 }
 
 Deno.serve(async (req) => {
@@ -104,8 +175,59 @@ Deno.serve(async (req) => {
   const dry = body.dry === true;
   const admin = adminClient();
   const CHANNEL = await channelId(admin);
-  const { data: last } = await admin.from("channel_posts").select("kind, text").order("posted_at", { ascending: false }).limit(10);
-  const lightDue = body.kind === "light" || (body.kind !== "house" && (last ?? []).slice(0, 2).every((p) => p.kind === "house") && (last ?? []).length >= 2);
+  const { data: last } = await admin.from("channel_posts").select("kind, text").order("posted_at", { ascending: false }).limit(30);
+
+  // Rhythm: morning (answer to yesterday's guess, else a find), house (a find), evening (guess on odd days, otherwise a rotating light post).
+  const kindIn = String(body.kind ?? "");
+  const day = Math.floor(Date.now() / 864e5);
+  const lastTexts = (last ?? []).map((p) => String(p.text ?? "").split("\n")[0]);
+  const home = { text: "Все дома в Италии", url: `${SITE}/?utm_source=tg_channel` };
+  const extra = async (): Promise<Response | null> => {
+    let kind = kindIn;
+    if (kind === "morning") {
+      const pr = await pendingReveal(admin);
+      if (pr) {
+        const { r, replyTo } = pr;
+        const caption = `<b>Ответ: ${eur(r.price_eur)}</b>\n${esc(r.comune)}, ${esc(r.region)}${r.surface_sqm ? ` · ${Math.round(r.surface_sqm)} м²` : ""}\nСо всеми расходами около ${eur(allIn(r))}.\n\nКто угадал, тот знает рынок лучше многих агентов.`.slice(0, 1024);
+        const markup = { inline_keyboard: [[{ text: "Смотреть дом", url: `${SITE}/listing/${r.id}?utm_source=tg_channel` }], [home]] };
+        if (dry || !CHANNEL) return json({ posted: false, dry: true, kind: "reveal", caption });
+        const res = await send(CHANNEL, null, caption, markup, replyTo);
+        if (!res.ok) return json({ posted: false, error: res.description ?? "telegram refused" }, 502);
+        await admin.from("channel_posts").insert({ listing_id: r.id, kind: "reveal", message_id: res.result?.message_id ?? null, text: caption });
+        return json({ posted: true, kind: "reveal" });
+      }
+      return null; // no guess pending: fall through to a normal find
+    }
+    if (kind === "evening") kind = day % 2 ? "guess" : (["light", "word", "region"] as const)[Math.floor(day / 2) % 3];
+    if (kind !== "guess" && kind !== "word" && kind !== "region") return null;
+    let photoUrl: string | null = null, caption = "", markup: unknown = { inline_keyboard: [[home]] }, listingId: string | null = null, postKind = kind;
+    if (kind === "guess") {
+      const g = await guessPost(admin);
+      if (!g) return null;
+      caption = g.caption; photoUrl = photo(g.r.hero_image_path); listingId = g.r.id;
+      markup = { inline_keyboard: [[home]] };
+    } else if (kind === "word") {
+      caption = (await wordPost(lastTexts.slice(0, 12))).caption;
+      const h = await prettyHouse(admin);
+      photoUrl = h ? photo(h.hero_image_path) : null;
+      markup = { inline_keyboard: [[home]] };
+    } else {
+      const g = await regionPost(admin, lastTexts);
+      if (!g) return null;
+      caption = g.caption; photoUrl = g.h ? photo(g.h.hero_image_path) : null;
+      markup = { inline_keyboard: [[{ text: `Дома: ${g.region}`, url: `${SITE}/?utm_source=tg_channel` }], [home]] };
+    }
+    if (dry || !CHANNEL) return json({ posted: false, dry: true, kind: postKind, caption, photo: photoUrl });
+    const res = await send(CHANNEL, photoUrl, caption, markup);
+    if (!res.ok) return json({ posted: false, error: res.description ?? "telegram refused" }, 502);
+    await admin.from("channel_posts").insert({ listing_id: listingId, kind: postKind, message_id: res.result?.message_id ?? null, text: caption });
+    return json({ posted: true, kind: postKind, message_id: res.result?.message_id });
+  };
+  if (["morning", "evening", "guess", "word", "region"].includes(kindIn)) {
+    const out = await extra().catch((e) => json({ posted: false, error: String(e?.message ?? e) }, 500));
+    if (out) return out;
+  }
+  const lightDue = body.kind === "light" || kindIn === "evening" || (!["house", "morning"].includes(kindIn) && (last ?? []).slice(0, 2).every((p) => p.kind === "house") && (last ?? []).length >= 2);
   const r = lightDue ? null : await pick(admin);
   if (!r) {
     // Light post: a saying, a wry line, a nudge to the site.
