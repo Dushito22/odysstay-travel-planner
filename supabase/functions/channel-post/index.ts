@@ -28,16 +28,16 @@ function allIn(r: Row) {
   return round(p + extra);
 }
 
-async function pick(admin: ReturnType<typeof adminClient>) {
+async function pick(admin: ReturnType<typeof adminClient>, premium = false) {
   const { data: done } = await admin.from("channel_posts").select("listing_id");
   const seen = new Set((done ?? []).map((d) => d.listing_id as string));
-  for (const days of [3, 10, 30]) {
+  for (const days of premium ? [10, 30, 90] : [3, 10, 30]) {
     const { data, error } = await admin.from("listing_feed")
       .select("id, comune, province, region, price_eur, surface_sqm, property_type, condition, sale_type, occupancy, days_left, discount_pct, score, score_reasons, hero_image_path, red_flag_count")
       .eq("is_demo", false).eq("is_scrap", false).eq("has_real_photo", true)
-      .not("status", "in", "(closed,withdrawn)").in("sale_type", ["sale", "auction_judicial", "auction_notary", "one_euro"])
-      .in("property_type", ["house", "rural_house", "apartment", "building"])
-      .gte("price_eur", 1000).lte("price_eur", 150000).gte("score", 70)
+      .not("status", "in", "(closed,withdrawn)").in("sale_type", premium ? ["sale"] : ["sale", "auction_judicial", "auction_notary", "one_euro"])
+      .in("property_type", premium ? ["house", "rural_house", "apartment"] : ["house", "rural_house", "apartment", "building"])
+      .gte("price_eur", premium ? 150000 : 1000).lte("price_eur", premium ? 500000 : 150000).gte("score", premium ? 55 : 70)
       .gte("created_at", new Date(Date.now() - days * 864e5).toISOString())
       .order("score", { ascending: false }).limit(40);
     if (error) throw error;
@@ -111,8 +111,8 @@ async function queued(admin: ReturnType<typeof adminClient>, slot: string) {
     if (!art) { const { data: b } = await admin.from("channel_art").select("id, url, author, license").is("used_at", null).order("id").limit(1); art = (b ?? [])[0] ?? null; }
   }
   const author = art ? String(art.author ?? "").replace(/^This Photo was taken by\s*/i, "").split(/[.\n]/)[0].slice(0, 48) : "";
-  const credit = art ? `\n\n<i>Фото: ${esc(author)}, ${esc(String(art.license ?? ""))}, Wikimedia Commons</i>` : "";
-  const text = (String(q.text) + credit).slice(0, 1024);
+  void author;
+  const text = String(q.text).slice(0, 1024);
   const rows: unknown[] = [];
   if (q.button_text && q.button_url) rows.push([{ text: q.button_text, url: String(q.button_url).replace("{SITE}", SITE) }]);
   rows.push([{ text: "Все дома в Италии", url: `${SITE}/?utm_source=tg_channel` }]);
@@ -133,8 +133,8 @@ async function guessPost(admin: ReturnType<typeof adminClient>) {
   const seen = new Set((done ?? []).map((d) => d.listing_id as string));
   const { data } = await admin.from("listing_feed").select("id, comune, region, price_eur, surface_sqm, property_type, hero_image_path")
     .eq("is_demo", false).eq("is_scrap", false).eq("has_real_photo", true).not("status", "in", "(closed,withdrawn)")
-    .in("sale_type", ["sale"]).in("property_type", ["house", "rural_house"]).gte("price_eur", 8000).lte("price_eur", 90000)
-    .gte("score", 60).not("hero_image_path", "is", null).order("created_at", { ascending: false }).limit(80);
+    .in("sale_type", ["sale"]).in("property_type", ["house", "rural_house"]).gte("price_eur", 8000).lte("price_eur", Math.floor(Date.now() / 864e5) % 4 === 1 ? 250000 : 90000)
+    .gte("score", 55).not("hero_image_path", "is", null).order("created_at", { ascending: false }).limit(80);
   const list = (data ?? []).filter((x) => !seen.has(x.id));
   const r = list.length ? list[Math.floor(Math.random() * list.length)] as Row : null;
   if (!r) return null;
@@ -215,7 +215,7 @@ Deno.serve(async (req) => {
         await admin.from("channel_posts").insert({ listing_id: r.id, kind: "reveal", message_id: res.result?.message_id ?? null, text: caption });
         return json({ posted: true, kind: "reveal" });
       }
-      kind = "queue-am"; // no guess pending: a post from the queue, else a normal find
+      return null; // no guess pending: a normal find
     }
     if (kind === "evening" && day % 2 === 0) kind = "queue-eve";
     if (kind === "queue-am" || kind === "queue-eve") {
@@ -263,7 +263,9 @@ Deno.serve(async (req) => {
     if (out) return out;
   }
   const lightDue = body.kind === "light" || kindIn === "evening" || (!["house", "morning"].includes(kindIn) && (last ?? []).slice(0, 2).every((p) => p.kind === "house") && (last ?? []).length >= 2);
-  const r = lightDue ? null : await pick(admin);
+  const day2 = Math.floor(Date.now() / 864e5);
+  // every third find is a better house, not a project: 150 to 500 thousand
+  const r = lightDue ? null : ((day2 % 3 === 2 ? await pick(admin, true) : null) ?? await pick(admin));
   if (!r) {
     // Light post: a saying, a wry line, a nudge to the site.
     const { count } = await admin.from("listing_feed").select("id", { count: "exact", head: true }).eq("is_demo", false).not("status", "in", "(closed,withdrawn)");
