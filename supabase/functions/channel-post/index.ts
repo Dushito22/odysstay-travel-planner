@@ -154,6 +154,16 @@ Return JSON only: {"line": "1 or 2 sentences inviting people to guess what this 
   return { r, caption };
 }
 
+/** Sunday evening: the top players of the bot's games, with buttons to play. */
+async function topPost(admin: ReturnType<typeof adminClient>) {
+  const { data } = await admin.from("tg_players").select("name, best").gt("best", 0).order("best", { ascending: false }).limit(5);
+  if (!data || data.length < 3) return null; // a list of one or two names isn't worth a post
+  const lines = data.map((r, i) => `${i + 1}. ${esc(String(r.name || "Игрок"))}: ${r.best}`).join("\n");
+  const caption = `<b>Таблица лидеров</b>\nИгры «Угадай цену» и «Где этот дом?» в нашем боте. Лучший результат за одну игру.\n\n${lines}\n\nПопасть в список можно за пару минут. Бот ждёт.`;
+  const h = await prettyHouse(admin);
+  return { caption, photoUrl: h ? photo(h.hero_image_path) : null };
+}
+
 /** Morning: the answer to yesterday's guess, as a reply under it. */
 async function pendingReveal(admin: ReturnType<typeof adminClient>) {
   const { data } = await admin.from("channel_posts").select("listing_id, kind, message_id").in("kind", ["guess", "reveal"]).order("posted_at", { ascending: false }).limit(6);
@@ -225,6 +235,18 @@ Deno.serve(async (req) => {
       }
       return null; // no guess pending: a normal find
     }
+    if (kind === "top" || (kind === "evening" && new Date().getUTCDay() === 0)) {
+      const tp = await topPost(admin), bu = await botUser();
+      if (tp) {
+        const mk = { inline_keyboard: [...(bu ? [[{ text: "Угадать цену в боте", url: `https://t.me/${bu}?start=g` }], [{ text: "Где этот дом? Игра на карте", url: `https://t.me/${bu}?start=w` }]] : []), [home]] };
+        if (dry || !CHANNEL) return json({ posted: false, dry: true, kind: "top", caption: tp.caption, photo: tp.photoUrl });
+        const res = await send(CHANNEL, tp.photoUrl, tp.caption, mk);
+        if (!res.ok) return json({ posted: false, error: res.description ?? "telegram refused" }, 502);
+        await admin.from("channel_posts").insert({ listing_id: null, kind: "top", message_id: res.result?.message_id ?? null, text: tp.caption });
+        return json({ posted: true, kind: "top", message_id: res.result?.message_id });
+      }
+      if (kind === "top") return null;
+    }
     if (kind === "evening" && day % 2 === 0) kind = "queue-eve";
     if (kind === "queue-am" || kind === "queue-eve") {
       const qd = await queued(admin, kind === "queue-am" ? "am" : "eve");
@@ -267,7 +289,7 @@ Deno.serve(async (req) => {
     await admin.from("channel_posts").insert({ listing_id: listingId, kind: postKind, message_id: res.result?.message_id ?? null, text: caption });
     return json({ posted: true, kind: postKind, message_id: res.result?.message_id });
   };
-  if (["morning", "evening", "guess", "word", "region"].includes(kindIn)) {
+  if (["morning", "evening", "guess", "word", "region", "top"].includes(kindIn)) {
     const out = await extra().catch((e) => json({ posted: false, error: String(e?.message ?? e) }, 500));
     if (out) return out;
   }

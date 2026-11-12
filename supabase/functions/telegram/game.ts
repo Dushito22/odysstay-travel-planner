@@ -31,24 +31,24 @@ const S = {
   ru: {
     price: "Ваша цена", tap: "Коснитесь шкалы или ведите пальцем", go: "Угадать", real: "Цена на самом деле", you: "Вы", house: "Дом", pts: "очков", total: "всего",
     houses: "домов", best: "рекорд", nb: "новый рекорд", next: "Ещё дом", end: "Закончить игру", again: "Играть снова", otherShort: "Другая игра",
-    over: "Игра окончена", houseN: "Домов", pointsN: "Очков", record: "Ваш рекорд", ask: "А если хотите настоящий дом, просто напишите мне, что ищете.", wait: "Секунду", err: "Не вышло, ещё раз",
+    over: "Игра окончена", lead: "Таблица лидеров", leadSub: "Лучший результат за одну игру", rank: "Ваше место", anon: "Игрок", leadEmpty: "Пока никого. Станьте первым.", houseN: "Домов", pointsN: "Очков", record: "Ваш рекорд", ask: "А если хотите настоящий дом, просто напишите мне, что ищете.", wait: "Секунду", err: "Не вышло, ещё раз",
     t: ["Как будто сами продавали", "Глаз намётан", "Неплохо", "Италия умеет удивлять"],
     where: "Где этот дом?", pin: "Коснитесь карты, чтобы поставить метку", miss: "Вы промахнулись на", kmu: "км", bull: "В точку",
     type: { house: "Дом", rural_house: "Загородный дом" } as Record<string, string>, sqm: "м²", look: "Смотреть этот дом",
     other: { price: "Другая игра: где этот дом?", where: "Другая игра: угадай цену" },
     fail: "Игра сейчас не открывается. Попробуйте чуть позже.", empty: "Домов для игры пока нет, загляните позже.",
-    pick: "Выберите игру", pPrice: "Угадай цену", pWhere: "Где этот дом?",
+    pick: "Выберите игру", pPrice: "Угадай цену", pWhere: "Где этот дом?", pTop: "Таблица лидеров",
   },
   en: {
     price: "Your price", tap: "Tap the scale or drag", go: "Guess", real: "Actual price", you: "You", house: "House", pts: "points", total: "total",
     houses: "houses", best: "best", nb: "new best", next: "Another house", end: "End game", again: "Play again", otherShort: "Other game",
-    over: "Game over", houseN: "Houses", pointsN: "Points", record: "Your best", ask: "And if you want a real house, just tell me what you are looking for.", wait: "One moment", err: "Didn't work, try again",
+    over: "Game over", lead: "Leaderboard", leadSub: "Best score in a single game", rank: "Your rank", anon: "Player", leadEmpty: "Nobody yet. Be the first.", houseN: "Houses", pointsN: "Points", record: "Your best", ask: "And if you want a real house, just tell me what you are looking for.", wait: "One moment", err: "Didn't work, try again",
     t: ["Could have sold it yourself", "Sharp eye", "Not bad", "Italy loves to surprise"],
     where: "Where is this house?", pin: "Tap the map to drop a pin", miss: "You missed by", kmu: "km", bull: "Spot on",
     type: { house: "House", rural_house: "Country house" } as Record<string, string>, sqm: "m²", look: "See this house",
     other: { price: "Other game: where is this house?", where: "Other game: guess the price" },
     fail: "The game won't open right now. Try again soon.", empty: "No houses for the game yet, check back later.",
-    pick: "Pick a game", pPrice: "Guess the price", pWhere: "Where is this house?",
+    pick: "Pick a game", pPrice: "Guess the price", pWhere: "Where is this house?", pTop: "Leaderboard",
   },
 };
 type Lang = keyof typeof S;
@@ -195,12 +195,44 @@ async function cleanup(admin: Admin, tg: Tg, chatId: number, exceptId?: number) 
   if (old.length) await admin.from("tg_games").update({ cleared: true }).in("id", old.map((r) => r.id));
 }
 
+/** Remember how the player shows up on the leaderboard (their Telegram first name). */
+export async function setName(admin: Admin, chatId: number, name?: string | null) {
+  const n = String(name ?? "").replace(/[<>&]/g, "").trim().slice(0, 24);
+  if (!n) return;
+  const { data } = await admin.from("tg_players").select("name").eq("chat_id", chatId).maybeSingle();
+  if (!data) await admin.from("tg_players").insert({ chat_id: chatId, name: n });
+  else if (data.name !== n) await admin.from("tg_players").update({ name: n }).eq("chat_id", chatId);
+}
+
+/** Top players by their best single game, with the asking player's own place. */
+async function board(admin: Admin, lang: Lang, chatId: number, limit: number) {
+  const s = S[lang] ?? S.ru;
+  const { data } = await admin.from("tg_players").select("chat_id, name, best").gt("best", 0).order("best", { ascending: false }).limit(limit);
+  const rows = data ?? [];
+  const lines = rows.map((r, i) => `${i + 1}. ${r.name || s.anon}: ${r.best}${r.chat_id === chatId ? (lang === "en" ? " (you)" : " (вы)") : ""}`);
+  const mine = (await admin.from("tg_players").select("best").eq("chat_id", chatId).maybeSingle()).data?.best ?? 0;
+  let rank = "";
+  if (mine > 0 && !rows.some((r) => r.chat_id === chatId)) {
+    const { count } = await admin.from("tg_players").select("chat_id", { count: "exact", head: true }).gt("best", mine);
+    rank = `\n${s.rank}: ${(count ?? 0) + 1} (${mine})`;
+  }
+  return { lines, rank, empty: !rows.length };
+}
+
+/** The leaderboard on its own: /top and the menu button. */
+export async function top(admin: Admin, tg: Tg, chatId: number, lang: Lang) {
+  const s = S[lang] ?? S.ru;
+  const b = await board(admin, lang, chatId, 10);
+  const text = `${s.lead}\n${s.leadSub}\n\n${b.empty ? s.leadEmpty : b.lines.join("\n")}${b.rank}`;
+  await tg("sendMessage", { chat_id: chatId, text, reply_markup: { inline_keyboard: [[{ text: s.again, callback_data: "g:menu" }]] } });
+}
+
 /** The menu: two games, one tap each. */
 export async function menu(admin: Admin, tg: Tg, chatId: number, lang: Lang) {
   const s = S[lang] ?? S.ru;
   const { data: pl } = await admin.from("tg_players").select("summary_msg").eq("chat_id", chatId).maybeSingle();
   await del(tg, chatId, pl?.summary_msg as number);
-  await tg("sendMessage", { chat_id: chatId, text: s.pick, reply_markup: { inline_keyboard: [[{ text: s.pPrice, callback_data: "g:price" }], [{ text: s.pWhere, callback_data: "g:where" }]] } });
+  await tg("sendMessage", { chat_id: chatId, text: s.pick, reply_markup: { inline_keyboard: [[{ text: s.pPrice, callback_data: "g:price" }], [{ text: s.pWhere, callback_data: "g:where" }], [{ text: s.pTop, callback_data: "g:top" }]] } });
 }
 
 /** End of the game: everything from it is deleted, one short summary stays. */
@@ -208,7 +240,9 @@ export async function endGame(admin: Admin, tg: Tg, chatId: number, lang: Lang) 
   const s = S[lang] ?? S.ru;
   const ses = await session(admin, chatId, true);
   await cleanup(admin, tg, chatId);
-  const text = ses.n ? `${s.over}\n${s.houseN}: ${ses.n}\n${s.pointsN}: ${ses.t}\n${s.record}: ${ses.b}${ses.nb ? ` (${s.nb})` : ""}\n\n${s.ask}` : `${s.over}\n\n${s.ask}`;
+  const b = await board(admin, lang, chatId, 5);
+  const lead = b.empty ? "" : `\n\n${s.lead}\n${b.lines.join("\n")}${b.rank}`;
+  const text = ses.n ? `${s.over}\n${s.houseN}: ${ses.n}\n${s.pointsN}: ${ses.t}\n${s.record}: ${ses.b}${ses.nb ? ` (${s.nb})` : ""}${lead}\n\n${s.ask}` : `${s.over}${lead}\n\n${s.ask}`;
   const sent = await tg("sendMessage", { chat_id: chatId, text, reply_markup: { inline_keyboard: [[{ text: s.again, callback_data: "g:menu" }]] } });
   await admin.from("tg_players").update({ session_start: new Date().toISOString(), summary_msg: sent.result?.message_id ?? null }).eq("chat_id", chatId);
 }
