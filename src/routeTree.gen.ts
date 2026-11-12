@@ -28,6 +28,8 @@ import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authentic
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedSavedRouteImport } from './routes/_authenticated/saved'
 import { Route as AuthenticatedVaultRouteImport } from './routes/_authenticated/vault'
+import { Route as GuideIndexRouteImport } from './routes/guide.index'
+import { Route as GuideSlugRouteImport } from './routes/guide.$slug'
 import { Route as ListingIdRouteImport } from './routes/listing.$id'
 import { Route as AuthenticatedDealsIndexRouteImport } from './routes/_authenticated/deals.index'
 import { Route as AuthenticatedDealsIdRouteImport } from './routes/_authenticated/deals.$id'
@@ -126,6 +128,16 @@ const AuthenticatedVaultRoute = AuthenticatedVaultRouteImport.update({
   path: '/vault',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const GuideIndexRoute = GuideIndexRouteImport.update({
+  id: '/guide/',
+  path: '/guide/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuideSlugRoute = GuideSlugRouteImport.update({
+  id: '/guide/$slug',
+  path: '/guide/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ListingIdRoute = ListingIdRouteImport.update({
   id: '/listing/$id',
   path: '/listing/$id',
@@ -161,7 +173,9 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AuthenticatedProfileRoute
   '/saved': typeof AuthenticatedSavedRoute
   '/vault': typeof AuthenticatedVaultRoute
+  '/guide/$slug': typeof GuideSlugRoute
   '/listing/$id': typeof ListingIdRoute
+  '/guide/': typeof GuideIndexRoute
   '/deals/$id': typeof AuthenticatedDealsIdRoute
   '/deals/': typeof AuthenticatedDealsIndexRoute
 }
@@ -184,7 +198,9 @@ export interface FileRoutesByTo {
   '/profile': typeof AuthenticatedProfileRoute
   '/saved': typeof AuthenticatedSavedRoute
   '/vault': typeof AuthenticatedVaultRoute
+  '/guide/$slug': typeof GuideSlugRoute
   '/listing/$id': typeof ListingIdRoute
+  '/guide': typeof GuideIndexRoute
   '/deals/$id': typeof AuthenticatedDealsIdRoute
   '/deals': typeof AuthenticatedDealsIndexRoute
 }
@@ -209,7 +225,9 @@ export interface FileRoutesById {
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/saved': typeof AuthenticatedSavedRoute
   '/_authenticated/vault': typeof AuthenticatedVaultRoute
+  '/guide/$slug': typeof GuideSlugRoute
   '/listing/$id': typeof ListingIdRoute
+  '/guide/': typeof GuideIndexRoute
   '/_authenticated/deals/$id': typeof AuthenticatedDealsIdRoute
   '/_authenticated/deals/': typeof AuthenticatedDealsIndexRoute
 }
@@ -234,7 +252,9 @@ export interface FileRouteTypes {
     | '/profile'
     | '/saved'
     | '/vault'
+    | '/guide/$slug'
     | '/listing/$id'
+    | '/guide/'
     | '/deals/$id'
     | '/deals/'
   fileRoutesByTo: FileRoutesByTo
@@ -257,7 +277,9 @@ export interface FileRouteTypes {
     | '/profile'
     | '/saved'
     | '/vault'
+    | '/guide/$slug'
     | '/listing/$id'
+    | '/guide'
     | '/deals/$id'
     | '/deals'
   id:
@@ -281,7 +303,9 @@ export interface FileRouteTypes {
     | '/_authenticated/profile'
     | '/_authenticated/saved'
     | '/_authenticated/vault'
+    | '/guide/$slug'
     | '/listing/$id'
+    | '/guide/'
     | '/_authenticated/deals/$id'
     | '/_authenticated/deals/'
   fileRoutesById: FileRoutesById
@@ -298,7 +322,9 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   StyleguideRoute: typeof StyleguideRoute
   TermsRoute: typeof TermsRoute
+  GuideSlugRoute: typeof GuideSlugRoute
   ListingIdRoute: typeof ListingIdRoute
+  GuideIndexRoute: typeof GuideIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -436,6 +462,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVaultRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/guide/': {
+      id: '/guide/'
+      path: '/guide'
+      fullPath: '/guide/'
+      preLoaderRoute: typeof GuideIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guide/$slug': {
+      id: '/guide/$slug'
+      path: '/guide/$slug'
+      fullPath: '/guide/$slug'
+      preLoaderRoute: typeof GuideSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/listing/$id': {
       id: '/listing/$id'
       path: '/listing/$id'
@@ -501,18 +541,10 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   StyleguideRoute: StyleguideRoute,
   TermsRoute: TermsRoute,
+  GuideSlugRoute: GuideSlugRoute,
   ListingIdRoute: ListingIdRoute,
+  GuideIndexRoute: GuideIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

@@ -12,3 +12,8 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+User-agent: Yandex
+Allow: /
+
+Sitemap: https://odysstay.xyz/sitemap.xml
