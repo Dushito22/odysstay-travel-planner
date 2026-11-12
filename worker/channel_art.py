@@ -22,10 +22,14 @@ THEMES = {
     "sea": ["Cinque Terre Manarola", "Sardinia beach Cala", "Capri Faraglioni"],
     "city": ["Rome Trastevere", "Venice canal quiet", "Florence rooftops Duomo"],
     "table": ["Italian lemons Sorrento", "olive grove Italy", "Italian terrace breakfast"],
+    # old tourism posters and Grand Tour paintings, public domain, for the days the photos run out
+    "poster": ["ENIT Italian travel poster 1930s", "Visit Italy vintage tourism poster", "Capri vintage poster", "Italian Riviera vintage poster"],
+    "vintage": ["Grand Tour painting Italian landscape Bay of Naples", "Lake Como 19th century painting", "Italian village painting 19th century"],
 }
+LOOSE = {"poster", "vintage"}  # portrait and older images are fine here
 
 
-def search(q):
+def search(q, loose=False):
     r = httpx.get("https://commons.wikimedia.org/w/api.php", headers=UA, timeout=40, params={
         "action": "query", "format": "json", "generator": "search", "gsrnamespace": 6, "gsrsearch": f"{q} filetype:bitmap",
         "gsrlimit": 12, "prop": "imageinfo", "iiprop": "url|size|extmetadata|mime", "iiurlwidth": 2000})
@@ -37,7 +41,7 @@ def search(q):
         lic = (md.get("LicenseShortName") or {}).get("value", "")
         if not OK_LICENSE.match(lic) or "NC" in lic or "ND" in lic:
             continue
-        if ii.get("mime") not in ("image/jpeg", "image/png") or (ii.get("width") or 0) < 2000 or (ii.get("width") or 0) < (ii.get("height") or 0) * 1.1:
+        if ii.get("mime") not in ("image/jpeg", "image/png") or (ii.get("width") or 0) < (1200 if loose else 2000) or (not loose and (ii.get("width") or 0) < (ii.get("height") or 0) * 1.1):
             continue
         author = re.sub(r"<[^>]+>", "", (md.get("Artist") or {}).get("value", "")).strip()[:90] or "unknown"
         out.append({"title": p["title"].removeprefix("File:"), "thumb": ii.get("thumburl") or ii["url"], "author": author, "license": lic,
@@ -96,7 +100,7 @@ def main(per_theme=3):
             if got >= per_theme:
                 break
             try:
-                cands = search(q)
+                cands = search(q, theme in LOOSE)
             except Exception as e:
                 print("search failed", q, e); continue
             random.shuffle(cands)
