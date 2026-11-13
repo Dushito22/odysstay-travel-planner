@@ -30,7 +30,7 @@ const CITIES: [string, string, number, number][] = [
 const S = {
   ru: {
     price: "Ваша цена", tap: "Коснитесь шкалы или ведите пальцем", go: "Угадать", real: "Цена на самом деле", you: "Вы", house: "Дом", pts: "очков", total: "всего",
-    houses: "домов", best: "рекорд", nb: "новый рекорд", next: "Ещё дом", end: "Закончить игру", again: "Играть снова", otherShort: "Другая игра",
+    houses: "домов", best: "рекорд", nb: "новый рекорд", next: "Ещё дом", end: "Закончить игру", again: "Играть снова", otherShort: "Другая игра", chan: "Канал с домами", friend: "Позвать друга",
     over: "Игра окончена", lead: "Таблица лидеров", leadSub: "Лучший результат за одну игру", rank: "Ваше место", anon: "Игрок", leadEmpty: "Пока никого. Станьте первым.", houseN: "Домов", pointsN: "Очков", record: "Ваш рекорд", ask: "А если хотите настоящий дом, просто напишите мне, что ищете.", wait: "Секунду", err: "Не вышло, ещё раз",
     t: ["Как будто сами продавали", "Глаз намётан", "Неплохо", "Италия умеет удивлять"],
     where: "Где этот дом?", pin: "Коснитесь карты, чтобы поставить метку", miss: "Вы промахнулись на", kmu: "км", bull: "В точку",
@@ -41,7 +41,7 @@ const S = {
   },
   en: {
     price: "Your price", tap: "Tap the scale or drag", go: "Guess", real: "Actual price", you: "You", house: "House", pts: "points", total: "total",
-    houses: "houses", best: "best", nb: "new best", next: "Another house", end: "End game", again: "Play again", otherShort: "Other game",
+    houses: "houses", best: "best", nb: "new best", next: "Another house", end: "End game", again: "Play again", otherShort: "Other game", chan: "Houses channel", friend: "Invite a friend",
     over: "Game over", lead: "Leaderboard", leadSub: "Best score in a single game", rank: "Your rank", anon: "Player", leadEmpty: "Nobody yet. Be the first.", houseN: "Houses", pointsN: "Points", record: "Your best", ask: "And if you want a real house, just tell me what you are looking for.", wait: "One moment", err: "Didn't work, try again",
     t: ["Could have sold it yourself", "Sharp eye", "Not bad", "Italy loves to surprise"],
     where: "Where is this house?", pin: "Tap the map to drop a pin", miss: "You missed by", kmu: "km", bull: "Spot on",
@@ -341,6 +341,7 @@ export async function widgetQuery(admin: Admin, tg: Tg, q: Row, lang: (chatId: n
       [{ text: S[l].next, callback_data: `g:${kind}` }],
       [{ text: S[l].look, url: `${SITE}/listing/${row.listing_id}?utm_source=tg_game` }],
       [{ text: S[l].otherShort, callback_data: `g:${other}` }, { text: S[l].end, callback_data: "g:end" }],
+      [{ text: S[l].chan, url: "https://t.me/odysstay" }, { text: S[l].friend, url: `https://t.me/share/url?url=${encodeURIComponent("https://t.me/odysstay_bot?start=g")}&text=${encodeURIComponent(l === "ru" ? "Угадай цену дома в Италии. Мой рекорд " + out.b + " очков" : "Guess what an Italian house costs. My best is " + out.b + " points")}` }],
     ] } }),
   ]);
   await answer(JSON.stringify(out));

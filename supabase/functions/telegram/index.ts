@@ -282,7 +282,11 @@ Deno.serve(async (req) => {
         await tg("sendMessage", { chat_id: chatId, text: t.linkOld });
         return new Response("ok");
       }
-      await tg("sendMessage", { chat_id: chatId, text: userId ? t.hello : `${t.hello}\n\n${t.connect}` });
+      const ru = lang === "ru";
+      await tg("sendMessage", { chat_id: chatId, text: userId ? t.hello : `${t.hello}\n\n${t.connect}`, reply_markup: { inline_keyboard: [
+        [{ text: ru ? "Канал: дома в Италии каждый день" : "Channel: Italian houses every day", url: "https://t.me/odysstay" }],
+        [{ text: ru ? "Позвать друга" : "Invite a friend", url: `https://t.me/share/url?url=${encodeURIComponent("https://t.me/odysstay_bot")}&text=${encodeURIComponent(ru ? "Argos ищет и покупает дома в Италии вместо вас" : "Argos finds and buys houses in Italy for you")}` }],
+      ] } });
       await save(history);
       return new Response("ok");
     }
