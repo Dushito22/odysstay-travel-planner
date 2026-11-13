@@ -272,7 +272,7 @@ Deno.serve(async (req) => {
       }
       if (kind === "top") return null;
     }
-    if (kind === "evening" && day % 2 === 0) kind = "queue-eve";
+    if (kind === "evening" && day % 2 === 0) kind = "queue-eve"; // hand-written posts with art on even days
     if (kind === "queue-am" || kind === "queue-eve") {
       const qd = await queued(admin, kind === "queue-am" ? "am" : "eve");
       if (qd) {
@@ -288,7 +288,7 @@ Deno.serve(async (req) => {
       kind = "evening-rest";
     }
     if (kind === "evening-rest") kind = (["word", "region"] as const)[Math.floor(day / 2) % 2];
-    if (kind === "evening") kind = day % 2 ? "guess" : (["light", "word", "region"] as const)[Math.floor(day / 2) % 3];
+    if (kind === "evening") kind = day % 6 === 1 ? "guess" : (["light", "word", "region"] as const)[day % 3]; // a game only every sixth day, the rest is postcards and words
     if (kind !== "guess" && kind !== "word" && kind !== "region") return null;
     let photoUrl: string | null = null, caption = "", markup: unknown = { inline_keyboard: [[home]] }, listingId: string | null = null, postKind = kind;
     if (kind === "guess") {
