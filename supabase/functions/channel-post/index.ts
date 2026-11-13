@@ -205,6 +205,21 @@ Use only well-known, safe general facts about the region (landscape, food, pace 
   return { caption, h, region: c.k };
 }
 
+
+/** The channel is the front door, not an arcade: a game stays up until its answer has been out for a day, then both posts go. */
+async function sweepGames(admin: ReturnType<typeof adminClient>, chat: string) {
+  const cutoff = new Date(Date.now() - 20 * 36e5).toISOString();
+  const { data } = await admin.from("channel_posts").select("id, kind, listing_id, message_id, posted_at").in("kind", ["guess", "reveal", "top"]).not("message_id", "is", null).order("posted_at", { ascending: false }).limit(60);
+  const rows = (data ?? []) as Row[];
+  const revealed = new Set(rows.filter((r) => r.kind === "reveal").map((r) => r.listing_id));
+  const old = rows.filter((r) => String(r.posted_at) < cutoff && (r.kind !== "guess" || revealed.has(r.listing_id)));
+  for (const r of old) {
+    await fetch(`https://api.telegram.org/bot${BOT}/deleteMessage`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: chat, message_id: r.message_id }) }).catch(() => null);
+    await admin.from("channel_posts").update({ message_id: null }).eq("id", r.id);
+  }
+  return old.length;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (!SECRET || req.headers.get("x-drop-secret") !== SECRET) return json({ error: "forbidden" }, 403);
@@ -213,6 +228,8 @@ Deno.serve(async (req) => {
   const admin = adminClient();
   const CHANNEL = await channelId(admin);
   const { data: last } = await admin.from("channel_posts").select("kind, text").order("posted_at", { ascending: false }).limit(30);
+
+  if (!dry && CHANNEL) await sweepGames(admin, CHANNEL).catch(() => 0);
 
   // Guard for catch-up runs: GitHub's scheduler can run hours late or skip a slot, so extra runs only post when the channel has been quiet.
   const gap = Number(body.min_gap_hours ?? 0);
