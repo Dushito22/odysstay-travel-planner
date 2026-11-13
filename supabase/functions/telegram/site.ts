@@ -93,3 +93,36 @@ export async function siteQuery(admin: Admin, tg: Tg, q: Row): Promise<boolean> 
   await tg("answerWidgetQuery", { widget_query_id: q.id, data: JSON.stringify({ n: count ?? h.length, h }) });
   return true;
 }
+
+const RU_REG: Record<string, string> = { тоскана: "Toscana", апулия: "Puglia", сицилия: "Sicilia", абруццо: "Abruzzo", калабрия: "Calabria", пьемонт: "Piemonte", лигурия: "Liguria", сардиния: "Sardegna", умбрия: "Umbria", марке: "Marche", ломбардия: "Lombardia", базиликата: "Basilicata", молизе: "Molise", кампания: "Campania", лацио: "Lazio" };
+const SB = (Deno.env.get("SUPABASE_URL") ?? "").replace(/\/$/, "");
+const img = (p: string | null) => (!p ? undefined : /^https?:\/\//.test(p) ? p : `${SB}/storage/v1/object/public/listing-images/${p}`);
+
+/** Inline mode: @odysstay_bot toscana 50000 gives house cards anyone can drop into any chat. */
+export async function inlineResults(admin: Admin, text: string, lang: Lang) {
+  const words = text.toLowerCase().split(/\s+/).filter(Boolean);
+  let region: string | null = null, budget = 150000;
+  for (const w of words) {
+    const n = Number(w.replace(/[^\d]/g, ""));
+    if (n >= 1000 || (n > 0 && /[kк]$/.test(w))) budget = /[kк]$/.test(w) && n < 1000 ? n * 1000 : n;
+    else if (RU_REG[w]) region = RU_REG[w];
+    else if (w.length > 3) { const hit = REGIONS.find((r) => r && r.toLowerCase().startsWith(w.slice(0, 5))); if (hit) region = hit; }
+  }
+  let s = admin.from("listing_feed").select("id, comune, region, price_eur, surface_sqm, hero_image_path")
+    .eq("is_demo", false).eq("is_scrap", false).eq("has_real_photo", true).not("status", "in", "(closed,withdrawn)")
+    .in("sale_type", SALE).in("property_type", TYPES).gte("price_eur", 1000).lte("price_eur", budget).gte("score", 55);
+  if (region) s = s.eq("region", region);
+  const { data } = await s.order("score", { ascending: false, nullsFirst: false }).limit(12);
+  const ru = lang === "ru";
+  return ((data ?? []) as Row[]).map((h) => {
+    const price = `€${Number(h.price_eur).toLocaleString(ru ? "ru-RU" : "en-US")}`;
+    const url = `${SITE}/listing/${h.id}?utm_source=tg_inline`;
+    return {
+      type: "article", id: String(h.id), title: `${h.comune}, ${h.region}`,
+      description: `${price}${h.surface_sqm ? ` · ${Math.round(Number(h.surface_sqm))} м²` : ""}`,
+      thumbnail_url: img(h.hero_image_path as string | null),
+      input_message_content: { message_text: `${h.comune}, ${h.region}\n${price}${h.surface_sqm ? ` · ${Math.round(Number(h.surface_sqm))} м²` : ""}\n${url}`, link_preview_options: { url, prefer_large_media: true, show_above_text: true } },
+      reply_markup: { inline_keyboard: [[{ text: ru ? "Смотреть дом" : "See the house", url }], [{ text: ru ? "Дома в Италии: @odysstay_bot" : "Houses in Italy: @odysstay_bot", url: "https://t.me/odysstay_bot" }]] },
+    };
+  });
+}

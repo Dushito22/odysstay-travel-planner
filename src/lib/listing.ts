@@ -144,7 +144,8 @@ export async function startDeal(listing: FeedRow): Promise<string> {
       .from("deals").select("id", { count: "exact", head: true })
       .not("stage", "in", `(${CLOSED_STAGES.join(",")})`);
     if (error) throw error;
-    if ((count ?? 0) >= FREE_ACTIVE_DEALS) throw new UpgradeRequired();
+    const { data: bonus } = await supabase.rpc("referral_bonus" as never);
+    if ((count ?? 0) >= FREE_ACTIVE_DEALS + Math.min(3, Number(bonus ?? 0))) throw new UpgradeRequired();
   }
   const { data: deal, error: dErr } = await supabase
     .from("deals").insert({ user_id: uid, listing_id: listing.id, stage: "interested", autonomy: "auto_info_requests" }).select("id").single();
