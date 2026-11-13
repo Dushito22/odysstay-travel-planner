@@ -214,6 +214,14 @@ Deno.serve(async (req) => {
   const CHANNEL = await channelId(admin);
   const { data: last } = await admin.from("channel_posts").select("kind, text").order("posted_at", { ascending: false }).limit(30);
 
+  // Guard for catch-up runs: GitHub's scheduler can run hours late or skip a slot, so extra runs only post when the channel has been quiet.
+  const gap = Number(body.min_gap_hours ?? 0);
+  if (!dry && gap > 0) {
+    const { data: lp } = await admin.from("channel_posts").select("posted_at").order("posted_at", { ascending: false }).limit(1);
+    const at = lp?.[0]?.posted_at ? new Date(lp[0].posted_at as string).getTime() : 0;
+    if (Date.now() - at < gap * 36e5) return json({ posted: false, skipped: "recent post" });
+  }
+
   // Rhythm: morning (answer to yesterday's guess, else a find), house (a find), evening (guess on odd days, otherwise a rotating light post).
   const kindIn = String(body.kind ?? "");
   const day = Math.floor(Date.now() / 864e5);
