@@ -4,7 +4,7 @@
 // Needs TELEGRAM_BOT_TOKEN and TELEGRAM_WEBHOOK_SECRET; voice needs ELEVENLABS_API_KEY.
 import { adminClient, corsHeaders } from "../_shared/runtime.ts";
 import { endGame, menu, setName, startRound, top, widgetQuery } from "./game.ts";
-import { siteQuery, startSite } from "./site.ts";
+import { inlineResults, siteQuery, startSite } from "./site.ts";
 
 const BOT = Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "";
 const SECRET = Deno.env.get("TELEGRAM_WEBHOOK_SECRET") ?? "";
@@ -193,6 +193,16 @@ Deno.serve(async (req) => {
     }
     return new Response("ok");
   }
+  if (update.inline_query) {
+    const iq = update.inline_query;
+    try {
+      const lg = String(iq.from?.language_code ?? "").startsWith("ru") ? "ru" : "en";
+      const results = await inlineResults(adminClient(), String(iq.query ?? ""), lg);
+      await tg("answerInlineQuery", { inline_query_id: iq.id, results, cache_time: 120, is_personal: false,
+        button: { text: lg === "ru" ? "Открыть Argos" : "Open Argos", start_parameter: "app" } });
+    } catch (e) { console.error("inline", e); }
+    return new Response("ok");
+  }
   const cb = update.callback_query;
   if (cb?.data && /^g:(price|where|end|menu|top)$/.test(cb.data) && cb.message?.chat?.id) {
     await tg("answerCallbackQuery", { callback_query_id: cb.id });
@@ -246,6 +256,20 @@ Deno.serve(async (req) => {
 
   try {
     const text: string = typeof msg.text === "string" ? msg.text.trim() : "";
+    if (msg.chat.type === "private" && /^\/start\s+ref_\d{5,15}$/i.test(text) && !chat) {
+      const ref = Number(text.split("ref_")[1]);
+      if (ref && ref !== chatId) await admin.from("tg_referrals").upsert({ new_chat: chatId, ref_chat: ref }, { onConflict: "new_chat", ignoreDuplicates: true });
+    }
+    if (/^\/invite$/i.test(text) && msg.chat.type === "private") {
+      const { count: friends } = await admin.from("tg_referrals").select("new_chat", { count: "exact", head: true }).eq("ref_chat", chatId);
+      const link = `https://t.me/odysstay_bot?start=ref_${chatId}`;
+      const ru0 = lang === "ru";
+      await tg("sendMessage", { chat_id: chatId, text: ru0
+        ? `Позовите друзей, и у вас станет больше бесплатных сделок: +1 за каждого, до 6 активных.\n\nВаша ссылка:\n${link}\n\nДрузей пришло: ${friends ?? 0}. Сделки прибавляются, если бот привязан к вашему аккаунту на odysstay.xyz.`
+        : `Invite friends and get more free deals: +1 for each, up to 6 active.\n\nYour link:\n${link}\n\nFriends joined: ${friends ?? 0}. Deals are added when the bot is connected to your odysstay.xyz account.`,
+        reply_markup: { inline_keyboard: [[{ text: ru0 ? "Отправить другу" : "Send to a friend", url: `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(ru0 ? "Argos ищет и покупает дома в Италии вместо вас" : "Argos finds and buys houses in Italy for you")}` }]] } });
+      return new Response("ok");
+    }
     // The mini site: /app, or the channel button (/start app).
     if (/^\/(app|site|start\s+app)$/i.test(text) && msg.chat.type === "private") {
       if (!chat) await save(history);
@@ -285,7 +309,7 @@ Deno.serve(async (req) => {
       const ru = lang === "ru";
       await tg("sendMessage", { chat_id: chatId, text: userId ? t.hello : `${t.hello}\n\n${t.connect}`, reply_markup: { inline_keyboard: [
         [{ text: ru ? "Канал: дома в Италии каждый день" : "Channel: Italian houses every day", url: "https://t.me/odysstay" }],
-        [{ text: ru ? "Позвать друга" : "Invite a friend", url: `https://t.me/share/url?url=${encodeURIComponent("https://t.me/odysstay_bot")}&text=${encodeURIComponent(ru ? "Argos ищет и покупает дома в Италии вместо вас" : "Argos finds and buys houses in Italy for you")}` }],
+        [{ text: ru ? "Позвать друга" : "Invite a friend", url: `https://t.me/share/url?url=${encodeURIComponent(`https://t.me/odysstay_bot?start=ref_${chatId}`)}&text=${encodeURIComponent(ru ? "Argos ищет и покупает дома в Италии вместо вас" : "Argos finds and buys houses in Italy for you")}` }],
       ] } });
       await save(history);
       return new Response("ok");

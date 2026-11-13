@@ -341,7 +341,7 @@ export async function widgetQuery(admin: Admin, tg: Tg, q: Row, lang: (chatId: n
       [{ text: S[l].next, callback_data: `g:${kind}` }],
       [{ text: S[l].look, url: `${SITE}/listing/${row.listing_id}?utm_source=tg_game` }],
       [{ text: S[l].otherShort, callback_data: `g:${other}` }, { text: S[l].end, callback_data: "g:end" }],
-      [{ text: S[l].chan, url: "https://t.me/odysstay" }, { text: S[l].friend, url: `https://t.me/share/url?url=${encodeURIComponent("https://t.me/odysstay_bot?start=g")}&text=${encodeURIComponent(l === "ru" ? "Угадай цену дома в Италии. Мой рекорд " + out.b + " очков" : "Guess what an Italian house costs. My best is " + out.b + " points")}` }],
+      [{ text: S[l].chan, url: "https://t.me/odysstay" }, { text: S[l].friend, url: `https://t.me/share/url?url=${encodeURIComponent(`https://t.me/odysstay_bot?start=ref_${chatId}`)}&text=${encodeURIComponent(l === "ru" ? "Угадай цену дома в Италии. Мой рекорд " + out.b + " очков" : "Guess what an Italian house costs. My best is " + out.b + " points")}` }],
     ] } }),
   ]);
   await answer(JSON.stringify(out));
