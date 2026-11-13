@@ -572,6 +572,15 @@ function HeroPanel({ data, userId }: { data: ListingBundle; userId: string | nul
           {r ? "Argos пишет продавцу по-итальянски. Обычные вопросы уходят сами, цена и визит ждут вашего «да»." : "Argos writes to the seller in Italian. Routine questions go out on their own; price and visits wait for your yes."}
         </p>
         <ListingServiceLinks listingId={l.id!} price={l.price_eur} />
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-[14.5px]">
+          <a className="text-primary underline-offset-4 hover:underline" target="_blank" rel="noreferrer"
+            href={`https://t.me/share/url?url=${encodeURIComponent(`https://odysstay.xyz/listing/${l.id}?utm_source=share`)}&text=${encodeURIComponent(`${l.comune ?? ""}${l.price_eur ? `, ${formatEur(l.price_eur)}` : ""}`)}`}>
+            {r ? "Отправить другу в Telegram" : "Send to a friend on Telegram"}
+          </a>
+          <a className="text-primary underline-offset-4 hover:underline" target="_blank" rel="noreferrer" href="https://t.me/odysstay?utm_source=site">
+            {r ? "Канал в Telegram" : "Telegram channel"}
+          </a>
+        </div>
       </div>
     </div>
   );
