@@ -112,17 +112,33 @@ export async function inlineResults(admin: Admin, text: string, lang: Lang) {
     .eq("is_demo", false).eq("is_scrap", false).eq("has_real_photo", true).not("status", "in", "(closed,withdrawn)")
     .in("sale_type", SALE).in("property_type", TYPES).gte("price_eur", 1000).lte("price_eur", budget).gte("score", 55);
   if (region) s = s.eq("region", region);
-  const { data } = await s.order("score", { ascending: false, nullsFirst: false }).limit(12);
+  const { data } = await s.order("score", { ascending: false, nullsFirst: false }).limit(region ? 12 : 90);
   const ru = lang === "ru";
-  return ((data ?? []) as Row[]).map((h) => {
-    const price = `€${Number(h.price_eur).toLocaleString(ru ? "ru-RU" : "en-US")}`;
-    const url = `${SITE}/listing/${h.id}?utm_source=tg_inline`;
-    return {
-      type: "article", id: String(h.id), title: `${h.comune}, ${h.region}`,
-      description: `${price}${h.surface_sqm ? ` · ${Math.round(Number(h.surface_sqm))} м²` : ""}`,
-      thumbnail_url: img(h.hero_image_path as string | null),
-      input_message_content: { message_text: `${h.comune}, ${h.region}\n${price}${h.surface_sqm ? ` · ${Math.round(Number(h.surface_sqm))} м²` : ""}\n${url}`, link_preview_options: { url, prefer_large_media: true, show_above_text: true } },
-      reply_markup: { inline_keyboard: [[{ text: ru ? "Смотреть дом" : "See the house", url }], [{ text: ru ? "Дома в Италии: @odysstay_bot" : "Houses in Italy: @odysstay_bot", url: "https://t.me/odysstay_bot" }]] },
-    };
+  const rows = (data ?? []) as Row[];
+  const fmt = (h: Row) => `€${Number(h.price_eur).toLocaleString(ru ? "ru-RU" : "en-US")}${h.surface_sqm ? ` · ${Math.round(Number(h.surface_sqm))} м²` : ""}`;
+  const link = (h: Row) => `${SITE}/listing/${h.id}?utm_source=tg_inline`;
+  const BOT = [{ text: ru ? "Дома в Италии: @odysstay_bot" : "Houses in Italy: @odysstay_bot", url: "https://t.me/odysstay_bot" }];
+  const RN: Record<string, string> = Object.fromEntries(Object.entries(RU_REG).map(([k, v]) => [v, k[0].toUpperCase() + k.slice(1)]));
+  // A pack: the three best houses of one region in one message.
+  const pack = (reg: string, hs: Row[]) => ({
+    type: "article", id: `pack_${reg}`, title: ru ? `3 лучших дома: ${RN[reg] ?? reg}` : `Top 3 houses: ${reg}`,
+    description: hs.map((h) => `${h.comune} ${fmt(h).split(" · ")[0]}`).join(", "),
+    thumbnail_url: img(hs[0].hero_image_path as string | null),
+    input_message_content: { message_text: `${ru ? "Три лучших дома" : "Three best houses"}: ${RN[reg] ?? reg}\n\n${hs.map((h, i) => `${i + 1}. ${h.comune}\n${fmt(h)}`).join("\n\n")}`, link_preview_options: { is_disabled: true } },
+    reply_markup: { inline_keyboard: [...hs.map((h, i) => [{ text: `${i + 1}. ${h.comune}, ${fmt(h).split(" · ")[0]}`, url: link(h) }]), BOT] },
   });
+  const packs: Row[] = [];
+  if (region) { if (rows.length >= 3) packs.push(pack(region, rows.slice(0, 3))); }
+  else {
+    const by = new Map<string, Row[]>();
+    for (const h of rows) { const r = String(h.region); if (!by.has(r)) by.set(r, []); by.get(r)!.push(h); }
+    for (const [r, hs] of by) if (hs.length >= 3 && packs.length < 6) packs.push(pack(r, hs.slice(0, 3)));
+  }
+  const cards = rows.slice(0, 12).map((h) => ({
+    type: "article", id: String(h.id), title: `${h.comune}, ${h.region}`, description: fmt(h),
+    thumbnail_url: img(h.hero_image_path as string | null),
+    input_message_content: { message_text: `${h.comune}, ${h.region}\n${fmt(h)}\n${link(h)}`, link_preview_options: { url: link(h), prefer_large_media: true, show_above_text: true } },
+    reply_markup: { inline_keyboard: [[{ text: ru ? "Смотреть дом" : "See the house", url: link(h) }], BOT] },
+  }));
+  return [...packs, ...cards].slice(0, 20);
 }
