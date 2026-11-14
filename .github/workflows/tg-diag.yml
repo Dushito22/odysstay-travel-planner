@@ -1,6 +1,6 @@
 name: Telegram check
 
-# Read-only checks against the Bot API: webhook health and whether widget methods answer.
+# Checks against the Bot API: webhook health, and a widget sent to the admin's own chat (deleted right after).
 on:
   workflow_dispatch:
 
@@ -9,10 +9,30 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      P: nryhvtxprjiylajolcef
     steps:
-      - name: Webhook and widget methods
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Webhook and a real widget
         run: |
           A="https://api.telegram.org/bot$TOKEN"
-          echo "::notice title=webhook::$(curl -sS $A/getWebhookInfo | jq -c '.result | {pending_update_count, last_error_date, last_error_message, allowed_updates}' | cut -c1-600)"
-          echo "::notice title=sendWidget probe::$(curl -sS -X POST $A/sendWidget -H 'content-type: application/json' -d '{"chat_id":1,"html":"<b>x</b>","width":300,"height":200}' | cut -c1-300)"
-          echo "::notice title=unknown method probe::$(curl -sS -X POST $A/sendNoSuchThing -d chat_id=1 | cut -c1-200)"
+          echo "::notice title=webhook::$(curl -sS $A/getWebhookInfo | jq -c '.result | {pending_update_count, last_error_message}' | cut -c1-300)"
+          CHAT=$(jq -n '{query: "select c.chat_id from telegram_chats c join profiles p on p.id = c.user_id where p.is_admin limit 1"}' | curl -sS -X POST "https://api.supabase.com/v1/projects/$P/database/query" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" -d @- | jq -r '.[0].chat_id')
+          echo "::notice title=chat found::$([ -n "$CHAT" ] && [ "$CHAT" != null ] && echo yes || echo no)"
+          sed -i 's/^function siteHtml/export function siteHtml/' supabase/functions/telegram/site.ts
+          cat > /tmp/h.ts <<'TS'
+          import { siteHtml } from "./supabase/functions/telegram/site.ts";
+          console.log(JSON.stringify({ html: siteHtml("ru") }));
+          TS
+          deno run --allow-env /tmp/h.ts > /tmp/h.json
+          for H in tiny real; do
+            if [ $H = tiny ]; then BODY=$(jq -n --arg c "$CHAT" '{chat_id: ($c|tonumber), html: "<b>test</b>", width: 300, height: 200}');
+            else BODY=$(jq --arg c "$CHAT" '{chat_id: ($c|tonumber), html: .html, allow_queries: true, width: 320, height: 440}' /tmp/h.json); fi
+            R=$(curl -sS -X POST $A/sendWidget -H 'content-type: application/json' -d "$BODY")
+            echo "::notice title=sendWidget $H::$(echo "$R" | jq -c '{ok, error_code, description}')"
+            MID=$(echo "$R" | jq -r '.result.message_id // empty')
+            [ -n "$MID" ] && curl -sS -X POST $A/deleteMessage -d chat_id=$CHAT -d message_id=$MID > /dev/null
+          done
