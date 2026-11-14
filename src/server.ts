@@ -44,8 +44,28 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+/** House lists through Vercel's cache: the database builds each list once every few minutes, not once per
+ *  visitor. Only reads of the public listing_feed view pass, with the public key, so nothing private can. */
+async function feedProxy(request: Request) {
+  const base = (import.meta.env["VITE_SUPABASE_URL"] as string | undefined)?.replace(/\/$/, "");
+  const key = import.meta.env["VITE_SUPABASE_PUBLISHABLE_KEY"] as string | undefined;
+  if (request.method !== "GET" || !base || !key) return new Response("no", { status: 400 });
+  const search = new URL(request.url).search;
+  if (search.length > 4000 || !/[?&]select=/.test(search)) return new Response("no", { status: 400 });
+  const r = await fetch(`${base}/rest/v1/listing_feed${search}`, { headers: { apikey: key, authorization: `Bearer ${key}`, accept: "application/json" } });
+  const body = await r.text();
+  return new Response(body, {
+    status: r.status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": r.ok ? "public, max-age=60, s-maxage=300, stale-while-revalidate=3600" : "no-store",
+    },
+  });
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    if (new URL(request.url).pathname === "/api/feed") return feedProxy(request);
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
