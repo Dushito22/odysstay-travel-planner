@@ -24,6 +24,11 @@ jobs:
         run: |
           START=$(date -u -d "-${{ inputs.hours }} hours" +%Y-%m-%dT%H:%M:%SZ)
           END=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          for T in function_logs functions_logs deno_logs edge_logs function_edge_logs; do
+            R=$(curl -sS -G "https://api.supabase.com/v1/projects/$P/analytics/endpoints/logs" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              --data-urlencode "sql=select timestamp, event_message from $T limit 1" --data-urlencode "iso_timestamp_start=$START" --data-urlencode "iso_timestamp_end=$END" | cut -c1-200)
+            echo "::notice title=table $T::$R"
+          done
           SQL="select timestamp, event_message from function_logs where event_message not like '%booted%' and event_message not like '%shutdown%' order by timestamp desc limit 60"
           curl -sS -G "https://api.supabase.com/v1/projects/$P/analytics/endpoints/logs" \
             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
