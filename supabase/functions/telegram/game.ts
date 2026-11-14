@@ -72,7 +72,7 @@ const CSSP = `.v{font:400 46px/1 Georgia,'Times New Roman',serif;letter-spacing:
 .c{width:36px;height:36px;border-radius:18px;border:0;background:var(--soft);color:var(--ink);font:300 22px/36px system-ui;padding:0}
 .c:active{transform:scale(.92)}`;
 
-function priceHtml(l: Lang) {
+export function priceHtml(l: Lang) {
   const s = S[l];
   return `<style>${CSS}${CSSP}
 body,#a{height:284px}
@@ -116,7 +116,7 @@ if(c&&c.p)res(c);else game();
 </script>`;
 }
 
-function whereHtml(l: Lang) {
+export function whereHtml(l: Lang) {
   const s = S[l];
   const cities = CITIES.map((c) => [c[l === "ru" ? 0 : 1], ...toXY(c[2], c[3])]);
   return `<style>${CSS}
@@ -232,7 +232,7 @@ export async function menu(admin: Admin, tg: Tg, chatId: number, lang: Lang) {
   const s = S[lang] ?? S.ru;
   const { data: pl } = await admin.from("tg_players").select("summary_msg").eq("chat_id", chatId).maybeSingle();
   await del(tg, chatId, pl?.summary_msg as number);
-  await tg("sendMessage", { chat_id: chatId, text: s.pick, reply_markup: { inline_keyboard: [[{ text: s.pPrice, callback_data: "g:price" }], [{ text: s.pWhere, callback_data: "g:where" }], [{ text: s.pTop, callback_data: "g:top" }]] } });
+  await tg("sendMessage", { chat_id: chatId, text: s.pick, reply_markup: { inline_keyboard: [[{ ...miniButton(lang, "price"), text: s.pPrice }], [{ ...miniButton(lang, "where"), text: s.pWhere }], [{ text: s.pTop, callback_data: "g:top" }]] } });
 }
 
 /** End of the game: everything from it is deleted, one short summary stays. */
@@ -247,50 +247,15 @@ export async function endGame(admin: Admin, tg: Tg, chatId: number, lang: Lang) 
   await admin.from("tg_players").update({ session_start: new Date().toISOString(), summary_msg: sent.result?.message_id ?? null }).eq("chat_id", chatId);
 }
 
-/** Sends one round: the photo, then the widget; the previous round is removed. `only` pins a specific house (from the channel post). */
+/** Opens a game. Telegram now allows in-chat widgets only for whitelisted bots, so the game opens as a Mini App
+ *  (odysstay.xyz/tg) from a button; the old chat rounds are cleared. `only` pins a house from a channel post. */
 export async function startRound(admin: Admin, tg: Tg, chatId: number, lang: Lang, kind: Kind = "price", only?: string) {
-  const s = S[lang] ?? S.ru;
-  const { data: pl0 } = await admin.from("tg_players").select("session_start, summary_msg").eq("chat_id", chatId).maybeSingle();
-  if (!pl0) await admin.from("tg_players").insert({ chat_id: chatId });
-  else {
-    await del(tg, chatId, pl0.summary_msg as number);
-    const { data: last } = await admin.from("tg_games").select("answered_at").eq("chat_id", chatId).not("answered_at", "is", null).order("answered_at", { ascending: false }).limit(1).maybeSingle();
-    // After a long break a new session starts, so the score means "this sitting".
-    if (last?.answered_at && Date.now() - new Date(last.answered_at as string).getTime() > 3 * 3600e3) await admin.from("tg_players").update({ session_start: new Date().toISOString(), summary_msg: null }).eq("chat_id", chatId);
-    else if (pl0.summary_msg) await admin.from("tg_players").update({ summary_msg: null }).eq("chat_id", chatId);
-  }
-  const { data: played } = await admin.from("tg_games").select("listing_id").eq("chat_id", chatId).eq("kind", kind);
-  const seen = new Set((played ?? []).map((p) => p.listing_id as string));
-  let r: Row | null = null;
-  const cols = "id, comune, region, price_eur, surface_sqm, property_type, hero_image_path, lat, lng";
-  if (only && kind === "price") {
-    const { data } = await admin.from("listing_feed").select(cols).eq("id", only).maybeSingle();
-    if (data && !seen.has(only)) r = data as Row;
-  }
-  if (!r) {
-    let q = admin.from("listing_feed").select(cols)
-      .eq("is_demo", false).eq("is_scrap", false).eq("has_real_photo", true).not("status", "in", "(closed,withdrawn)")
-      .eq("sale_type", "sale").in("property_type", ["house", "rural_house"]).gte("price_eur", 8000).lte("price_eur", 250000)
-      .gte("score", 55).not("hero_image_path", "is", null);
-    if (kind === "where") q = q.not("lat", "is", null).not("lng", "is", null);
-    const { data } = await q.order("created_at", { ascending: false }).limit(150);
-    const list = (data ?? []).filter((x) => !seen.has(x.id as string));
-    r = list.length ? list[Math.floor(Math.random() * list.length)] as Row : null;
-  }
-  if (!r) { await tg("sendMessage", { chat_id: chatId, text: s.empty }); return; }
-  // The price game hides the price, the location game hides the town; the other facts are the clues.
-  const facts = kind === "price"
-    ? [s.type[r.property_type as string] ?? s.type.house, r.surface_sqm ? `${Math.round(Number(r.surface_sqm))} ${s.sqm}` : null, `${r.comune}, ${r.region}`]
-    : [s.type[r.property_type as string] ?? s.type.house, r.surface_sqm ? `${Math.round(Number(r.surface_sqm))} ${s.sqm}` : null, `€${Math.round(Number(r.price_eur)).toLocaleString("en-GB")}`];
-  const ph = photo(r.hero_image_path as string | null);
-  const caption = facts.filter(Boolean).join(" · ");
-  const pm = ph ? await tg("sendPhoto", { chat_id: chatId, photo: ph, caption }) : await tg("sendMessage", { chat_id: chatId, text: caption });
-  const sent = await tg("sendWidget", kind === "price"
-    ? { chat_id: chatId, html: priceHtml(lang), allow_queries: true, width: 300, height: 284 }
-    : { chat_id: chatId, html: whereHtml(lang), allow_queries: true, width: 300, height: 472 });
-  if (!sent.ok) { await del(tg, chatId, pm.result?.message_id); await tg("sendMessage", { chat_id: chatId, text: s.fail }); return; }
-  const { data: ins } = await admin.from("tg_games").insert({ chat_id: chatId, message_id: sent.result?.message_id ?? null, photo_message_id: pm.result?.message_id ?? null, listing_id: r.id, kind }).select("id").single();
-  await cleanup(admin, tg, chatId, ins?.id as number);
+  await cleanup(admin, tg, chatId);
+  const ru = lang !== "en";
+  const text = kind === "price"
+    ? (ru ? "Угадайте цену дома в Италии. Фото, город и метры есть, цены нет." : "Guess what an Italian house costs. You get the photo, the town and the size, not the price.")
+    : (ru ? "Где этот дом? Отметьте место на карте Италии." : "Where is this house? Drop a pin on the map of Italy.");
+  await tg("sendMessage", { chat_id: chatId, text, reply_markup: { inline_keyboard: [[miniButton(lang, kind, only)]] } });
 }
 
 /** A tap inside the widget. Always answered, within 15 seconds. */
@@ -345,4 +310,85 @@ export async function widgetQuery(admin: Admin, tg: Tg, q: Row, lang: (chatId: n
     ] } }),
   ]);
   await answer(JSON.stringify(out));
+}
+
+
+// ---- Mini App ----
+// Telegram restricted in-chat widgets to whitelisted bots, so the same games also run as a Telegram Mini App:
+// the page at odysstay.xyz/tg loads the same widget markup and talks to these two functions through tg-mini.
+
+/** A new round for the Mini App: picks a house the player hasn't had, records it, returns the clues. */
+export async function miniRound(admin: Admin, chatId: number, lang: Lang, kind: Kind = "price", only?: string) {
+  const s = S[lang] ?? S.ru;
+  const { data: pl0 } = await admin.from("tg_players").select("chat_id").eq("chat_id", chatId).maybeSingle();
+  if (!pl0) await admin.from("tg_players").insert({ chat_id: chatId });
+  const { data: played } = await admin.from("tg_games").select("listing_id").eq("chat_id", chatId).eq("kind", kind);
+  const seen = new Set((played ?? []).map((p) => p.listing_id as string));
+  let r: Row | null = null;
+  const cols = "id, comune, region, price_eur, surface_sqm, property_type, hero_image_path, lat, lng";
+  if (only && kind === "price") {
+    const { data } = await admin.from("listing_feed").select(cols).eq("id", only).maybeSingle();
+    if (data && !seen.has(only)) r = data as Row;
+  }
+  if (!r) {
+    let q = admin.from("listing_feed").select(cols)
+      .eq("is_demo", false).eq("is_scrap", false).eq("has_real_photo", true).not("status", "in", "(closed,withdrawn)")
+      .eq("sale_type", "sale").in("property_type", ["house", "rural_house"]).gte("price_eur", 8000).lte("price_eur", 250000)
+      .gte("score", 55).not("hero_image_path", "is", null);
+    if (kind === "where") q = q.not("lat", "is", null).not("lng", "is", null);
+    const { data } = await q.order("created_at", { ascending: false }).limit(150);
+    const list = (data ?? []).filter((x) => !seen.has(x.id as string));
+    r = list.length ? list[Math.floor(Math.random() * list.length)] as Row : null;
+  }
+  if (!r) return null;
+  const facts = kind === "price"
+    ? [s.type[r.property_type as string] ?? s.type.house, r.surface_sqm ? `${Math.round(Number(r.surface_sqm))} ${s.sqm}` : null, `${r.comune}, ${r.region}`]
+    : [s.type[r.property_type as string] ?? s.type.house, r.surface_sqm ? `${Math.round(Number(r.surface_sqm))} ${s.sqm}` : null, `€${Math.round(Number(r.price_eur)).toLocaleString("en-GB")}`];
+  const { data: ins } = await admin.from("tg_games").insert({ chat_id: chatId, message_id: null, listing_id: r.id, kind, cleared: true }).select("id").single();
+  return { id: ins?.id as number, kind, caption: facts.filter(Boolean).join(" · "), photo: photo(r.hero_image_path as string | null), listing: r.id as string };
+}
+
+/** A guess from the Mini App: same scoring as the widget, answer only after the guess. */
+export async function miniGuess(admin: Admin, chatId: number, gameId: number, data: string) {
+  const { data: row } = await admin.from("tg_games").select("*").eq("id", gameId).eq("chat_id", chatId).maybeSingle();
+  if (!row) return null;
+  if (row.answered_at && row.result) return JSON.parse(String(row.result));
+  const kind = (row.kind === "where" ? "where" : "price") as Kind;
+  const { data: h } = await admin.from("listing_feed").select("price_eur, comune, region, lat, lng").eq("id", row.listing_id).maybeSingle();
+  if (!h) return null;
+  let out: Row, pts: number, guess: number;
+  if (kind === "price") {
+    const m = data.match(/^g:(\d{3,7})$/);
+    const real = Number(h.price_eur);
+    if (!m || !real) return null;
+    guess = Number(m[1]); pts = scorePrice(guess, real);
+    out = { p: Math.round(real), g: guess, s: pts };
+  } else {
+    const m = data.match(/^l:(\d{1,3}),(\d{1,3})$/);
+    if (!m || h.lat == null || h.lng == null) return null;
+    const [rx, ry] = toXY(Number(h.lat), Number(h.lng));
+    const gx = Math.min(MW, Number(m[1])), gy = Math.min(MH, Number(m[2]));
+    guess = Math.round(km(fromXY(gx, gy), [Number(h.lat), Number(h.lng)]));
+    pts = scoreWhere(guess);
+    out = { x: rx, y: ry, gx, gy, d: guess, s: pts, tw: `${h.comune}${h.region ? `, ${h.region}` : ""}` };
+  }
+  await admin.from("tg_games").update({ guess, points: pts, answered_at: new Date().toISOString() }).eq("id", row.id);
+  const ses = await session(admin, chatId, true);
+  out = { ...out, t: ses.t, n: ses.n, b: ses.b, nb: ses.nb };
+  await admin.from("tg_games").update({ result: JSON.stringify(out) }).eq("id", row.id);
+  return out;
+}
+
+/** Leaderboard lines for the Mini App. */
+export async function miniTop(admin: Admin, chatId: number, lang: Lang) {
+  const b = await board(admin, lang, chatId, 10);
+  return { lines: b.lines, rank: b.rank.trim(), empty: b.empty };
+}
+
+/** A message with a button that opens a game (or the mini site) as a Mini App, for private chats. */
+export function miniButton(lang: Lang, what: "price" | "where" | "app", only?: string) {
+  const ru = lang !== "en";
+  const label = what === "price" ? (ru ? "Угадать цену" : "Guess the price") : what === "where" ? (ru ? "Где этот дом?" : "Where is this house?") : (ru ? "Открыть Odysstay" : "Open Odysstay");
+  const url = `${SITE}/tg?m=${what}&lang=${lang}${only ? `&only=${only}` : ""}`;
+  return { text: label, web_app: { url } };
 }

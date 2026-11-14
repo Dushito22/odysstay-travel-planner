@@ -59,3 +59,6 @@ verify_jwt = false
 
 [functions.benchmarks-refresh]
 verify_jwt = false
+
+[functions.tg-mini]
+verify_jwt = false
