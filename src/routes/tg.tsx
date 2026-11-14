@@ -66,6 +66,13 @@ function TgApp() {
   const [frameKey, setFrameKey] = useState(0);
   const [top, setTop] = useState<{ lines: string[]; rank: string } | null>(null);
   const roundRef = useRef<Round | null>(null);
+  const frameRef = useRef<HTMLIFrameElement | null>(null);
+  // After an answer, the extra actions appear inside the game frame: on iPhones taps on the page under
+  // the frame did not register, the frame's own buttons always do.
+  useEffect(() => {
+    if (!answered) return;
+    try { frameRef.current?.contentDocument?.getElementById("ox")?.classList.add("on"); } catch { /* frame gone */ }
+  }, [answered]);
   roundRef.current = round;
   const dark = typeof window !== "undefined" && webApp()?.colorScheme === "dark";
 
@@ -76,7 +83,9 @@ function TgApp() {
       const wa = webApp();
       if (!wa && tries++ < 20) { window.setTimeout(go, 100); return; }
       wa?.ready(); wa?.expand();
-      setP(startParams());
+      const sp = startParams();
+      if (new URLSearchParams(window.location.search).get("lang") || !wa?.initData) { setP(sp); return; }
+      void call({ action: "me", initData: wa.initData }).then((d) => setP({ ...sp, lang: d["lang"] === "en" ? "en" : d["lang"] === "ru" ? "ru" : sp.lang })).catch(() => setP(sp));
     };
     go();
   }, []);
@@ -122,6 +131,12 @@ function TgApp() {
       return { result: String(out.result) };
     };
     w["__odysOpen"] = (u: string) => { const wa = webApp(); if (wa) wa.openLink(u); else window.open(u, "_blank"); };
+    w["__odysAct"] = (what: string) => {
+      const r = roundRef.current;
+      if (what === "open" && r) (w["__odysOpen"] as (u: string) => void)(`${SITE}/listing/${r.listing}?utm_source=tg_game`);
+      if (what === "other" && p && p.mode !== "app") { setP({ ...p, mode: p.mode === "price" ? "where" : "price", only: undefined }); setRound(null); setHtml(null); }
+      if (what === "top") void showTopRef.current();
+    };
   }, [p, loadRound]);
 
   const srcDoc = html
@@ -130,9 +145,11 @@ var P=window.parent,WA=P.Telegram&&P.Telegram.WebApp;
 window.TelegramWidget={colorScheme:${JSON.stringify(dark ? "dark" : "light")},chatData:null,
 HapticFeedback:(WA&&WA.HapticFeedback)||{impactOccurred:function(){},notificationOccurred:function(){},selectionChanged:function(){}},
 request:function(d){return P.__odysReq(d)},openLink:function(u){P.__odysOpen(u)}};
-</script></head><body>${html}</body></html>`
+</script><style>#ox{display:none;gap:8px;padding:6px 2px 4px}#ox.on{display:grid}#ox button{height:44px;border-radius:22px;border:0;font:600 15px -apple-system,system-ui,sans-serif;width:100%;background:${dark ? "#1d2730" : "#f3efe6"};color:${dark ? "#f2ede3" : "#1b1916"}}#ox button.q{background:transparent;color:${dark ? "#8f8a80" : "#8a857b"};height:36px}</style></head><body>${html}${p?.mode !== "app" ? `<div id=ox><button onclick="P.__odysAct('open')">${ru ? "Посмотреть этот дом" : "See this house"}</button><button onclick="P.__odysAct('other')">${p?.mode === "price" ? (ru ? "Играть: где этот дом?" : "Play: where is this house?") : (ru ? "Играть: угадать цену" : "Play: guess the price")}</button><button class=q onclick="P.__odysAct('top')">${ru ? "Таблица лидеров" : "Leaderboard"}</button></div>` : ""}</body></html>`
     : "";
 
+  const showTopRef = useRef<() => Promise<void>>(async () => {});
+  showTopRef.current = showTop;
   async function showTop() {
     try { const d = await call({ action: "top", lang: p?.lang, initData: webApp()?.initData ?? "" }); setTop({ lines: (d.lines as string[]) ?? [], rank: String(d.rank ?? "") }); }
     catch { setTop({ lines: [], rank: "" }); }
@@ -155,14 +172,7 @@ request:function(d){return P.__odysReq(d)},openLink:function(u){P.__odysOpen(u)}
         )}
         {err && <p style={{ textAlign: "center", padding: "40px 10px", color: mut }}>{err}</p>}
         {html && (p.mode === "app" || round) && (
-          <iframe key={frameKey} title="Odysstay" srcDoc={srcDoc} style={{ width: "100%", height: H[p.mode], border: 0, display: "block" }} />
-        )}
-        {p.mode !== "app" && answered && round && (
-          <div style={{ display: "grid", gap: 8, marginTop: 6 }}>
-            <button style={{ ...btn, background: soft, color: ink }} onClick={() => (window as unknown as { __odysOpen: (u: string) => void }).__odysOpen(`${SITE}/listing/${round.listing}?utm_source=tg_game`)}>{t("Посмотреть этот дом", "See this house")}</button>
-            <button style={{ ...btn, background: soft, color: ink }} onClick={() => { setP({ ...p, mode: other, only: undefined }); setRound(null); setHtml(null); }}>{other === "where" ? t("Играть: где этот дом?", "Play: where is this house?") : t("Играть: угадать цену", "Play: guess the price")}</button>
-            <button style={{ ...btn, background: "transparent", color: mut, height: 36 }} onClick={() => void showTop()}>{t("Таблица лидеров", "Leaderboard")}</button>
-          </div>
+          <iframe ref={frameRef} key={frameKey} title="Odysstay" srcDoc={srcDoc} style={{ width: "100%", height: H[p.mode] + (answered ? 156 : 0), border: 0, display: "block" }} />
         )}
         {top && (
           <div style={{ marginTop: 10, padding: 14, borderRadius: 14, background: soft }}>
