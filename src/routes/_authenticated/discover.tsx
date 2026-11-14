@@ -5,10 +5,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArgosComposer } from "@/components/odys/ArgosComposer";
 import { FilterBar } from "@/components/odys/FilterBar";
 import { RESET_SEARCH } from "@/components/odys/Filters";
+import { FeedGate, PEEK } from "@/components/odys/SignInGate";
 import { ListingCard, ListingCardSkeleton } from "@/components/odys/ListingCard";
 import { SaveSearchButton } from "@/components/odys/SaveSearchButton";
 import { WeeklyDrop } from "@/components/odys/WeeklyDrop";
 import { feedSearchSchema, type FeedSearch } from "@/lib/feed";
+import { useSignedIn } from "@/lib/signed-in";
 import { useFeed } from "@/lib/use-feed";
 import { speechLang, useLang } from "@/lib/i18n";
 import { useT } from "@/lib/tr";
@@ -29,6 +31,8 @@ function DiscoverPage() {
   const replace = useCallback((s: FeedSearch) => navigate({ search: s, replace: true }), [navigate]);
   const patch = (p: Partial<FeedSearch>) => navigate({ search: (prev: FeedSearch) => ({ ...prev, ...p }), replace: true });
   const { profile, filters, rows, total, isLoading, error } = useFeed(search, replace);
+  const signedIn = useSignedIn();
+  const guest = signedIn === false;
 
   const [shown, setShown] = useState(PAGE);
   const sentinel = useRef<HTMLDivElement>(null);
@@ -84,9 +88,10 @@ function DiscoverPage() {
         ) : (
           <>
             <div className="grid items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-              {rows.slice(0, shown).map((r) => <ListingCard key={r.id} row={r} profile={profile} />)}
+              {rows.slice(0, guest ? PEEK : shown).map((r) => <ListingCard key={r.id} row={r} profile={profile} />)}
             </div>
-            {shown < rows.length && <div ref={sentinel} className="h-10" />}
+            {guest ? <FeedGate rows={rows} total={Math.max(total, rows.length)} region={search.regions.length === 1 ? (search.regions[0] ?? null) : null} />
+              : shown < rows.length && <div ref={sentinel} className="h-10" />}
           </>
         )}
       </div>

@@ -14,6 +14,7 @@ import { toast } from "sonner";
 
 import { GenerateRender } from "@/components/odys/GenerateRender";
 import { ArgosHandleButton, argosTake, AskArgos } from "@/components/odys/ListingArgos";
+import { ListingGate } from "@/components/odys/SignInGate";
 import { ListingServiceLinks } from "@/components/odys/PurchaseService";
 import { Description } from "@/components/odys/Description";
 import { Nearby } from "@/components/odys/Nearby";
@@ -240,11 +241,13 @@ function ListingPage() {
   const { data } = useSuspenseQuery(listingQuery(id));
   const { listing: l, facts, flags } = data;
   const userId = useUserId();
+  const signedIn = useSignedIn();
   const byKey = Object.fromEntries(facts.map((f) => [f.key, f])) as Record<string, Fact | undefined>;
   const src = l.source_url;
 
   return (
     <Shell>
+      <ListingGate id={l.id!} signedIn={signedIn} />
       <section className="grid grid-cols-1 gap-6 pt-4 sm:pt-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(340px,1fr)] lg:items-start lg:gap-10 lg:pt-10">
         <Gallery data={data} userId={userId} />
         <HeroPanel data={data} userId={userId} />

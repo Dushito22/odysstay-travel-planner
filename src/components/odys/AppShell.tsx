@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { inboxCountQuery } from "@/lib/deal";
 import { setLang, useLang } from "@/lib/i18n";
 import { profileQuery } from "@/lib/profile";
+import { useSignedIn } from "@/lib/signed-in";
 import { useInboxRealtime } from "@/lib/use-deal";
 import { useT } from "@/lib/tr";
 import { LangToggle } from "./LangToggle";
@@ -23,6 +24,7 @@ const mobileNav = [
 export function AppShell() {
   const t = useT();
   const { pathname } = useLocation();
+  const signedIn = useSignedIn();
   const inboxCount = useQuery({ ...inboxCountQuery, refetchInterval: 60_000 }).data ?? 0;
   useInboxRealtime();
   // The account's language wins over the browser's, so every device opens in the buyer's language.
@@ -40,6 +42,9 @@ export function AppShell() {
         <header className="sticky top-0 z-30 flex items-center border-b bg-background/85 px-5 py-4 backdrop-blur-xl md:hidden">
           <Wordmark size="sm" />
           <LangToggle className="ml-auto" />
+          {signedIn === false && (
+            <Link to="/login" search={{ redirect: pathname }} className="ml-3 rounded-full bg-foreground px-4 py-1.5 text-[14px] text-background">{t("Sign in")}</Link>
+          )}
         </header>
         {pathname === "/map" ? (
           <main className="relative flex-1">
@@ -57,7 +62,7 @@ export function AppShell() {
         )}
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-card/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
+      {signedIn !== false && <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-card/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
         {mobileNav.map(({ to, label, icon: Icon }) => (
           <Link
             key={to}
@@ -72,7 +77,7 @@ export function AppShell() {
             {t(label)}
           </Link>
         ))}
-      </nav>
+      </nav>}
     </div>
   );
 }

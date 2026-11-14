@@ -15,6 +15,10 @@ type Row = Record<string, any>;
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "content-type": "application/json" } });
 const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const eur = (n: number) => `€${Math.round(n).toLocaleString("ru-RU")}`;
+
+const REG_RU: Record<string, string> = { Toscana: "Тоскана", Puglia: "Апулия", Sicilia: "Сицилия", Abruzzo: "Абруццо", Calabria: "Калабрия", Piemonte: "Пьемонт", Liguria: "Лигурия", Sardegna: "Сардиния", Umbria: "Умбрия", Marche: "Марке", Lombardia: "Ломбардия", Basilicata: "Базиликата", Molise: "Молизе", Campania: "Кампания", Lazio: "Лацио", Veneto: "Венето", "Emilia-Romagna": "Эмилия-Романья", "Friuli-Venezia Giulia": "Фриули", "Trentino-Alto Adige": "Трентино", "Valle d'Aosta": "Валле-д'Аоста" };
+/** The feed, filtered: sort is set so a returning visitor's last search doesn't override the region. */
+const feedUrl = (region?: string | null) => `${SITE}/discover?sort=%22best%22${region ? `&regions=${encodeURIComponent(JSON.stringify([region]))}` : ""}&utm_source=tg_channel`;
 const photo = (p: string | null) => (!p ? null : /^https?:\/\//.test(p) ? p : `${SB}/storage/v1/object/public/listing-images/${p}`);
 
 /** Same estimate as the site (src/lib/costs.ts): price plus taxes, notary or court, agency and survey. */
@@ -123,7 +127,7 @@ async function queued(admin: ReturnType<typeof adminClient>, slot: string) {
   const text = String(q.text).slice(0, 1024);
   const rows: unknown[] = [];
   if (q.button_text && q.button_url) rows.push([{ text: q.button_text, url: String(q.button_url).replace("{SITE}", SITE) }]);
-  rows.push([{ text: "Все дома в Италии", url: `${SITE}/?utm_source=tg_channel` }]);
+  rows.push([{ text: "Все дома в Италии", url: feedUrl() }]);
   return { q, art, text, markup: { inline_keyboard: rows } };
 }
 const SALE_FILTER = ["sale", "auction_judicial", "auction_notary", "one_euro"];
@@ -243,7 +247,7 @@ Deno.serve(async (req) => {
   const kindIn = String(body.kind ?? "");
   const day = Math.floor(Date.now() / 864e5);
   const lastTexts = (last ?? []).map((p) => String(p.text ?? "").split("\n")[0]);
-  const home = { text: "Все дома в Италии", url: `${SITE}/?utm_source=tg_channel` };
+  const home = { text: "Все дома в Италии", url: feedUrl() };
   const extra = async (): Promise<Response | null> => {
     let kind = kindIn;
     if (kind === "morning") {
@@ -306,7 +310,7 @@ Deno.serve(async (req) => {
       const g = await regionPost(admin, lastTexts);
       if (!g) return null;
       caption = g.caption; photoUrl = g.h ? photo(g.h.hero_image_path) : null;
-      markup = { inline_keyboard: [[{ text: `Дома: ${g.region}`, url: `${SITE}/?utm_source=tg_channel` }], [home]] };
+      markup = { inline_keyboard: [[{ text: `Дома: ${REG_RU[g.region] ?? g.region}`, url: feedUrl(g.region) }], [home]] };
     }
     if (dry || !CHANNEL) return json({ posted: false, dry: true, kind: postKind, caption, photo: photoUrl });
     const res = await send(CHANNEL, photoUrl, caption, markup);
@@ -329,7 +333,7 @@ Deno.serve(async (req) => {
     const o = await writeLight(recent, count ?? 0);
     const h = await prettyHouse(admin);
     const caption = `<b><i>${esc(o.it)}</i></b>${o.ru ? `\n${esc(o.ru)}` : ""}\n\n${esc(o.line)}${o.cta ? `\n\n${esc(o.cta)}` : ""}${h ? `\n\nНа фото: ${esc(h.comune)}, ${esc(h.region)} · ${eur(h.price_eur)}` : ""}`.slice(0, 1024);
-    const link = h ? `${SITE}/listing/${h.id}?utm_source=tg_channel` : `${SITE}/?utm_source=tg_channel`;
+    const link = h ? `${SITE}/listing/${h.id}?utm_source=tg_channel` : feedUrl();
     const markup = { inline_keyboard: [[{ text: h ? "Смотреть этот дом" : "Смотреть дома", url: link }], [{ text: "Все дома в Италии", url: `${SITE}/?utm_source=tg_channel` }]] };
     if (dry || !CHANNEL) return json({ posted: false, dry: true, kind: "light", channel_set: !!CHANNEL, caption, photo: h ? photo(h.hero_image_path) : null });
     const res = await send(CHANNEL, h ? photo(h.hero_image_path) : null, caption, markup);

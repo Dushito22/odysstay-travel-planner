@@ -167,8 +167,8 @@ export async function startDeal(listing: FeedRow): Promise<string> {
 
 /** Hands the deal to Argos: he writes to the seller and runs the conversation from here.
  * Pass `email` when the listing has no address for the seller. */
-export async function startAutopilot(dealId: string, email?: string) {
-  const { data, error } = await supabase.functions.invoke("autopilot", { body: { action: "start", deal_id: dealId, ...(email ? { email } : {}) } });
+export async function startAutopilot(dealId: string, email?: string, research = false) {
+  const { data, error } = await supabase.functions.invoke("autopilot", { body: { action: research ? "research" : "start", deal_id: dealId, ...(email ? { email } : {}) } });
   if (error) {
     const ctx = (error as { context?: Response }).context;
     const j = ctx ? await ctx.json().catch(() => null) : null;
