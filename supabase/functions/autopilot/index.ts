@@ -149,7 +149,7 @@ async function ensureThread(admin: Admin, c: Ctx, givenEmail?: string) {
   const auction = String(c.listing?.sale_type ?? "").startsWith("auction");
   const { data: contact } = await admin.from("contacts").insert({
     kind: auction ? "other" : "agency", name: pick?.name || pick?.agency || pick?.role || (auction ? "Custode" : "Venditore"), organisation: pick?.agency ?? pick?.role ?? null,
-    email, comune: c.listing?.comune ?? null, region: c.listing?.region ?? null,
+    email, phone: pick?.phone ?? all.find((x) => x?.phone)?.phone ?? null, comune: c.listing?.comune ?? null, region: c.listing?.region ?? null,
   }).select("*").single();
   const { data: thread } = await admin.from("threads").insert({
     deal_id: c.deal.id, contact_id: contact?.id ?? null, channel: "email", subject: `Immobile a ${c.listing?.comune ?? ""}`.trim(), purpose_en: "Argos handles the conversation with the seller", status: "open",
@@ -163,38 +163,50 @@ const BAD_MAIL = /(noreply|no-reply|donotreply|sentry|wixpress|example\.|@(ideal
 const MAIL = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
 const okMail = (e: string) => !BAD_MAIL.test(e) && e.length < 80;
 
-/** Reads the listing page itself: many ads carry a mailto or an address in the text. Free and fast. */
-async function mailFromListingPage(url: string | null | undefined) {
-  if (!url || !/^https?:/i.test(url)) return null;
+/** Fetches a page and pulls out email addresses. Free and fast. */
+async function mailsOn(url: string | null | undefined) {
+  if (!url || !/^https?:/i.test(url)) return [] as string[];
   try {
     const r = await fetch(url, { headers: { "user-agent": "Mozilla/5.0 (compatible; OdysstayBot/1.0; +https://odysstay.xyz)" }, signal: AbortSignal.timeout(7000) });
-    if (!r.ok) return null;
+    if (!r.ok) return [];
     const html = (await r.text()).slice(0, 400_000);
-    const found = [...html.matchAll(MAIL)].map((m) => m[0].toLowerCase()).filter(okMail);
-    return found[0] ?? null;
-  } catch { return null; }
+    return [...new Set([...html.matchAll(MAIL)].map((m) => m[0].toLowerCase()).filter(okMail))];
+  } catch { return []; }
 }
 
-/** Asks Claude with web search for the seller's public contact: the agency's own site, or for auctions the
- *  custodian's / delegated professional's PEC. Only an address that a source page actually shows is accepted. */
-async function searchContact(c: Ctx, thread: Row) {
+/** An agency's own site usually lists its address on the home page or on /contatti. */
+async function mailsOnSite(site: string) {
+  const base = site.replace(/\/+$/, "");
+  for (const u of [base, `${base}/contatti`, `${base}/contatti/`, `${base}/contact`, `${base}/chi-siamo`]) {
+    const found = await mailsOn(u);
+    if (found.length) return found[0];
+  }
+  return null;
+}
+
+type Found = { email: string | null; phone: string | null; website: string | null; source: string | null };
+
+/** Asks Claude with web search for the seller's public contact: the agency's own site, phone and email, or for
+ *  auctions the custodian's / delegated professional's PEC. Only details that a source page actually shows count. */
+async function searchContact(c: Ctx, thread: Row): Promise<Found | null> {
   const key = Deno.env.get("ANTHROPIC_API_KEY");
   if (!key) return null;
   const l = (c.listing ?? {}) as Row;
   const who = thread.contacts?.organisation || thread.contacts?.name || "";
   const auction = String(l.sale_type ?? "").startsWith("auction");
   const q = {
-    seller: who || null, kind: auction ? "court auction: find the custode giudiziario or professionista delegato and their PEC or email" : "real estate agency or private seller: find the agency's public contact email",
+    seller: who || null,
+    kind: auction ? "court auction: find the custode giudiziario or professionista delegato named in the notice, and their PEC, email and phone" : "real estate agency or private seller: find the agency's own website, contact email and phone",
     town: l.comune, province: l.province, region: l.region, listing_url: l.source_url, type: l.property_type, price_eur: l.price_eur,
   };
   try {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST", headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      signal: AbortSignal.timeout(45000),
+      signal: AbortSignal.timeout(50000),
       body: JSON.stringify({
         model: Deno.env.get("ANTHROPIC_MODEL") || "claude-haiku-5-5", max_tokens: 3000,
-        tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }],
-        system: "You find the public contact email of the seller of an Italian property. Search the web (Italian queries work best). Use only an address that appears on a page you found, never guess one. Prefer the exact agency or custodian named; if you cannot be sure it is the right one, return nulls. Reply with JSON only: {\"email\": string|null, \"phone\": string|null, \"source_url\": string|null, \"who\": string|null}.",
+        tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 4 }],
+        system: "You find the public contact details of the seller of an Italian property. Search the web in Italian: the agency name plus the town, the listing itself, Google business pages, the agency's own site. Use only details that appear on a page you found, never guess. Prefer the exact agency or custodian named; if you are not sure it is the same one, return nulls. Reply with JSON only: {\"email\": string|null, \"phone\": string|null, \"website\": string|null, \"source_url\": string|null}.",
         messages: [{ role: "user", content: JSON.stringify(q) }],
       }),
     });
@@ -204,30 +216,60 @@ async function searchContact(c: Ctx, thread: Row) {
     const m = text.match(/\{[\s\S]*\}/);
     if (!m) return null;
     const o = JSON.parse(m[0]) as Row;
-    const email = typeof o.email === "string" ? o.email.trim().toLowerCase() : "";
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || !okMail(email) || !o.source_url) return null;
-    return { email, phone: typeof o.phone === "string" ? o.phone : null, source: String(o.source_url) };
+    const email0 = typeof o.email === "string" ? o.email.trim().toLowerCase() : "";
+    const email = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email0) && okMail(email0) && o.source_url ? email0 : null;
+    const phone = typeof o.phone === "string" && o.phone.replace(/\D/g, "").length >= 8 ? o.phone.trim() : null;
+    const website = typeof o.website === "string" && /^https?:\/\//.test(o.website) && !/immobiliare|idealista|casa\.it|subito|facebook|instagram/.test(o.website) ? o.website.trim() : null;
+    if (!email && !phone && !website) return null;
+    return { email, phone, website, source: o.source_url ? String(o.source_url) : null };
   } catch { return null; }
 }
 
-/** Finds the seller's address when the listing gave none, and remembers it for every later buyer. */
-async function findContact(admin: Admin, c: Ctx, thread: Row) {
+/** Finds the seller's contact when the listing gave none, and remembers it for every later buyer.
+ *  Every attempt is written on the contact, so the deal page can show what Argos tried. */
+async function findContact(admin: Admin, c: Ctx, thread: Row, force = false) {
   const ct = thread.contacts;
   if (!ct || ct.email || ct.pec) return null;
+  const stats = (ct.stats ?? {}) as Row;
+  const last = stats.search?.at ? Date.parse(stats.search.at) : 0;
+  if (!force && Date.now() - last < 6 * 3600e3) return null; // searched recently, don't burn credit on every step
+  const tried: string[] = [];
+  let out: Found = { email: null, phone: ct.phone ?? null, website: stats.website ?? null, source: null };
   // 1. Somebody already found it: same organisation, same town.
   if (ct.organisation) {
-    const { data } = await admin.from("contacts").select("email").eq("organisation", ct.organisation).eq("comune", (c.listing as Row)?.comune ?? "").not("email", "is", null).limit(1);
-    if (data?.[0]?.email) return { email: data[0].email as string, source: "known" };
+    tried.push("book");
+    const { data } = await admin.from("contacts").select("email, phone").eq("organisation", ct.organisation).eq("comune", (c.listing as Row)?.comune ?? "").not("email", "is", null).limit(1);
+    if (data?.[0]?.email) out = { ...out, email: data[0].email as string, phone: out.phone ?? data[0].phone ?? null, source: "known" };
   }
   // 2. The listing page itself.
-  const page = await mailFromListingPage((c.listing as Row)?.source_url);
-  if (page) return { email: page, source: "listing" };
-  // 3. The web.
-  return await searchContact(c, thread);
+  if (!out.email) {
+    tried.push("listing");
+    const page = (await mailsOn((c.listing as Row)?.source_url))[0];
+    if (page) out = { ...out, email: page, source: "listing" };
+  }
+  // 3. The web: agency site, phone, email.
+  if (!out.email) {
+    tried.push("web");
+    const w = await searchContact(c, thread);
+    if (w) out = { email: w.email, phone: w.phone ?? out.phone, website: w.website ?? out.website, source: w.source };
+  }
+  // 4. The agency's own site, if the search found one but no address.
+  if (!out.email && out.website) {
+    tried.push("site");
+    const m = await mailsOnSite(out.website);
+    if (m) out = { ...out, email: m, source: out.website };
+  }
+  await admin.from("contacts").update({
+    ...(out.email ? { email: out.email } : {}), ...(out.phone && !ct.phone ? { phone: out.phone } : {}),
+    stats: { ...stats, website: out.website, search: { at: new Date().toISOString(), tried, found: !!out.email } },
+  }).eq("id", ct.id);
+  ct.phone = out.phone ?? ct.phone;
+  ct.stats = { ...stats, website: out.website, search: { at: new Date().toISOString(), tried, found: !!out.email } };
+  return out;
 }
 
 /** One move on one deal. */
-async function step(admin: Admin, dealId: string, why: string, givenEmail?: string) {
+async function step(admin: Admin, dealId: string, why: string, givenEmail?: string, research = false) {
   const c = await load(admin, dealId);
   if (["won", "lost", "withdrawn"].includes(c.deal.stage)) return { skipped: "closed" };
   const thread = await ensureThread(admin, c, givenEmail);
@@ -236,15 +278,33 @@ async function step(admin: Admin, dealId: string, why: string, givenEmail?: stri
     thread.contacts.email = givenEmail;
   }
   if (thread.contacts && !thread.contacts.email && !thread.contacts.pec) {
-    const found = await findContact(admin, c, thread).catch(() => null);
-    if (found) {
-      await admin.from("contacts").update({ email: found.email }).eq("id", thread.contacts.id);
+    const found = await findContact(admin, c, thread, research).catch(() => null);
+    if (found?.email) {
       thread.contacts.email = found.email;
       await event(admin, dealId, "agent_update", { summary: c.lang === "ru" ? `Argos нашёл email продавца: ${found.email}.` : `Argos found the seller's email: ${found.email}.`, source: found.source });
+    } else if (found) {
+      const ru0 = c.lang === "ru";
+      const bits = [found.phone && (ru0 ? `телефон ${found.phone}` : `phone ${found.phone}`), found.website && (ru0 ? "сайт агентства" : "the agency's site")].filter(Boolean).join(ru0 ? " и " : " and ");
+      await event(admin, dealId, "agent_update", { summary: ru0
+        ? `Argos искал адрес продавца: наши контакты, страница объявления, поиск в интернете${found.website ? ", сайт агентства" : ""}. Email скрыт${bits ? `, но нашёлся ${bits}` : ""}.`
+        : `Argos searched for the seller's address: our contacts, the listing page, the web${found.website ? ", the agency's site" : ""}. The email is hidden${bits ? `, but he found ${bits}` : ""}.` });
     }
   }
-  // Don't double up: one draft waiting for the buyer is enough.
-  if (c.messages.some((m: Row) => m.thread_id === thread.id && m.status === "awaiting_approval")) return { skipped: "waiting for buyer" };
+  // A draft already waits. If an address has just turned up (the buyer pasted it, or the search found it),
+  // send it now when it's routine: pasting an address is the buyer's go-ahead, and the autopilot covers the rest.
+  const held = c.messages.find((m: Row) => m.thread_id === thread.id && m.status === "awaiting_approval" && m.direction === "outbound");
+  if (held) {
+    const to0 = thread.contacts?.email || thread.contacts?.pec || null;
+    if (to0 && !held.is_binding && (givenEmail || c.deal.autonomy === "auto_info_requests")) {
+      const providerId = await sendEmail(c, thread, to0, held.subject || thread.subject, held.body_original);
+      const now = new Date().toISOString();
+      await admin.from("messages").update({ status: "sent", sent_at: now, approved_at: now, provider_id: providerId ?? null, sent_to: to0 }).eq("id", held.id);
+      await admin.from("threads").update({ status: "waiting_reply", last_message_at: now }).eq("id", thread.id);
+      await event(admin, dealId, "message_sent", { sent_to: to0 });
+      return { sent: to0 };
+    }
+    return { skipped: "waiting for buyer" };
+  }
 
   const ru = c.lang === "ru";
   // What sellers already told us about this house in the last 30 days, from any buyer's conversation.
@@ -297,7 +357,10 @@ async function step(admin: Admin, dealId: string, why: string, givenEmail?: stri
   await admin.from("threads").update({ status: "needs_you" }).eq("id", thread.id);
   const reason = !to ? (ru ? "У продавца нет email в объявлении. Вставьте адрес в сделке, и Argos отправит." : "The listing has no email for the seller. Paste one in the deal and Argos sends it.")
     : o.question || (o.binding ? (ru ? "Это письмо вас к чему-то обязывает, поэтому ждёт вашего «да»." : "This one commits you to something, so it waits for your yes.") : (ru ? "Письмо готово, ждёт вашего одобрения." : "A message is ready for your OK."));
-  await event(admin, dealId, "agent_needs_you", { summary: o.update, question: reason });
+  const who = thread.contacts?.organisation || thread.contacts?.name || (ru ? "продавца" : "the seller");
+  await event(admin, dealId, "agent_needs_you", { summary: !to
+    ? (ru ? `Письмо для ${who} готово, но не отправлено: адреса продавца пока нет.` : `The message to ${who} is ready but not sent: no address for the seller yet.`)
+    : (ru ? `Письмо для ${who} готово и ждёт вас.` : `The message to ${who} is ready and waits for you.`), question: reason });
   const town = c.listing?.comune ?? "";
   await telegram(admin, c, `${ru ? "Argos ждёт вас" : "Argos needs you"}${town ? ` · ${town}` : ""}\n${reason}`, ru ? "Ответить в сделке" : "Answer in the deal");
   await emailBuyer(c, ru ? `Argos ждёт вашего решения${town ? `: ${town}` : ""}` : `Argos needs your decision${town ? `: ${town}` : ""}`, reason);
@@ -311,6 +374,16 @@ async function sweep(admin: Admin) {
   for (const t of queued ?? []) {
     await admin.from("threads").update({ status: "open" }).eq("id", t.id);
     try { out.push({ deal: t.deal_id, ...(await step(admin, t.deal_id, "Your earlier message was held back so the agency wasn't crowded. Send it now if it still makes sense.")) }); }
+    catch (e) { out.push({ deal: t.deal_id, error: String(e).slice(0, 160) }); }
+  }
+  // Drafts stuck without an address: search again (findContact itself waits 6 hours between tries).
+  const { data: stuck } = await admin.from("threads").select("id, deal_id, contacts(email, pec, stats)").eq("status", "needs_you").limit(30);
+  for (const t of (stuck ?? []) as Row[]) {
+    const ct = t.contacts as Row | null;
+    if (!ct || ct.email || ct.pec) continue;
+    const at = (ct.stats as Row)?.search?.at;
+    if (at && Date.now() - Date.parse(at) < 6 * 3600e3) continue;
+    try { out.push({ deal: t.deal_id, ...(await step(admin, t.deal_id, "Still waiting for the seller's address.")) }); }
     catch (e) { out.push({ deal: t.deal_id, error: String(e).slice(0, 160) }); }
   }
   const cutoff = new Date(Date.now() - FOLLOW_UP_DAYS * 864e5).toISOString();
@@ -349,8 +422,8 @@ Deno.serve(async (req) => {
       if (!data.user || !deal || deal.user_id !== data.user.id) return json({ error: "Not your deal" }, 403);
     }
     const email = typeof body.email === "string" && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(body.email.trim()) ? body.email.trim().toLowerCase() : undefined;
-    const why = body.action === "start" ? "START: the buyer just opened this deal. Write the first message." : String(body.why ?? "The seller replied. Read it and decide.");
-    return json(await step(admin, dealId, why, email));
+    const why = body.action === "start" || body.action === "research" ? "START: the buyer just opened this deal. Write the first message." : String(body.why ?? "The seller replied. Read it and decide.");
+    return json(await step(admin, dealId, why, email, body.action === "research"));
   } catch (e) {
     if (e instanceof HttpError) return json({ error: e.message }, e.status);
     console.error("autopilot", e);
