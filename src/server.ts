@@ -58,7 +58,7 @@ async function feedProxy(request: Request) {
     status: r.status,
     headers: {
       "content-type": "application/json; charset=utf-8",
-      "cache-control": r.ok ? "public, max-age=60, s-maxage=300, stale-while-revalidate=3600" : "no-store",
+      "cache-control": r.ok ? "public, max-age=120, s-maxage=900, stale-while-revalidate=86400" : "no-store",
     },
   });
 }
