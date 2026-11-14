@@ -1,0 +1,24 @@
+name: Database health
+
+# Read-only: compute size, what uses the CPU, table bloat. Needs SUPABASE_ACCESS_TOKEN.
+on:
+  workflow_dispatch:
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      P: nryhvtxprjiylajolcef
+    steps:
+      - name: Plan and compute
+        run: |
+          A=https://api.supabase.com/v1
+          echo "::notice title=Project::$(curl -sS $A/projects/$P -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" | jq -c '{region, status, database: .database.version}' | cut -c1-400)"
+          echo "::notice title=Addons::$(curl -sS $A/projects/$P/billing/addons -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" | jq -c '{selected: [.selected_addons[]? | {type, variant: .variant.identifier}]}' | cut -c1-600)"
+      - name: Where the CPU goes
+        run: |
+          q() { jq -n --arg q "$1" '{query: $q}' | curl -sS -X POST "https://api.supabase.com/v1/projects/$P/database/query" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" -d @- ; }
+          echo "::notice title=Top statements::$(q "select json_agg(x) from (select calls, round(total_exec_time/1000) as total_s, round(mean_exec_time) as mean_ms, left(regexp_replace(query,'\s+',' ','g'),110) as q from extensions.pg_stat_statements order by total_exec_time desc limit 10) x" | cut -c1-2900)"
+          echo "::notice title=Bloat::$(q "select json_agg(x) from (select relname, n_live_tup as live, n_dead_tup as dead, n_tup_upd as upd, n_tup_hot_upd as hot, last_autovacuum::date as vac, pg_size_pretty(pg_total_relation_size(relid)) as size from pg_stat_user_tables order by pg_total_relation_size(relid) desc limit 10) x" | cut -c1-2900)"
+          echo "::notice title=Memory::$(q "select json_build_object('db', pg_size_pretty(pg_database_size(current_database())), 'shared_buffers', current_setting('shared_buffers'), 'cache_hit', (select round(sum(heap_blks_hit)*100.0/nullif(sum(heap_blks_hit)+sum(heap_blks_read),0),1) from pg_statio_user_tables), 'stats_since', (select stats_reset::text from pg_stat_statements_info), 'conns', (select count(*) from pg_stat_activity))" | cut -c1-900)"
