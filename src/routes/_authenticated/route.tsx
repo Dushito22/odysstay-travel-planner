@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 
 import { AppShell } from "@/components/odys/AppShell";
 import { supabase } from "@/integrations/supabase/client";
-import { feedSearchSchema, fetchFeed, filtersOf } from "@/lib/feed";
+import { FEED_FIRST, feedSearchSchema, fetchFeed, filtersOf } from "@/lib/feed";
 import { profileQuery } from "@/lib/profile";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -13,7 +13,9 @@ export const Route = createFileRoute("/_authenticated")({
     const raw = location.search as Record<string, unknown>;
     if (location.pathname === "/discover" && raw["sort"]) {
       const search = feedSearchSchema.parse(raw);
-      void context.queryClient.prefetchQuery({ queryKey: ["feed", filtersOf(search), search.sort ?? "best"], queryFn: () => fetchFeed(filtersOf(search), search.sort ?? "best") });
+      const f = filtersOf(search), sort = search.sort ?? "best";
+      void context.queryClient.prefetchQuery({ queryKey: ["feed-first", f, sort], queryFn: () => fetchFeed(f, sort, FEED_FIRST) });
+      void context.queryClient.prefetchQuery({ queryKey: ["feed", f, sort], queryFn: () => fetchFeed(f, sort) });
     }
     // The session is read locally; the server still checks the token on every query.
     const { data } = await supabase.auth.getSession();

@@ -133,11 +133,14 @@ export async function countFeed(f: FeedFilters, sort = "best"): Promise<number |
   return error ? null : count ?? null;
 }
 
-export async function fetchFeed(f: FeedFilters, sort = "best"): Promise<{ rows: FeedRow[]; total: number }> {
+/** First screenful, asked for separately: it comes back in about 0.2 s even when the full list takes seconds. */
+export const FEED_FIRST = 48;
+
+export async function fetchFeed(f: FeedFilters, sort = "best", limit = FEED_LIMIT): Promise<{ rows: FeedRow[]; total: number }> {
   const o = SERVER_ORDER[sort] ?? SERVER_ORDER["best"]!;
   let q = feedQuery(f, sort, FEED_COLS);
   if (sort === "best" || sort === "foryou") q = q.order("has_real_photo", { ascending: false, nullsFirst: false });
-  q = q.order(o.col, { ascending: o.asc, nullsFirst: false }).limit(FEED_LIMIT);
+  q = q.order(o.col, { ascending: o.asc, nullsFirst: false }).limit(limit);
   const { data, error } = await q;
   if (error) throw error;
   const rows = (data ?? []) as unknown as FeedRow[];
