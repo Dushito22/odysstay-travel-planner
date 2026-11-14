@@ -23,8 +23,8 @@ jobs:
           CHAT=$(jq -n '{query: "select chat_id from telegram_chats where user_id in (select user_id from deals) limit 1"}' | curl -sS -X POST "https://api.supabase.com/v1/projects/$P/database/query" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" -d @- | jq -r '.[0].chat_id')
           echo "::notice title=chat found::$([ -n "$CHAT" ] && [ "$CHAT" != null ] && echo yes || echo no)"
           sed -i 's/^function siteHtml/export function siteHtml/' supabase/functions/telegram/site.ts
-          cat > /tmp/h.ts <<'TS'
-          import { siteHtml } from "./supabase/functions/telegram/site.ts";
+          cat > /tmp/h.ts <<TS
+          import { siteHtml } from "${{ github.workspace }}/supabase/functions/telegram/site.ts";
           console.log(JSON.stringify({ html: siteHtml("ru") }));
           TS
           deno run --allow-env /tmp/h.ts > /tmp/h.json
