@@ -130,7 +130,11 @@ function TgApp() {
       setAnswered(true);
       return { result: String(out.result) };
     };
-    w["__odysOpen"] = (u: string) => { const wa = webApp(); if (wa) wa.openLink(u); else window.open(u, "_blank"); };
+    // Our own pages open right here in the Mini App: Telegram ignores openLink after a tap inside the frame.
+    w["__odysOpen"] = (u: string) => {
+      if (u.startsWith(SITE) || u.startsWith("/")) { window.location.assign(u.replace(SITE, "")); return; }
+      const wa = webApp(); if (wa) wa.openLink(u); else window.open(u, "_blank");
+    };
     w["__odysAct"] = (what: string) => {
       const r = roundRef.current;
       if (what === "open" && r) (w["__odysOpen"] as (u: string) => void)(`${SITE}/listing/${r.listing}?utm_source=tg_game`);
