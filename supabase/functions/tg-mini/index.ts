@@ -50,6 +50,10 @@ Deno.serve(async (req) => {
     const chatId = me.id; // a user's private chat with the bot has the user's id
     if (me.first_name) await setName(admin, chatId, me.first_name).catch(() => {});
 
+    if (action === "me") {
+      const { data: ch } = await admin.from("telegram_chats").select("lang").eq("chat_id", chatId).maybeSingle();
+      return json({ lang: ch?.lang ?? (String(me.language_code ?? "").startsWith("en") ? "en" : "ru") });
+    }
     if (action === "round") {
       const kind = body.kind === "where" ? "where" : "price";
       const only = typeof body.only === "string" && /^[0-9a-f-]{36}$/i.test(body.only) ? body.only : undefined;
