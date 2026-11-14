@@ -20,7 +20,7 @@ jobs:
         run: |
           A="https://api.telegram.org/bot$TOKEN"
           echo "::notice title=webhook::$(curl -sS $A/getWebhookInfo | jq -c '.result | {pending_update_count, last_error_message}' | cut -c1-300)"
-          CHAT=$(jq -n '{query: "select c.chat_id from telegram_chats c join profiles p on p.id = c.user_id where p.is_admin limit 1"}' | curl -sS -X POST "https://api.supabase.com/v1/projects/$P/database/query" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" -d @- | jq -r '.[0].chat_id')
+          CHAT=$(jq -n '{query: "select c.chat_id from telegram_chats c join auth.users u on u.id = c.user_id where lower(u.email) = (select lower(email) from auth.users where id in (select user_id from deals) and email like 'gyurovik%' limit 1) limit 1"}' | curl -sS -X POST "https://api.supabase.com/v1/projects/$P/database/query" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" -d @- | jq -r '.[0].chat_id')
           echo "::notice title=chat found::$([ -n "$CHAT" ] && [ "$CHAT" != null ] && echo yes || echo no)"
           sed -i 's/^function siteHtml/export function siteHtml/' supabase/functions/telegram/site.ts
           cat > /tmp/h.ts <<'TS'
