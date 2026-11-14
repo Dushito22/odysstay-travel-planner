@@ -293,6 +293,17 @@ Deno.serve(async (req) => {
         body: JSON.stringify({ chat_id: CHANNEL, message_id: p.message_id, reply_markup: { inline_keyboard: rows } }) }).then((x) => x.json()).catch(() => null);
       fixed.push({ p: p.id, ok: r?.ok ?? false, d: r?.description ?? null });
     }
+    const bu = await botUser();
+    const { data: gp } = await admin.from("channel_posts").select("id, kind, listing_id, message_id").in("kind", ["guess", "top"]).not("message_id", "is", null);
+    for (const p of (gp ?? []) as Row[]) {
+      if (!bu) break;
+      const rows = p.kind === "guess"
+        ? [[{ text: "Угадать цену этого дома", url: `https://t.me/${bu}?startapp=g_${String(p.listing_id)}` }], [{ text: "Где этот дом? Игра на карте", url: `https://t.me/${bu}?startapp=where` }], [{ text: "Мини-сайт Odysstay в Telegram", url: `https://t.me/${bu}?startapp=app` }], [{ text: "Все дома в Италии", url: feedUrl() }]]
+        : [[{ text: "Угадать цену", url: `https://t.me/${bu}?startapp=price` }], [{ text: "Где этот дом? Игра на карте", url: `https://t.me/${bu}?startapp=where` }], [{ text: "Все дома в Италии", url: feedUrl() }]];
+      const r = await fetch(`https://api.telegram.org/bot${BOT}/editMessageReplyMarkup`, { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ chat_id: CHANNEL, message_id: p.message_id, reply_markup: { inline_keyboard: rows } }) }).then((x) => x.json()).catch(() => null);
+      fixed.push({ g: p.id, ok: r?.ok ?? false, d: r?.description ?? null });
+    }
     return json({ fixed });
   }
   const kindIn = String(body.kind ?? "");
@@ -318,7 +329,7 @@ Deno.serve(async (req) => {
     if (kind === "top" || (kind === "evening" && new Date().getUTCDay() === 0)) {
       const tp = await topPost(admin), bu = await botUser();
       if (tp) {
-        const mk = { inline_keyboard: [...(bu ? [[{ text: "Угадать цену в боте", url: `https://t.me/${bu}?start=g` }], [{ text: "Где этот дом? Игра на карте", url: `https://t.me/${bu}?start=w` }]] : []), [home]] };
+        const mk = { inline_keyboard: [...(bu ? [[{ text: "Угадать цену", url: `https://t.me/${bu}?startapp=price` }], [{ text: "Где этот дом? Игра на карте", url: `https://t.me/${bu}?startapp=where` }]] : []), [home]] };
         if (dry || !CHANNEL) return json({ posted: false, dry: true, kind: "top", caption: tp.caption, photo: tp.photoUrl });
         const res = await send(CHANNEL, tp.photoUrl, tp.caption, mk);
         if (!res.ok) return json({ posted: false, error: res.description ?? "telegram refused" }, 502);
@@ -351,7 +362,7 @@ Deno.serve(async (req) => {
       if (!g) return null;
       caption = g.caption; photoUrl = photo(g.r.hero_image_path); listingId = g.r.id;
       const bu = await botUser();
-      markup = { inline_keyboard: [...(bu ? [[{ text: "Угадать цену в боте", url: `https://t.me/${bu}?start=g_${String(g.r.id)}` }], [{ text: "Где этот дом? Игра на карте", url: `https://t.me/${bu}?start=w` }], [{ text: "Мини-сайт Odysstay в Telegram", url: `https://t.me/${bu}?start=app` }]] : []), [home]] };
+      markup = { inline_keyboard: [...(bu ? [[{ text: "Угадать цену этого дома", url: `https://t.me/${bu}?startapp=g_${String(g.r.id)}` }], [{ text: "Где этот дом? Игра на карте", url: `https://t.me/${bu}?startapp=where` }], [{ text: "Мини-сайт Odysstay в Telegram", url: `https://t.me/${bu}?startapp=app` }]] : []), [home]] };
     } else if (kind === "word") {
       caption = (await wordPost(lastTexts.slice(0, 12))).caption;
       const h = await prettyHouse(admin);
