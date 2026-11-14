@@ -10,6 +10,10 @@ import httpx
 from . import config
 
 
+# Tables known to have a uuid primary key named id, big enough for keyset paging to matter.
+KEYSET = {"listings", "listing_facts", "documents", "cost_estimates", "raw_imports"}
+
+
 class Supa:
     def __init__(self, url: str | None = None, key: str | None = None, client: httpx.Client | None = None):
         self.url = (url or config.SUPABASE_URL).rstrip("/")
@@ -42,14 +46,29 @@ class Supa:
         return r
 
     def select(self, table: str, params: dict[str, str] | None = None) -> list[dict[str, Any]]:
-        out, offset = [], 0
+        params = params or {}
+        # Page by id (each page starts where the last ended, through the primary key) rather than by offset,
+        # which made the database re-read every earlier row on every page: 286M rows read in 19 days.
+        keyset = table in KEYSET and params.get("order", "id") == "id" and "limit" not in params and "id" not in params
+        out, offset, last = [], 0, None
         while True:
-            p = {"select": "*", **(params or {}), "offset": str(offset), "limit": "1000"}
+            p = {"select": "*", **params, "limit": "1000"}
+            if keyset:
+                p["order"] = "id"
+                sel = p["select"]
+                if sel != "*" and "id" not in [c.strip() for c in sel.split(",")]:
+                    p["select"] = f"id,{sel}"
+                if last is not None:
+                    p["id"] = f"gt.{last}"
+            else:
+                p["offset"] = str(offset)
             rows = self._check(self._send("GET", f"/{table}", params=p)).json()
             out.extend(rows)
-            if len(rows) < 1000 or "limit" in (params or {}):
+            if len(rows) < 1000 or "limit" in params:
                 return out
             offset += 1000
+            if keyset:
+                last = rows[-1]["id"]
 
     def insert(self, table: str, rows: list[dict] | dict, returning: bool = True) -> list[dict]:
         if isinstance(rows, dict):
