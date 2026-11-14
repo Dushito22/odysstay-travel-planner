@@ -14,4 +14,4 @@ analyze public.threads;
 analyze public.contacts;
 -- Start the statistics fresh so the next health check shows the effect.
 select extensions.pg_stat_statements_reset();
-select pg_stat_reset();
+select count(*) as indexes from pg_indexes where indexname in ('cost_estimates_listing_user_idx','deal_events_deal_idx','threads_deal_idx','contacts_org_comune_idx','deals_user_stage_idx','listings_geocode_todo_idx','listings_external_id_pattern_idx');
