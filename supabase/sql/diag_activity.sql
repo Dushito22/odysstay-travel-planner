@@ -1,8 +1,13 @@
--- Read-only: what the database is busy with right now, and what feeds the realtime stream. Safe to run any time.
-select json_build_object(
-  'publication', (select json_agg(tablename) from pg_publication_tables where pubname = 'supabase_realtime'),
-  'slots', (select json_agg(json_build_object('slot', slot_name, 'active', active)) from pg_replication_slots),
-  'writes', (select json_agg(w) from (select relname, n_tup_ins + n_tup_upd + n_tup_del as changes from pg_stat_user_tables order by 2 desc limit 6) w),
-  'active', (select count(*) from pg_stat_activity where state = 'active'),
-  'conns', (select count(*) from pg_stat_activity)
-) as r;
+-- Read-only: the plan and timing of one region feed query. Safe to run any time.
+create or replace function pg_temp.feed_plan() returns text language plpgsql as $$
+declare r text; o text := '';
+begin
+  for r in execute $q$explain (analyze, buffers, costs off)
+    select id, region, score, latest_render_path, red_flag_count from public.listing_feed
+    where is_demo = false and is_scrap = false and status not in ('closed','withdrawn') and region = 'Abruzzo'
+    order by has_real_photo desc nulls last, score desc nulls last limit 600$q$ loop
+    o := o || regexp_replace(r, '\s+', ' ', 'g') || ' / ';
+  end loop;
+  return o;
+end $$;
+select pg_temp.feed_plan() as plan;
