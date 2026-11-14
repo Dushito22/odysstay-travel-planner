@@ -75,7 +75,7 @@ export function allowedSaleTypes(f: Pick<FeedFilters, "leases" | "oneEuro">) {
 
 export const showDemo = import.meta.env['VITE_SHOW_DEMO'] === "true";
 
-export const FEED_LIMIT = 600;
+export const FEED_LIMIT = 300;
 
 /** Server-side order for each sort, so the best rows come back first even when thousands match. */
 const SERVER_ORDER: Record<string, { col: string; asc: boolean }> = {
@@ -141,6 +141,14 @@ export async function fetchFeed(f: FeedFilters, sort = "best", limit = FEED_LIMI
   let q = feedQuery(f, sort, FEED_COLS);
   if (sort === "best" || sort === "foryou") q = q.order("has_real_photo", { ascending: false, nullsFirst: false });
   q = q.order(o.col, { ascending: o.asc, nullsFirst: false }).limit(limit);
+  // Same query, served through the site's cache (see src/server.ts); straight to the database if that fails.
+  const url = (q as unknown as { url?: URL }).url;
+  if (url && typeof window !== "undefined") {
+    try {
+      const r = await fetch(`/api/feed${url.search}`);
+      if (r.ok) { const rows = (await r.json()) as FeedRow[]; return { rows, total: rows.length }; }
+    } catch { /* fall through */ }
+  }
   const { data, error } = await q;
   if (error) throw error;
   const rows = (data ?? []) as unknown as FeedRow[];
