@@ -88,8 +88,9 @@ const SERVER_ORDER: Record<string, { col: string; asc: boolean }> = {
 };
 
 /** What a card, the sort and the map need. The heavy columns (photo lists, score reasons, summaries, contacts)
- *  were 80% of a 1.5 MB response; the house page loads them for one house. */
-const FEED_COLS = "id,appraisal_eur,case_ref,court,discount_pct,external_id,min_offer_eur,sale_mode,address,auction_at,condition,comune,country,created_at,days_left,deadline_at,deposit_eur,document_id,hero_image_path,is_demo,land_sqm,lat,latest_render_path,has_real_photo,is_scrap,lng,lot,occupancy,previous_auction_failed,price_eur,price_per_sqm,property_type,province,red_flag_count,region,sale_type,score,source_id,source_published_at,source_title,source_url,status,surface_sqm,title_en,updated_at";
+ *  were 80% of a 1.5 MB response, and the source-document join was the slowest part of a cold load.
+ *  The house page loads all of it for one house. */
+const FEED_COLS = "id,appraisal_eur,discount_pct,min_offer_eur,auction_at,condition,comune,created_at,days_left,deadline_at,hero_image_path,is_demo,land_sqm,lat,latest_render_path,has_real_photo,is_scrap,lng,occupancy,previous_auction_failed,price_eur,price_per_sqm,property_type,province,red_flag_count,region,sale_type,score,status,surface_sqm,title_en,updated_at";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function applyFilters(q: any, f: FeedFilters, sort: string) {
