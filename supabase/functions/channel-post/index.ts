@@ -18,7 +18,31 @@ const eur = (n: number) => `€${Math.round(n).toLocaleString("ru-RU")}`;
 
 const REG_RU: Record<string, string> = { Toscana: "Тоскана", Puglia: "Апулия", Sicilia: "Сицилия", Abruzzo: "Абруццо", Calabria: "Калабрия", Piemonte: "Пьемонт", Liguria: "Лигурия", Sardegna: "Сардиния", Umbria: "Умбрия", Marche: "Марке", Lombardia: "Ломбардия", Basilicata: "Базиликата", Molise: "Молизе", Campania: "Кампания", Lazio: "Лацио", Veneto: "Венето", "Emilia-Romagna": "Эмилия-Романья", "Friuli-Venezia Giulia": "Фриули", "Trentino-Alto Adige": "Трентино", "Valle d'Aosta": "Валле-д'Аоста" };
 /** The feed, filtered: sort is set so a returning visitor's last search doesn't override the region. */
-const feedUrl = (region?: string | null) => `${SITE}/discover?sort=%22best%22${region ? `&regions=${encodeURIComponent(JSON.stringify([region]))}` : ""}&utm_source=tg_channel`;
+const feedUrl = (region?: string | string[] | null) => {
+  const regs = !region ? [] : Array.isArray(region) ? region : [region];
+  return `${SITE}/discover?sort=%22best%22${regs.length ? `&regions=${encodeURIComponent(JSON.stringify(regs))}` : ""}&utm_source=tg_channel`;
+};
+const NORTH = ["Piemonte", "Lombardia", "Liguria", "Valle d'Aosta", "Veneto", "Trentino-Alto Adige", "Friuli-Venezia Giulia", "Emilia-Romagna"];
+const SOUTH = ["Campania", "Puglia", "Basilicata", "Calabria", "Sicilia", "Sardegna", "Molise"];
+const SEA = ["Liguria", "Puglia", "Calabria", "Sicilia", "Sardegna"];
+/** Where a post's button should land: the regions its words name (the button first, then the post), else all Italy. */
+function smartUrl(button: string, post = "") {
+  for (const t of [button, post]) {
+    const w = t.toLowerCase();
+    const hits = new Set<string>();
+    for (const [it, ru] of Object.entries(REG_RU)) {
+      const stem = ru.toLowerCase().slice(0, Math.max(5, ru.length - 2));
+      if (w.includes(stem) || w.includes(it.toLowerCase())) hits.add(it);
+    }
+    if (/комо|гарда|маджоре|lago di como|lake como/.test(w)) hits.add("Lombardia");
+    if (/доломит|альп/.test(w)) { hits.add("Trentino-Alto Adige"); hits.add("Valle d'Aosta"); }
+    if (hits.size) return feedUrl([...hits]);
+    if (/север|north/.test(w)) return feedUrl(NORTH);
+    if (/юг|юге|south/.test(w)) return feedUrl(SOUTH);
+    if (/мор[ея]|побереж|пляж|sea|coast/.test(w)) return feedUrl(SEA);
+  }
+  return feedUrl();
+}
 const photo = (p: string | null) => (!p ? null : /^https?:\/\//.test(p) ? p : `${SB}/storage/v1/object/public/listing-images/${p}`);
 
 /** Same estimate as the site (src/lib/costs.ts): price plus taxes, notary or court, agency and survey. */
@@ -126,7 +150,12 @@ async function queued(admin: ReturnType<typeof adminClient>, slot: string) {
   void author;
   const text = String(q.text).slice(0, 1024);
   const rows: unknown[] = [];
-  if (q.button_text && q.button_url) rows.push([{ text: q.button_text, url: String(q.button_url).replace("{SITE}", SITE) }]);
+  if (q.button_text && q.button_url) {
+    const raw = String(q.button_url).replace("{SITE}", SITE);
+    // A button that pointed at the home page goes to the feed filtered by what the post is about.
+    const url = /\/(\?|$)/.test(raw.replace(SITE, "")) || raw.replace(SITE, "").startsWith("/?") ? smartUrl(String(q.button_text), String(q.text)) : raw;
+    rows.push([{ text: q.button_text, url }]);
+  }
   rows.push([{ text: "Все дома в Италии", url: feedUrl() }]);
   return { q, art, text, markup: { inline_keyboard: rows } };
 }
@@ -244,6 +273,28 @@ Deno.serve(async (req) => {
   }
 
   // Rhythm: morning (answer to yesterday's guess, else a find), house (a find), evening (guess on odd days, otherwise a rotating light post).
+  if (body.fix_buttons === true && CHANNEL) {
+    const fixed: unknown[] = [];
+    const { data: qs } = await admin.from("channel_queue").select("id, text, button_text, button_url, message_id").not("message_id", "is", null);
+    for (const q of (qs ?? []) as Row[]) {
+      const rows: unknown[] = [];
+      if (q.button_text) rows.push([{ text: q.button_text, url: smartUrl(String(q.button_text), String(q.text)) }]);
+      rows.push([{ text: "Все дома в Италии", url: feedUrl() }]);
+      const r = await fetch(`https://api.telegram.org/bot${BOT}/editMessageReplyMarkup`, { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ chat_id: CHANNEL, message_id: q.message_id, reply_markup: { inline_keyboard: rows } }) }).then((x) => x.json()).catch(() => null);
+      fixed.push({ q: q.id, ok: r?.ok ?? false, d: r?.description ?? null });
+    }
+    const { data: rp } = await admin.from("channel_posts").select("id, kind, text, message_id").eq("kind", "region").not("message_id", "is", null);
+    for (const p of (rp ?? []) as Row[]) {
+      const url = smartUrl("", String(p.text ?? ""));
+      const reg = Object.entries(REG_RU).find(([it, ru]) => String(p.text ?? "").includes(ru) || String(p.text ?? "").includes(it));
+      const rows = [[{ text: `Дома: ${reg ? reg[1] : "Италия"}`, url }], [{ text: "Все дома в Италии", url: feedUrl() }]];
+      const r = await fetch(`https://api.telegram.org/bot${BOT}/editMessageReplyMarkup`, { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ chat_id: CHANNEL, message_id: p.message_id, reply_markup: { inline_keyboard: rows } }) }).then((x) => x.json()).catch(() => null);
+      fixed.push({ p: p.id, ok: r?.ok ?? false, d: r?.description ?? null });
+    }
+    return json({ fixed });
+  }
   const kindIn = String(body.kind ?? "");
   const day = Math.floor(Date.now() / 864e5);
   const lastTexts = (last ?? []).map((p) => String(p.text ?? "").split("\n")[0]);
