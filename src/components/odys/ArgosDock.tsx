@@ -13,7 +13,7 @@ import { parseRequest, runSearch } from "@/lib/argos";
 import { isCourtPhoto, renderUrl, type FeedRow } from "@/lib/feed";
 import { speechLang, useLang } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { canListen, listen, speak, stopSpeaking } from "@/lib/voice";
+import { canListen, listen, speak, stopSpeaking, unlockAudio } from "@/lib/voice";
 
 type Msg = { role: "user" | "argos"; text: string; rows?: FeedRow[] };
 type Mode = "chat" | "call";
@@ -152,6 +152,10 @@ export function ArgosDock() {
         listenTurn();
         return;
       }
+      // A cough, a door, a word from the next room: too short to be a question, keep listening.
+      const words = heard.trim().split(/\s+/).filter(Boolean);
+      const SHORT = /^(да|нет|ага|давай|ок|окей|хорошо|спасибо|yes|no|ok|okay|sure|thanks|sì|si|grazie)[.!?]*$/i;
+      if (words.length < 2 && heard.trim().length < 8 && !SHORT.test(heard.trim())) { listenTurn(); return; }
       misses.current = 0;
       setCall("thinking");
       const reply = await ask(heard, "call");
@@ -166,6 +170,7 @@ export function ArgosDock() {
   }, [ask, lang, t.didntCatch, t.limit]);
 
   const startCall = useCallback(async (helloOverride?: string) => {
+    unlockAudio(); // still inside the tap that started the call
     setNote(null);
     setAnonOut(false);
     setSeconds(0);
@@ -301,7 +306,7 @@ export function ArgosDock() {
               </div>
               <div className="border-t border-foreground/10 p-3">
                 <ArgosComposer tone="light" busy={busy} lang={speechLang(lang)} placeholder={t.ask} onSubmit={(x, spoken) => void sendChat(x, spoken)} />
-                <button type="button" onClick={() => { if (aloud) stopSpeaking(); setAloud(!aloud); }} aria-pressed={aloud}
+                <button type="button" onClick={() => { if (aloud) stopSpeaking(); else unlockAudio(); setAloud(!aloud); }} aria-pressed={aloud}
                   className="mx-auto mt-2 flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground">
                   {aloud ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
                   {aloud ? (lang === "ru" ? "Argos отвечает голосом" : "Argos answers out loud") : (lang === "ru" ? "Включить голос Argos" : "Turn on Argos's voice")}

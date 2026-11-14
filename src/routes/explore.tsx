@@ -5,14 +5,13 @@ import { Lock } from "lucide-react";
 import { ListingCard, ListingCardSkeleton } from "@/components/odys/ListingCard";
 import { PublicShell } from "@/components/odys/PublicShell";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
 import { topListingsQuery } from "@/lib/public";
 
 export const Route = createFileRoute("/explore")({
   ssr: false,
-  beforeLoad: async () => {
-    const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: "/discover" });
+  // The feed is open to guests now (a taste, then a sign-in), so the old locked preview just forwards there.
+  beforeLoad: () => {
+    throw redirect({ to: "/discover", search: { sort: "best" } as never });
   },
   head: () => ({
     meta: [

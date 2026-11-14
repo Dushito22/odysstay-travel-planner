@@ -26,11 +26,12 @@ const PLANS: Plan[] = [
       { en: "The catch and the full cost on every house", ru: "Минусы и полная стоимость по каждому дому" },
       { en: "Argos's five picks every Saturday, with a voice note", ru: "5 домов от Argos каждую субботу, с голосовым" },
       { en: "Chat with Argos, here and on Telegram", ru: "Чат с Argos здесь и в Telegram" },
-      { en: "1 renovation illustration, 1 saved search", ru: "1 иллюстрация ремонта, 1 сохранённый поиск" },
+      { en: "3 renovation illustrations a month, 1 saved search", ru: "3 иллюстрации ремонта в месяц, 1 сохранённый поиск" },
+      { en: "Argos works 3 deals for you: finds the seller, writes in Italian", ru: "Argos ведёт 3 сделки: находит продавца, пишет по-итальянски" },
     ],
   },
   {
-    id: "buyer", name: { en: "Buyer", ru: "Покупатель" }, monthly: 29, featured: true,
+    id: "buyer", name: { en: "Buyer", ru: "Покупатель" }, monthly: 9.99, featured: true,
     blurb: { en: "For when you're serious.", ru: "Когда вы всерьёз." },
     features: [
       { en: "Everything in Free", ru: "Всё из бесплатного" },
@@ -38,7 +39,7 @@ const PLANS: Plan[] = [
       { en: "Argos writes to sellers in Italian; anything about price or visits needs your OK", ru: "Argos пишет продавцам по-итальянски; цена и визиты только с вашего «да»" },
       { en: "Court reports read for you: occupants, debts, risks", ru: "Отчёты суда прочитаны за вас: жильцы, долги, риски" },
       { en: "Your picks on Thursday, two days before everyone", ru: "Подборка в четверг, на два дня раньше всех" },
-      { en: "Unlimited illustrations and saved searches", ru: "Безлимит иллюстраций и сохранённых поисков" },
+      { en: "Unlimited deals, illustrations and saved searches", ru: "Без ограничений: сделки, иллюстрации, сохранённые поиски" },
       { en: "What you've paid counts toward a Deal Check or purchase", ru: "Оплаченное засчитывается в проверку сделки или покупку" },
     ],
   },
@@ -76,7 +77,10 @@ export function PricingPlans({ className }: { className?: string }) {
       </div>
       <div className="mx-auto mt-8 grid max-w-3xl gap-4 md:grid-cols-2">
         {PLANS.map((p) => {
-          const price = yearly && p.monthly ? Math.round((p.monthly * 10) / 12) : p.monthly;
+          // Yearly is ten months for twelve. Prices show with cents only when they have them.
+          const raw = yearly && p.monthly ? (p.monthly * 10) / 12 : p.monthly;
+          const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(".", ru ? "," : "."));
+          const price = fmt(Math.round(raw * 100) / 100);
           return (
             <section key={p.id} className={cn("flex flex-col rounded-2xl border bg-card p-6", p.featured && "border-foreground shadow-hover")}>
               <div className="flex items-center justify-between">
@@ -88,7 +92,7 @@ export function PricingPlans({ className }: { className?: string }) {
                 {p.monthly > 0 && <span className="text-sm text-muted-foreground">{ru ? "/мес" : "/month"}</span>}
               </p>
               <p className="mt-1 h-4 text-xs text-muted-foreground">
-                {yearly && p.monthly > 0 ? (ru ? `€${p.monthly * 10} в год` : `€${p.monthly * 10} billed yearly`) : ""}
+                {yearly && p.monthly > 0 ? (ru ? `€${fmt(Math.round(p.monthly * 1000) / 100)} в год` : `€${fmt(Math.round(p.monthly * 1000) / 100)} billed yearly`) : ""}
               </p>
               <p className="mt-2 text-[15px] font-light text-muted-foreground">{p.blurb[L]}</p>
               <ul className="mt-4 flex-1 space-y-2">

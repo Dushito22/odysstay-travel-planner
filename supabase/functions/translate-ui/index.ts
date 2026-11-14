@@ -27,6 +27,15 @@ async function sha(s: string) {
 
 serve(async (_req, body) => {
   if (body["lang"] !== "ru") throw new HttpError(400, "Unsupported language");
+  // The shared dictionary in one go, so a visitor's page is Russian from the first paint instead of
+  // waiting on a translation for each string. Interface-length strings only.
+  if (body["dict"] === true) {
+    const admin = adminClient();
+    const { data } = await admin.from("ui_translations").select("src,dst").eq("lang", "ru").order("created_at", { ascending: false }).limit(6000);
+    const dict: Record<string, string> = {};
+    for (const r of data ?? []) if (r.src && r.dst && String(r.src).length <= 160) dict[r.src as string] = r.dst as string;
+    return json({ dict });
+  }
   const raw = Array.isArray(body["texts"]) ? body["texts"] : [];
   const texts = [...new Set(raw.filter((t): t is string => typeof t === "string").map((t) => t.trim()).filter((t) => t && t.length <= MAX_LEN))].slice(0, MAX_TEXTS);
   if (!texts.length) return json({ translations: {} });

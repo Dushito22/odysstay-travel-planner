@@ -102,7 +102,7 @@ export function GenerateRender({
               onChange={(e) => setWish(e.target.value)}
               maxLength={500}
               rows={2}
-              placeholder={view === "interior" ? "For example: open-plan kitchen, light stone floors, linen curtains" : "For example: pool, olive trees, terracotta terrace, green shutters"}
+              placeholder={t(view === "interior" ? "For example: open-plan kitchen, light stone floors, linen curtains" : "For example: pool, olive trees, terracotta terrace, green shutters")}
               className="glass mt-2 w-full resize-none rounded-2xl p-3 text-sm outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
@@ -123,7 +123,7 @@ export function GenerateRender({
             ))}
           </div>
           <div className="mt-4 space-y-3 px-4 pb-6">
-            <p className="text-center text-[13px] font-light text-foreground/60">{t("Free accounts can create one illustration. Pro is unlimited.")}</p>
+            <p className="text-center text-[13px] font-light text-foreground/60">{t("3 free illustrations every month. Unlimited with Buyer, €9.99 a month.")}</p>
             {limit && (
               <div className="rounded-2xl bg-caution-soft p-4 text-sm text-caution">
                 <p>{limit}</p>

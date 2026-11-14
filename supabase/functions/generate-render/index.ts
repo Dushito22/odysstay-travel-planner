@@ -3,7 +3,8 @@ import { RENDER_STYLES, renderPrompt } from "../_shared/agent-core.ts";
 import { adminClient, HttpError, json, requireUser, serve, str, uuid } from "../_shared/runtime.ts";
 
 /** Free accounts get one illustration in total, to try it. */
-const FREE_TOTAL = 1;
+/** Free illustrations per calendar month: enough to fall for a house before anyone asks for money. */
+const FREE_MONTH = 3;
 /** Photo hosts we accept for restyling: real listing photos only. Court inspection photos are scanned pages
  * and are never restyled. Only URLs stored on the listing and on these hosts are fetched. */
 const PHOTO_HOSTS = [
@@ -46,16 +47,22 @@ serve(async (req, body) => {
     .select("plan")
     .eq("id", user.id)
     .maybeSingle();
-  if ((profile?.plan ?? "free") === "free") {
+  // The owner tests the product: no limit.
+  const owner = (user.email ?? "").toLowerCase() === (Deno.env.get("OWNER_EMAIL") || "gyurovik@gmail.com").toLowerCase();
+  if (!owner && (profile?.plan ?? "free") === "free") {
+    const monthStart = new Date();
+    monthStart.setUTCDate(1);
+    monthStart.setUTCHours(0, 0, 0, 0);
     const { count } = await admin
       .from("listing_images")
       .select("id", { count: "exact", head: true })
       .eq("created_by", user.id)
-      .eq("kind", "render");
-    if ((count ?? 0) >= FREE_TOTAL) {
+      .eq("kind", "render")
+      .gte("created_at", monthStart.toISOString());
+    if ((count ?? 0) >= FREE_MONTH) {
       throw new HttpError(
         429,
-        `The free plan includes ${FREE_TOTAL} illustration. Upgrade to Pro for unlimited.`,
+        `You've used this month's ${FREE_MONTH} free illustrations. They come back on the 1st, or go unlimited with Buyer at €9.99 a month.`,
       );
     }
   }
