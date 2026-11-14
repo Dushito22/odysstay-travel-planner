@@ -50,7 +50,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px -apple-system,syst
 .mb:active{transform:scale(.98)}
 .ft{position:absolute;left:0;right:0;bottom:12px;text-align:center}`;
 
-function siteHtml(l: Lang) {
+export function siteHtml(l: Lang) {
   const s = S[l];
   return `<style>${CSS}</style><div id=a></div><script>
 var T=${JSON.stringify(s)},W=TelegramWidget,A=document.getElementById('a'),rg=0,bd=1,pg=0,seq=0,box,mo;
@@ -74,12 +74,28 @@ show();
 </script>`;
 }
 
+/** The mini site, opened as a Mini App (Telegram allows in-chat widgets only for whitelisted bots). */
 export async function startSite(tg: Tg, chatId: number, lang: Lang) {
-  const sent = await tg("sendWidget", { chat_id: chatId, html: siteHtml(lang), allow_queries: true, width: 320, height: 440 });
-  if (!sent.ok) await tg("sendMessage", { chat_id: chatId, text: lang === "en" ? "The mini site won't open right now. Try again soon." : "Мини-сайт сейчас не открывается. Попробуйте чуть позже." });
+  const ru = lang !== "en";
+  await tg("sendMessage", { chat_id: chatId, text: ru ? "Дома в Италии по региону и бюджету, прямо в Telegram." : "Italian houses by region and budget, right in Telegram.",
+    reply_markup: { inline_keyboard: [[{ text: ru ? "Открыть Odysstay" : "Open Odysstay", web_app: { url: `${SITE}/tg?m=app&lang=${lang}` } }]] } });
 }
 
 /** "q:<region>:<budget>": the best houses for that region and budget, small enough for a widget answer (1024 bytes). */
+/** The same search for the Mini App: "q:<region>:<budget>:<page>" -> the JSON the widget expects. */
+export async function siteData(admin: Admin, data: string) {
+  const m = String(data).match(/^q:(\d):(\d):(\d{1,2})$/);
+  if (!m) return null;
+  const region = REGIONS[Number(m[1])], budget = BUDGETS[Number(m[2])];
+  let s = admin.from("listing_feed").select("id, comune, price_eur, surface_sqm, property_type", { count: "planned" })
+    .eq("is_demo", false).eq("is_scrap", false).eq("has_real_photo", true).not("status", "in", "(closed,withdrawn)")
+    .in("sale_type", SALE).in("property_type", TYPES).gte("price_eur", 1000).lte("price_eur", budget).gte("score", 55);
+  if (region) s = s.eq("region", region);
+  const { data: rows, count } = await s.order("score", { ascending: false, nullsFirst: false }).range(Number(m[3]) * 3, Number(m[3]) * 3 + 2);
+  const h = (rows ?? []).map((r) => [String(r.comune ?? "").slice(0, 24), Math.round(Number(r.price_eur)), r.surface_sqm ? Math.round(Number(r.surface_sqm)) : 0, Math.max(0, TYPES.indexOf(String(r.property_type))), r.id]);
+  return { n: count ?? h.length, h };
+}
+
 export async function siteQuery(admin: Admin, tg: Tg, q: Row): Promise<boolean> {
   const m = String(q.data ?? "").match(/^q:(\d):(\d):(\d{1,2})$/);
   if (!m) return false;

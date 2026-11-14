@@ -9,6 +9,7 @@ import {
   HeadContent,
   Scripts,
   type ErrorComponentProps,
+  useRouterState,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { startAutoTranslate, stopAutoTranslate } from "@/lib/autotranslate";
@@ -177,13 +178,15 @@ function RootComponent() {
     navigator.serviceWorker.register("/sw.js").catch(() => {});
   }, []);
 
+  // Inside Telegram (the Mini App at /tg) the page is the whole screen: no rail, no floating Argos.
+  const bare = useRouterState({ select: (st) => st.location.pathname.startsWith("/tg") });
   return (
     <QueryClientProvider client={queryClient}>
       <div className="md:flex">
-        <ClientOnly fallback={null}><NavRail /></ClientOnly>
+        {!bare && <ClientOnly fallback={null}><NavRail /></ClientOnly>}
         <div className="min-w-0 flex-1"><Outlet /></div>
       </div>
-      <ClientOnly fallback={null}><ArgosDock /><Analytics /></ClientOnly>
+      <ClientOnly fallback={null}>{!bare && <ArgosDock />}<Analytics /></ClientOnly>
       <Toaster />
     </QueryClientProvider>
   );

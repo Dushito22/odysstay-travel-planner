@@ -20,6 +20,7 @@ import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as StyleguideRouteImport } from './routes/styleguide'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as TgRouteImport } from './routes/tg'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedDiscoverRouteImport } from './routes/_authenticated/discover'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
@@ -86,6 +87,11 @@ const StyleguideRoute = StyleguideRouteImport.update({
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TgRoute = TgRouteImport.update({
+  id: '/tg',
+  path: '/tg',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
@@ -165,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/styleguide': typeof StyleguideRoute
   '/terms': typeof TermsRoute
+  '/tg': typeof TgRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/discover': typeof AuthenticatedDiscoverRoute
   '/inbox': typeof AuthenticatedInboxRoute
@@ -190,6 +197,7 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/styleguide': typeof StyleguideRoute
   '/terms': typeof TermsRoute
+  '/tg': typeof TgRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/discover': typeof AuthenticatedDiscoverRoute
   '/inbox': typeof AuthenticatedInboxRoute
@@ -217,6 +225,7 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/styleguide': typeof StyleguideRoute
   '/terms': typeof TermsRoute
+  '/tg': typeof TgRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/discover': typeof AuthenticatedDiscoverRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
@@ -244,6 +253,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/styleguide'
     | '/terms'
+    | '/tg'
     | '/admin'
     | '/discover'
     | '/inbox'
@@ -269,6 +279,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/styleguide'
     | '/terms'
+    | '/tg'
     | '/admin'
     | '/discover'
     | '/inbox'
@@ -295,6 +306,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/styleguide'
     | '/terms'
+    | '/tg'
     | '/_authenticated/admin'
     | '/_authenticated/discover'
     | '/_authenticated/inbox'
@@ -322,6 +334,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   StyleguideRoute: typeof StyleguideRoute
   TermsRoute: typeof TermsRoute
+  TgRoute: typeof TgRoute
   GuideSlugRoute: typeof GuideSlugRoute
   ListingIdRoute: typeof ListingIdRoute
   GuideIndexRoute: typeof GuideIndexRoute
@@ -404,6 +417,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tg': {
+      id: '/tg'
+      path: '/tg'
+      fullPath: '/tg'
+      preLoaderRoute: typeof TgRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/admin': {
@@ -541,6 +561,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   StyleguideRoute: StyleguideRoute,
   TermsRoute: TermsRoute,
+  TgRoute: TgRoute,
   GuideSlugRoute: GuideSlugRoute,
   ListingIdRoute: ListingIdRoute,
   GuideIndexRoute: GuideIndexRoute,
