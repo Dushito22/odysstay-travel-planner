@@ -1,0 +1,18 @@
+name: Telegram check
+
+# Read-only checks against the Bot API: webhook health and whether widget methods answer.
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+    steps:
+      - name: Webhook and widget methods
+        run: |
+          A="https://api.telegram.org/bot$TOKEN"
+          echo "::notice title=webhook::$(curl -sS $A/getWebhookInfo | jq -c '.result | {pending_update_count, last_error_date, last_error_message, allowed_updates}' | cut -c1-600)"
+          echo "::notice title=sendWidget probe::$(curl -sS -X POST $A/sendWidget -H 'content-type: application/json' -d '{"chat_id":1,"html":"<b>x</b>","width":300,"height":200}' | cut -c1-300)"
+          echo "::notice title=unknown method probe::$(curl -sS -X POST $A/sendNoSuchThing -d chat_id=1 | cut -c1-200)"
