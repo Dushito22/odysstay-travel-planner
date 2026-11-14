@@ -30,9 +30,11 @@ export const PROPERTY_TYPES = [
 ];
 
 export async function fetchMyProfile(): Promise<Profile | null> {
-  const { data: u } = await supabase.auth.getUser();
-  if (!u.user) return null;
-  const { data, error } = await supabase.from("profiles").select("*").eq("id", u.user.id).maybeSingle();
+  // The id from the local session; row-level security checks the token on the query itself.
+  const { data: s } = await supabase.auth.getSession();
+  const uid = s.session?.user.id;
+  if (!uid) return null;
+  const { data, error } = await supabase.from("profiles").select("*").eq("id", uid).maybeSingle();
   if (error) throw error;
   return data;
 }
