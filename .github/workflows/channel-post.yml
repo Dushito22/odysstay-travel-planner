@@ -34,6 +34,6 @@ jobs:
             esac
           fi
           R=$(curl -sS --max-time 120 -X POST https://nryhvtxprjiylajolcef.supabase.co/functions/v1/channel-post \
-            -H "content-type: application/json" -H "x-drop-secret: $SECRET" -d "{\"dry\": ${DRY:-false}, \"kind\": \"$KIND\", \"min_gap_hours\": $GAP}")
+            -H "content-type: application/json" -H "x-drop-secret: $SECRET" -d "{\"dry\": ${DRY:-false}, \"kind\": \"$KIND\", \"min_gap_hours\": $GAP, \"fix_buttons\": $([ "$KIND" = fix-buttons ] && echo true || echo false)}")
           echo "$R"
           echo "::notice title=Post::$(echo "$R" | head -c 1500)"
