@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 
-import { fetchFeed, filtersOf, prefsSearch, sortFeed, type FeedSearch } from "./feed";
+import { countFeed, fetchFeed, filtersOf, prefsSearch, sortFeed, type FeedSearch } from "./feed";
 import { profileQuery } from "./profile";
 
 /** Shared feed state for /discover and /map. Search params are the single source of truth. */
@@ -31,6 +31,15 @@ export function useFeed(search: FeedSearch, replace: (s: FeedSearch) => void) {
     queryFn: () => fetchFeed(filters, search.sort ?? "best"),
     enabled: ready,
   });
+  // The count runs beside the rows and never holds them up.
+  const c = useQuery({
+    queryKey: ["feed-count", filters, search.sort ?? "best"],
+    queryFn: () => countFeed(filters, search.sort ?? "best"),
+    enabled: ready, staleTime: 10 * 60_000,
+  });
   const rows = useMemo(() => sortFeed(q.data?.rows ?? [], search.sort ?? "best", profile), [q.data, search.sort, profile]);
-  return { profile, filters, rows, total: q.data?.total ?? 0, isLoading: !ready || q.isLoading, error: q.error };
+  const n = q.data?.rows.length ?? 0;
+  // A planner estimate can undershoot a short list; never show fewer than we hold.
+  const total = c.data != null ? Math.max(c.data, n) : n;
+  return { profile, filters, rows, total, isLoading: !ready || q.isLoading, error: q.error };
 }

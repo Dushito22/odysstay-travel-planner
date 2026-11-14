@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
   // Argos reads the reply and takes the next step himself (answers, or asks the buyer).
   const autopilot = fetch(`${(Deno.env.get("SUPABASE_URL") ?? "").replace(/\/$/, "")}/functions/v1/autopilot`, {
     method: "POST", headers: { "content-type": "application/json", "x-drop-secret": Deno.env.get("TELEGRAM_WEBHOOK_SECRET") ?? "" },
-    body: JSON.stringify({ action: "step", deal_id: deal.id, why: "The seller replied. Read it, update the buyer and decide the next move." }),
+    body: JSON.stringify({ action: "step", deal_id: deal.id, thread_id: thread.id, why: "They replied. Read it, update the buyer and decide the next move." }),
   }).catch((e) => console.error("autopilot call", e));
 
   // Tell the buyer where they'll see it.
