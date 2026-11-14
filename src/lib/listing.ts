@@ -167,6 +167,13 @@ export async function startDeal(listing: FeedRow): Promise<string> {
 
 /** Hands the deal to Argos: he writes to the seller and runs the conversation from here.
  * Pass `email` when the listing has no address for the seller. */
+/** The buyer's yes to Argos's plan for a seller who can't be reached directly. */
+export async function approveArgosPlan(dealId: string) {
+  const { data, error } = await supabase.functions.invoke("autopilot", { body: { action: "approve_plan", deal_id: dealId } });
+  if (error) throw new Error(error.message);
+  return data as { sent?: string; approved?: boolean; skipped?: string };
+}
+
 export async function startAutopilot(dealId: string, email?: string, research = false) {
   const { data, error } = await supabase.functions.invoke("autopilot", { body: { action: research ? "research" : "start", deal_id: dealId, ...(email ? { email } : {}) } });
   if (error) {

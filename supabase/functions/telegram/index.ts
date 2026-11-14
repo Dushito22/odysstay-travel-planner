@@ -96,7 +96,7 @@ async function transcribe(fileId: string): Promise<string> {
 }
 
 /** A voice note in Argos's voice. Telegram voice notes must be Ogg Opus; MP3 goes as audio instead. */
-async function sendVoice(admin: ReturnType<typeof adminClient>, chatId: number, text: string, lang: string) {
+async function sendVoice(admin: ReturnType<typeof adminClient>, chatId: number, text: string, lang: string, caption?: string, markup?: unknown) {
   if (!ELEVEN) return false;
   const clean = text.replace(/€\s?([\d.,]+)/g, "$1 euros").slice(0, 700);
   const day = new Date().toISOString().slice(0, 10);
@@ -117,6 +117,9 @@ async function sendVoice(admin: ReturnType<typeof adminClient>, chatId: number, 
     const isOpus = fmt.startsWith("opus");
     form.append(isOpus ? "voice" : "audio", new File([await r.arrayBuffer()], isOpus ? "argos.ogg" : "argos.mp3", { type: isOpus ? "audio/ogg" : "audio/mpeg" }));
     if (!isOpus) form.append("title", "Argos");
+    // The same words as text under the voice note, so it reads as one message in one language.
+    if (caption) form.append("caption", caption.slice(0, 1000));
+    if (markup) form.append("reply_markup", JSON.stringify(markup));
     const sent = await tg(isOpus ? "sendVoice" : "sendAudio", form);
     if (sent.ok) {
       await admin.from("voice_usage").upsert({ day, who, chars: used + clean.length });
@@ -204,6 +207,29 @@ Deno.serve(async (req) => {
     return new Response("ok");
   }
   const cb = update.callback_query;
+  // "Yes, go ahead" under Argos's plan for a deal.
+  if (cb?.data && /^ap:[0-9a-f-]{36}$/i.test(cb.data) && cb.message?.chat?.id) {
+    const adm = adminClient();
+    const dealId = cb.data.slice(3), chatId0 = cb.message.chat.id as number;
+    const { data: ch } = await adm.from("telegram_chats").select("user_id, lang").eq("chat_id", chatId0).maybeSingle();
+    const { data: deal } = await adm.from("deals").select("user_id").eq("id", dealId).maybeSingle();
+    const ru = (ch?.lang ?? "ru") === "ru";
+    if (!ch?.user_id || !deal || deal.user_id !== ch.user_id) {
+      await tg("answerCallbackQuery", { callback_query_id: cb.id, text: ru ? "Это не ваша сделка" : "Not your deal" });
+      return new Response("ok");
+    }
+    await tg("answerCallbackQuery", { callback_query_id: cb.id, text: ru ? "Argos взялся" : "Argos is on it" });
+    await tg("editMessageReplyMarkup", { chat_id: chatId0, message_id: cb.message.message_id, reply_markup: { inline_keyboard: [] } });
+    const r = await fetch(`${(Deno.env.get("SUPABASE_URL") ?? "").replace(/\/$/, "")}/functions/v1/autopilot`, {
+      method: "POST", headers: { "content-type": "application/json", "x-drop-secret": SECRET },
+      body: JSON.stringify({ action: "approve_plan", deal_id: dealId }),
+    }).then((x) => x.json()).catch(() => null);
+    await tg("sendMessage", { chat_id: chatId0, text: r?.sent
+      ? (ru ? `Готово. Argos написал в мэрию (${r.sent}). Ответ придёт в сделку, я сообщу.` : `Done. Argos wrote to the town hall (${r.sent}). The reply lands in the deal, I'll tell you.`)
+      : (ru ? "Принято. Argos продолжает искать контакт продавца и сообщит, как только найдёт." : "Got it. Argos keeps looking for the seller's contact and tells you the moment he finds it."),
+      reply_markup: { inline_keyboard: [[{ text: ru ? "Открыть сделку" : "Open the deal", url: `${SITE}/deals/${dealId}` }]] } });
+    return new Response("ok");
+  }
   if (cb?.data && /^g:(price|where|end|menu|top)$/.test(cb.data) && cb.message?.chat?.id) {
     await tg("answerCallbackQuery", { callback_query_id: cb.id });
     const adm = adminClient();
@@ -330,11 +356,12 @@ Deno.serve(async (req) => {
       if (!said) { await tg("sendMessage", { chat_id: chatId, text: t.deaf }); return new Response("ok"); }
     }
     if (!said) return new Response("ok");
-    if (!fixed) { if (/[а-яё]/i.test(said)) lang = "ru"; else if (/^[\x00-\x7F\s€]+$/.test(said)) lang = "en"; }
+    // Answer in the language of this message, whatever the account or the site is set to.
+    if (/[а-яё]/i.test(said)) lang = "ru"; else if (/^[\x00-\x7F\s€’'«»]+$/.test(said)) lang = "en";
     await tg("sendChatAction", { chat_id: chatId, action: spoke || voiceMode ? "record_voice" : "typing" });
 
     const voiceOut = spoke || voiceMode;
-    const convo: unknown[] = [...history, { role: "user", content: `${said}\n\n(VOICE: ${voiceOut ? "on" : "off"})` }];
+    const convo: unknown[] = [...history, { role: "user", content: `${said}\n\n(VOICE: ${voiceOut ? "on" : "off"}. Reply in ${lang === "ru" ? "Russian" : "English"}.)` }];
     let rows: Row[] = [];
     const system = SYSTEM + (userId ? await aboutBuyer(admin, userId) : "");
     let res = await claude(system, convo);
@@ -355,11 +382,10 @@ Deno.serve(async (req) => {
       text: `${r.comune ?? "Italy"} · ${typeof r.price_eur === "number" ? `€${Math.round(r.price_eur).toLocaleString("en-GB")}` : ""}`,
       url: `${SITE}/listing/${r.id}`,
     }]);
-    const voiced = voiceOut ? await sendVoice(admin, chatId, reply, lang) : false;
-    // Text always goes too when there are houses to tap, or when the voice note couldn't be made.
-    if (!voiced || buttons.length) {
-      await tg("sendMessage", { chat_id: chatId, text: voiced ? (lang === "ru" ? "Вот они:" : "Here they are:") : reply, ...(buttons.length ? { reply_markup: { inline_keyboard: buttons } } : {}) });
-    }
+    const markup = buttons.length ? { inline_keyboard: buttons } : undefined;
+    // One message: the voice note, its text underneath and the houses to tap, all in the language asked in.
+    const voiced = voiceOut ? await sendVoice(admin, chatId, reply, lang, reply, markup) : false;
+    if (!voiced) await tg("sendMessage", { chat_id: chatId, text: reply, ...(markup ? { reply_markup: markup } : {}) });
     await save([...history, { role: "user", content: said }, { role: "assistant", content: reply }]);
     if (userId) await keep(admin, userId, said, reply);
   } catch (e) {

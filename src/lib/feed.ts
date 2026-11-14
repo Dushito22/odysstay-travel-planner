@@ -87,12 +87,12 @@ const SERVER_ORDER: Record<string, { col: string; asc: boolean }> = {
   discount: { col: "discount_pct", asc: false },
 };
 
-export async function fetchFeed(f: FeedFilters, sort = "best"): Promise<{ rows: FeedRow[]; total: number }> {
-  const o = SERVER_ORDER[sort] ?? SERVER_ORDER["best"]!;
-  let q = supabase.from("listing_feed").select("*", { count: "estimated" });
-  // People choose with their eyes: on the default sorts, listings with real photos lead.
-  if (sort === "best" || sort === "foryou") q = q.order("has_real_photo", { ascending: false, nullsFirst: false });
-  q = q.order(o.col, { ascending: o.asc, nullsFirst: false }).limit(FEED_LIMIT);
+/** What a card, the sort and the map need. The heavy columns (photo lists, score reasons, summaries, contacts)
+ *  were 80% of a 1.5 MB response; the house page loads them for one house. */
+const FEED_COLS = "id,appraisal_eur,case_ref,court,discount_pct,external_id,min_offer_eur,sale_mode,address,auction_at,condition,comune,country,created_at,days_left,deadline_at,deposit_eur,document_id,hero_image_path,is_demo,land_sqm,lat,latest_render_path,has_real_photo,is_scrap,lng,lot,occupancy,previous_auction_failed,price_eur,price_per_sqm,property_type,province,red_flag_count,region,sale_type,score,source_id,source_published_at,source_title,source_url,status,surface_sqm,title_en,updated_at";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function applyFilters(q: any, f: FeedFilters, sort: string) {
   if (sort === "closing") q = q.gt("days_left", 0);
   if (f.minDiscount > 0) q = q.gte("discount_pct", f.minDiscount);
   if (!showDemo) q = q.eq("is_demo", false);
@@ -114,9 +114,33 @@ export async function fetchFeed(f: FeedFilters, sort = "best"): Promise<{ rows: 
   if (f.kind === "auction") q = q.in("sale_type", ["auction_judicial", "auction_notary"]);
   if (f.kind === "private") q = q.eq("sale_type", "sale");
   q = q.or(`sale_type.in.(${allowedSaleTypes(f).join(",")}),sale_type.is.null`);
-  const { data, error, count } = await q;
+  return q;
+}
+
+/** The feed's filters as a query, shared by the rows and the count. */
+function feedQuery(f: FeedFilters, sort: string, cols: string, head = false) {
+  const q = head
+    ? supabase.from("listing_feed").select("id", { count: "planned", head: true })
+    : supabase.from("listing_feed").select(cols);
+  return applyFilters(q, f, sort) as typeof q;
+}
+
+/** How many houses match. A planner estimate: an exact count over 25k rows took 3.3 s and broke the page
+ *  for signed-out visitors (3 s limit). It runs beside the rows, never in front of them. */
+export async function countFeed(f: FeedFilters, sort = "best"): Promise<number | null> {
+  const { count, error } = await feedQuery(f, sort, "id", true);
+  return error ? null : count ?? null;
+}
+
+export async function fetchFeed(f: FeedFilters, sort = "best"): Promise<{ rows: FeedRow[]; total: number }> {
+  const o = SERVER_ORDER[sort] ?? SERVER_ORDER["best"]!;
+  let q = feedQuery(f, sort, FEED_COLS);
+  if (sort === "best" || sort === "foryou") q = q.order("has_real_photo", { ascending: false, nullsFirst: false });
+  q = q.order(o.col, { ascending: o.asc, nullsFirst: false }).limit(FEED_LIMIT);
+  const { data, error } = await q;
   if (error) throw error;
-  return { rows: data ?? [], total: count ?? data?.length ?? 0 };
+  const rows = (data ?? []) as unknown as FeedRow[];
+  return { rows, total: rows.length };
 }
 
 export function forYouScore(r: FeedRow, p: Profile | null) {

@@ -1,12 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Copy, ExternalLink, Globe, Loader2, Mail, MessageCircle, Phone, RotateCw, Sparkles } from "lucide-react";
+import { Check, Copy, ExternalLink, Globe, Landmark, Loader2, Mail, MessageCircle, Phone, RotateCw, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Switch } from "@/components/ui/switch";
 import { updateDealSettings, type DealBundle } from "@/lib/deal";
 import { useLang } from "@/lib/i18n";
-import { startAutopilot } from "@/lib/listing";
+import { approveArgosPlan, startAutopilot } from "@/lib/listing";
 import { cn } from "@/lib/utils";
 
 type Detail = { summary?: string; question?: string; facts?: string[]; sent_to?: string };
@@ -52,6 +52,18 @@ export function ArgosStatus({ bundle, onOpenConversations }: { bundle: DealBundl
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [waiting, noEmail, searched]);
 
+  const planEv = events.find((e) => e.action === "agent_plan");
+  const plan = (planEv?.detail ?? null) as { status?: string; steps?: { kind: string; ru: string; en: string }[] } | null;
+  async function approve() {
+    setBusy(true);
+    try {
+      const r = await approveArgosPlan(deal.id);
+      toast.success(r.sent ? (ru ? `Argos написал: ${r.sent}` : `Argos wrote to ${r.sent}`) : (ru ? "Argos взялся" : "Argos is on it"));
+      await qc.invalidateQueries({ queryKey: ["deal", deal.id] });
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Try again."); }
+    finally { setBusy(false); }
+  }
+
   async function go(withEmail?: string, research = false) {
     setBusy(true);
     try {
@@ -76,8 +88,8 @@ export function ArgosStatus({ bundle, onOpenConversations }: { bundle: DealBundl
     const tried = (search.search?.tried ?? []).map((k) => names[k]?.[ru ? 0 : 1]).filter(Boolean).join(", ");
     headline = ru ? "Почта продавца скрыта" : "The seller's email is hidden";
     sub = ru
-      ? `Порталы вроде Immobiliare прячут адреса агентств за своей формой.${tried ? ` Argos проверил ${tried}.` : ""} Письмо на итальянском готово, выберите, как его доставить.`
-      : `Portals like Immobiliare hide agencies' addresses behind their own form.${tried ? ` Argos checked ${tried}.` : ""} The Italian message is ready; pick how it gets there.`;
+      ? `Порталы вроде Immobiliare прячут адреса агентств за своей формой.${tried ? ` Argos проверил ${tried}.` : ""} Ниже его план: одно «да», и он сам напишет в мэрию. Или доставьте готовое письмо продавцу одним из способов.`
+      : `Portals like Immobiliare hide agencies' addresses behind their own form.${tried ? ` Argos checked ${tried}.` : ""} His plan is below: one yes and he writes to the town hall himself. Or get the ready message to the seller one of these ways.`;
   } else if (waiting) {
     headline = ru ? "Argos ждёт вашего решения" : "Argos needs your decision";
     sub = needsQuestion ?? (ru ? "Письмо готово и ждёт вашего «да»." : "A message is ready and waits for your yes.");
@@ -117,6 +129,28 @@ export function ArgosStatus({ bundle, onOpenConversations }: { bundle: DealBundl
             className="h-10 shrink-0 rounded-full bg-azure px-5 text-[14px] text-white transition-colors hover:bg-azure/90 disabled:opacity-60">{cta.label}</button>
         )}
       </div>
+
+      {plan?.steps?.length ? (
+        <div className="border-t border-azure/15 bg-card px-4 py-4 md:px-5">
+          <p className="text-[15px] font-medium">{plan.status === "approved" ? (ru ? "План Argos, вы одобрили" : "Argos's plan, approved") : (ru ? "Argos предлагает план" : "Argos proposes a plan")}</p>
+          <ol className="mt-2.5 space-y-2">
+            {plan.steps.map((st, i) => (
+              <li key={i} className="flex gap-2.5 text-[14.5px] leading-snug">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-azure/10 text-azure">
+                  {plan.status === "approved" ? <Check className="h-3 w-3" /> : st.kind === "comune" ? <Landmark className="h-3 w-3" /> : <span className="text-[11px]">{i + 1}</span>}
+                </span>
+                {ru ? st.ru : st.en}
+              </li>
+            ))}
+          </ol>
+          {plan.status !== "approved" && (
+            <button type="button" disabled={busy} onClick={() => void approve()}
+              className="mt-3.5 h-10 rounded-full bg-azure px-5 text-[14.5px] text-white transition-colors hover:bg-azure/90 disabled:opacity-60">
+              {busy ? (ru ? "Argos пишет…" : "Argos is writing…") : (ru ? "Да, действуй" : "Yes, go ahead")}
+            </button>
+          )}
+        </div>
+      ) : null}
 
       {waiting && noEmail && !writing && <NoEmailOptions ru={ru} busy={busy} phone={contact?.phone ?? null} website={search.website ?? null}
         listingUrl={bundle.listing?.source_url ?? null} town={bundle.listing?.comune ?? ""} draft={waiting.body_original} subject={waiting.subject ?? ""}
