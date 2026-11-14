@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Check } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -113,48 +113,34 @@ function SignInSheet({ open, onOpenChange, title, total, teaser }: { open: boole
   );
 }
 
-/** The end of the free part of the feed: the next houses blurred under a sign-in card. The sheet opens
- *  once per visit, when the visitor actually reaches it. */
+/** The end of the free part of the feed: a strip of the next houses, blurred, under a sign-in card. */
 export function FeedGate({ rows, total, region }: { rows: FeedRow[]; total: number; region?: string | null }) {
   const ru = useLang() === "ru";
   const t = useT();
   const after = rows.slice(PEEK);
   const more = Math.max(0, total - PEEK);
-  const ref = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(([e]) => {
-      if (!e?.isIntersecting) return;
-      try { if (sessionStorage.getItem("gate_feed")) return; sessionStorage.setItem("gate_feed", "1"); } catch { /* storage blocked */ }
-      window.setTimeout(() => setOpen(true), 900);
-    }, { threshold: 0.35 });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
   if (!more) return null;
   const where = region ? (ru ? `: ${t(region)}` : ` in ${region}`) : "";
   const title = ru ? `Ещё ${more.toLocaleString("ru-RU")} домов${where}` : `${more.toLocaleString("en-GB")} more houses${where}`;
   return (
-    <div ref={ref} className="relative mt-5">
-      <div aria-hidden className="pointer-events-none grid select-none gap-5 opacity-70 blur-[6px] sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-        {after.slice(0, 4).map((r) => (
-          <div key={r.id} className="overflow-hidden rounded-[14px] border bg-card">
-            <div className="aspect-[4/3] bg-muted">{photo(r) && <img src={photo(r)!} alt="" referrerPolicy="no-referrer" className="h-full w-full object-cover" />}</div>
-            <div className="space-y-2 p-4"><div className="h-5 w-24 rounded bg-foreground/15" /><div className="h-4 w-40 rounded bg-foreground/10" /></div>
-          </div>
-        ))}
+    <div className="relative mt-5">
+      <div aria-hidden className="pointer-events-none h-[300px] select-none overflow-hidden [mask-image:linear-gradient(to_bottom,black,transparent)]">
+        <div className="grid gap-5 opacity-70 blur-[6px] sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+          {after.slice(0, 4).map((r, i) => (
+            <div key={r.id} className={cn("overflow-hidden rounded-[14px] border bg-card", i > 0 && "hidden sm:block", i > 1 && "sm:hidden lg:block", i > 2 && "lg:hidden 2xl:block")}>
+              <div className="aspect-[4/3] bg-muted">{photo(r) && <img src={photo(r)!} alt="" referrerPolicy="no-referrer" className="h-full w-full object-cover" />}</div>
+              <div className="space-y-2 p-4"><div className="h-5 w-24 rounded bg-foreground/15" /><div className="h-4 w-40 rounded bg-foreground/10" /></div>
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="absolute inset-0 flex items-start justify-center bg-gradient-to-b from-background/10 via-background/70 to-background pt-6 sm:pt-10">
+      <div className="relative -mt-[260px] flex justify-center px-0 sm:-mt-[240px]">
         <div className="w-full max-w-[460px] rounded-[22px] border bg-card p-6 shadow-[0_20px_60px_-20px_rgba(15,30,60,0.35)] sm:p-7">
           <p className="font-display text-[28px] leading-[1.1]">{title}</p>
           <p className="mt-1.5 text-[15px] text-foreground/65">{ru ? "Вы посмотрели лучшие. Остальные откроются после входа, это 10 секунд." : "You've seen the best ones. The rest open once you sign in, it takes 10 seconds."}</p>
           <Pitch ru={ru} total={total} teaser={after} className="mt-5" />
         </div>
       </div>
-      <div className="h-[560px] sm:h-[420px]" />
-      <SignInSheet open={open} onOpenChange={setOpen} title={title} total={total} teaser={after} />
     </div>
   );
 }

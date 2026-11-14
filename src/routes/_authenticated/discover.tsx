@@ -90,7 +90,7 @@ function DiscoverPage() {
             <div className="grid items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
               {rows.slice(0, guest ? PEEK : shown).map((r) => <ListingCard key={r.id} row={r} profile={profile} />)}
             </div>
-            {guest ? <FeedGate rows={rows} total={Math.max(total, rows.length)} region={search.regions.length === 1 ? search.regions[0] : null} />
+            {guest ? <FeedGate rows={rows} total={Math.max(total, rows.length)} region={search.regions.length === 1 ? (search.regions[0] ?? null) : null} />
               : shown < rows.length && <div ref={sentinel} className="h-10" />}
           </>
         )}
