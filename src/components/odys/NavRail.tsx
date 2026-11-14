@@ -1,8 +1,9 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, Bookmark, Compass, FolderLock, Handshake, Inbox, LogIn, LogOut, Map, PanelLeftClose, PanelLeftOpen, Sparkles, Tag, User, Shield } from "lucide-react";
+import { BookOpen, Bookmark, CircleHelp, Compass, FolderLock, Handshake, Inbox, LogIn, LogOut, Map, PanelLeftClose, PanelLeftOpen, Sparkles, Tag, User, Shield } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
+import { openGuide } from "@/components/odys/IntroGuide";
 import { supabase } from "@/integrations/supabase/client";
 import { inboxCountQuery } from "@/lib/deal";
 import { chooseLang, useLang } from "@/lib/i18n";
@@ -89,6 +90,9 @@ export function NavRail() {
       </nav>
 
       <div className="mt-auto flex flex-col gap-0.5 border-t pt-2">
+        <button type="button" onClick={openGuide} title={open ? undefined : lang === "ru" ? "Как это работает" : "How it works"} className={cn(item, "text-left")}>
+          <CircleHelp className="h-4 w-4 shrink-0" /> {label(lang === "ru" ? "Как это работает" : "How it works")}
+        </button>
         <button type="button" onClick={() => chooseLang(lang === "ru" ? "en" : "ru")} title={lang === "ru" ? "English" : "Русский"}
           className={cn(item, "justify-start text-[12.5px] uppercase")}>
           <span className="flex h-4 w-4 shrink-0 items-center justify-center text-[11px] font-semibold">{lang === "ru" ? "RU" : "EN"}</span>
