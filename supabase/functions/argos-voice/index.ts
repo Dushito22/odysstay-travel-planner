@@ -44,7 +44,7 @@ serve(async (req, body) => {
 
   const admin = adminClient();
   const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
-  let who = "", limit = ANON_DAY, signedIn = false;
+  let who = "", limit = ANON_DAY, signedIn = false, owner = false;
   if (token) {
     const { data } = await admin.auth.getUser(token);
     if (data.user) {
@@ -52,6 +52,8 @@ serve(async (req, body) => {
       who = `u:${data.user.id}`;
       const { data: p } = await admin.from("profiles").select("plan").eq("id", data.user.id).maybeSingle();
       limit = (p?.plan ?? "free") === "free" ? FREE_DAY : PRO_DAY;
+      // The owner tests the product all day: no daily cap, and not counted against everyone else's.
+      owner = (data.user.email ?? "").toLowerCase() === (Deno.env.get("OWNER_EMAIL") || "gyurovik@gmail.com").toLowerCase();
     }
   }
   if (!who) {
@@ -61,9 +63,11 @@ serve(async (req, body) => {
   const day = new Date().toISOString().slice(0, 10);
   const { data: mine } = await admin.from("voice_usage").select("chars").eq("day", day).eq("who", who).maybeSingle();
   const used = mine?.chars ?? 0;
-  if (used + text.length > limit) throw new HttpError(429, signedIn ? "voice-limit" : "voice-limit-anon");
-  const { data: all } = await admin.from("voice_usage").select("chars").eq("day", day);
-  if ((all ?? []).reduce((a, r) => a + (r.chars ?? 0), 0) + text.length > ALL_DAY) throw new HttpError(429, "voice-busy");
+  if (!owner) {
+    if (used + text.length > limit) throw new HttpError(429, signedIn ? "voice-limit" : "voice-limit-anon");
+    const { data: all } = await admin.from("voice_usage").select("chars").eq("day", day).not("who", "like", "owner:%");
+    if ((all ?? []).reduce((a, r) => a + (r.chars ?? 0), 0) + text.length > ALL_DAY) throw new HttpError(429, "voice-busy");
+  }
 
   const say = (model: string) => fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceFor(lang)}?output_format=mp3_44100_64`, {
     method: "POST",
@@ -84,7 +88,7 @@ serve(async (req, body) => {
     console.error("elevenlabs", res.status, await res.text());
     throw new HttpError(502, "voice-failed");
   }
-  await admin.from("voice_usage").upsert({ day, who, chars: used + text.length });
+  await admin.from("voice_usage").upsert({ day, who: owner ? `owner:${who}` : who, chars: used + text.length });
   return new Response(await res.arrayBuffer(), {
     headers: { ...corsHeaders, "Content-Type": "application/octet-stream", "Cache-Control": "no-store" },
   });

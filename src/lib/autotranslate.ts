@@ -94,7 +94,27 @@ function scan(root: Node) {
 
 function schedule() {
   window.clearTimeout(timer);
-  timer = window.setTimeout(flush, 180);
+  timer = window.setTimeout(flush, 60);
+}
+
+/** Loads the shared dictionary once a day, then re-applies it to anything still waiting. */
+const DICT_AT = "odys-tr-ru-dict-at";
+async function preload() {
+  try {
+    const at = Number(localStorage.getItem(DICT_AT) ?? 0);
+    if (Date.now() - at < 24 * 3600e3 && cache.size > 50) return;
+  } catch { /* no storage */ }
+  try {
+    const { data } = await supabase.functions.invoke("translate-ui", { body: { lang: "ru", dict: true } });
+    const dict = (data as { dict?: Record<string, string> } | null)?.dict ?? {};
+    for (const [k, v] of Object.entries(dict)) cache.set(norm(k), v);
+    for (const [k, nodes] of waiting) {
+      const d = cache.get(k);
+      if (d) { nodes.forEach((n) => put(n, k, d)); waiting.delete(k); pending.delete(k); }
+    }
+    persist();
+    try { localStorage.setItem(DICT_AT, String(Date.now())); } catch { /* no storage */ }
+  } catch { /* the per-string path still works */ }
 }
 
 async function flush() {
@@ -104,8 +124,9 @@ async function flush() {
   if (!keys.length) return;
   busy = true;
   try {
-    for (let i = 0; i < keys.length; i += BATCH) {
-      const chunk = keys.slice(i, i + BATCH);
+    const chunks: string[][] = [];
+    for (let i = 0; i < keys.length; i += BATCH) chunks.push(keys.slice(i, i + BATCH));
+    await Promise.all(chunks.map(async (chunk) => {
       const { data, error } = await supabase.functions.invoke("translate-ui", { body: { lang: "ru", texts: chunk } });
       const tr = (!error && (data as { translations?: Record<string, string> } | null)?.translations) || {};
       for (const k of chunk) {
@@ -120,7 +141,7 @@ async function flush() {
         }
       }
       persist();
-    }
+    }));
   } catch {
     keys.forEach((k) => { failedAt.set(k, Date.now()); waiting.delete(k); });
   } finally {
@@ -135,6 +156,7 @@ function skipPage() {
 
 export function startAutoTranslate() {
   if (observer || typeof document === "undefined") return;
+  void preload();
   const run = (n: Node) => { if (!skipPage()) scan(n); };
   run(document.body);
   observer = new MutationObserver((records) => {

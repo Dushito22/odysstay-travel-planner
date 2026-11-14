@@ -63,6 +63,29 @@ function speakBrowser(text: string, lang: string): Promise<void> {
 
 let audio: HTMLAudioElement | null = null;
 let generation = 0;
+/** One audio element for the whole call. iPhones only let a page play sound from an element the person
+ *  started with a tap, so the call button plays a moment of silence through it and every reply reuses it. */
+let player: HTMLAudioElement | null = null;
+let silence: string | null = null;
+function silentWav() {
+  if (silence) return silence;
+  const n = 1600, b = new ArrayBuffer(44 + n * 2), v = new DataView(b);
+  const w = (o: number, t: string) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+  w(0, "RIFF"); v.setUint32(4, 36 + n * 2, true); w(8, "WAVE"); w(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true);
+  v.setUint16(22, 1, true); v.setUint32(24, 16000, true); v.setUint32(28, 32000, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+  w(36, "data"); v.setUint32(40, n * 2, true);
+  silence = URL.createObjectURL(new Blob([b], { type: "audio/wav" }));
+  return silence;
+}
+/** Call this inside the tap that starts a call or turns the voice on. */
+export function unlockAudio() {
+  try {
+    if (!player) player = new Audio();
+    player.src = silentWav();
+    void player.play().catch(() => {});
+    if (canSpeak()) { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; window.speechSynthesis.speak(u); }
+  } catch { /* nothing to unlock */ }
+}
 
 export type VoiceResult = "voice" | "browser" | "limit" | "limit-anon" | "stopped";
 
@@ -86,15 +109,21 @@ export async function speak(text: string, lang: string): Promise<VoiceResult> {
     }
     const blob = data instanceof Blob ? data : new Blob([data as ArrayBuffer], { type: "audio/mpeg" });
     const url = URL.createObjectURL(new Blob([blob], { type: "audio/mpeg" }));
-    await new Promise<void>((done) => {
-      audio = new Audio(url);
-      audio.onended = () => done();
-      audio.onerror = () => done();
-      audio.onpause = () => done();
-      audio.play().catch(() => done());
+    // Ends only when the clip ends or we stop it: phones fire "pause" on small audio interruptions.
+    const played = await new Promise<boolean>((done) => {
+      const a = player ?? new Audio();
+      audio = a;
+      a.onended = () => done(true);
+      a.onerror = () => done(false);
+      a.onpause = () => { if (mine !== generation) done(true); else if (!a.ended) void a.play().catch(() => done(true)); };
+      a.src = url;
+      a.play().catch(() => done(false));
     });
     URL.revokeObjectURL(url);
-    return mine === generation ? "voice" : "stopped";
+    if (mine !== generation) return "stopped";
+    // Blocked or broken audio: say it with the browser's voice rather than stay silent.
+    if (!played) { await speakBrowser(text, lang); return "browser"; }
+    return "voice";
   } catch {
     if (mine !== generation) return "stopped";
     await speakBrowser(text, lang);
@@ -104,7 +133,7 @@ export async function speak(text: string, lang: string): Promise<VoiceResult> {
 
 export const stopSpeaking = () => {
   generation++;
-  if (audio) { audio.pause(); audio = null; }
+  if (audio) { audio.onpause = null; audio.pause(); audio = null; }
   if (canSpeak()) window.speechSynthesis.cancel();
 };
 
