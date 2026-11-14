@@ -15,6 +15,7 @@ import { useEffect, type ReactNode } from "react";
 import { startAutoTranslate, stopAutoTranslate } from "@/lib/autotranslate";
 import { rememberList } from "@/lib/last-list";
 import { ArgosDock } from "@/components/odys/ArgosDock";
+import { IntroGuide } from "@/components/odys/IntroGuide";
 import { NavRail } from "@/components/odys/NavRail";
 import { useLang } from "@/lib/i18n";
 
@@ -186,7 +187,7 @@ function RootComponent() {
         {!bare && <ClientOnly fallback={null}><NavRail /></ClientOnly>}
         <div className="min-w-0 flex-1"><Outlet /></div>
       </div>
-      <ClientOnly fallback={null}>{!bare && <ArgosDock />}<Analytics /></ClientOnly>
+      <ClientOnly fallback={null}>{!bare && <ArgosDock />}{!bare && <IntroGuide />}<Analytics /></ClientOnly>
       <Toaster />
     </QueryClientProvider>
   );
