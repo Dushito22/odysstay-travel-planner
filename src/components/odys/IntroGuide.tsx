@@ -126,12 +126,13 @@ export function IntroGuide() {
               touch.current = null;
             }}
             className={cn(
-              "fixed z-50 flex max-h-[94dvh] w-full flex-col overflow-hidden border border-white/60 bg-white/[0.72] shadow-[0_40px_120px_-30px_rgba(10,25,45,0.55)] backdrop-blur-2xl backdrop-saturate-150 outline-none dark:border-white/10 dark:bg-[#141b23]/[0.78]",
-              "inset-x-0 bottom-0 rounded-t-[28px] sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-[560px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[28px]",
+              "fixed z-50 flex flex-col overflow-hidden border border-white/60 bg-white/[0.72] shadow-[0_40px_120px_-30px_rgba(10,25,45,0.55)] backdrop-blur-2xl backdrop-saturate-150 outline-none dark:border-white/10 dark:bg-[#141b23]/[0.78]",
+              // One fixed size for every slide: the card never jumps. A floating card on phones, centred on larger screens.
+              "inset-x-3 bottom-3 h-[min(560px,calc(100dvh-24px))] rounded-[24px] sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:h-[min(620px,calc(100dvh-48px))] sm:w-[540px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[28px]",
               "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-bottom-6 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=open]:zoom-in-[0.97]",
             )}>
-            <div className="relative p-2.5 pb-0">
-              <div className="relative aspect-[16/9] overflow-hidden rounded-[20px] bg-muted">
+            <div className="relative shrink-0 p-2 pb-0 sm:p-2.5 sm:pb-0">
+              <div className="relative aspect-[2/1] overflow-hidden rounded-[18px] bg-muted sm:aspect-[16/9] sm:rounded-[20px]">
                 {SLIDES.map((sl, k) => (
                   <img key={sl.img} src={sl.img} alt="" aria-hidden={k !== n} style={{ objectPosition: sl.pos ?? "50% 50%" }}
                     className={cn("absolute inset-0 h-full w-full object-cover transition-[opacity,transform] duration-700 ease-out", k === n ? "scale-100 opacity-100" : "scale-[1.03] opacity-0")} />
@@ -160,40 +161,42 @@ export function IntroGuide() {
               </DialogPrimitive.Close>
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pb-6 pt-5 sm:px-7">
-              <div key={n} className="animate-in fade-in-0 slide-in-from-bottom-1 duration-500 sm:min-h-[248px]">
-                <DialogPrimitive.Title className="font-display text-[29px] leading-[1.08] tracking-[-0.01em] sm:text-[33px]">{s.title[i]}</DialogPrimitive.Title>
-                <DialogPrimitive.Description className="mt-3 text-[15.5px] leading-[1.6] text-foreground/75">{s.body[i]}</DialogPrimitive.Description>
-                <ul className="mt-4 flex flex-wrap gap-1.5">
+            <div className="flex min-h-0 flex-1 flex-col">
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-4 sm:px-7 sm:pt-5">
+              <div key={n} className="animate-in fade-in-0 slide-in-from-bottom-1 duration-500">
+                <DialogPrimitive.Title className="font-display text-[23px] leading-[1.1] tracking-[-0.01em] sm:text-[30px]">{s.title[i]}</DialogPrimitive.Title>
+                <DialogPrimitive.Description className="mt-2.5 text-[14px] leading-[1.55] text-foreground/75 sm:text-[15px] sm:leading-[1.6]">{s.body[i]}</DialogPrimitive.Description>
+                <ul className="mt-3 flex flex-wrap gap-1.5 pb-3">
                   {s.facts.map((f) => (
-                    <li key={f[0]} className="rounded-full border border-foreground/10 bg-white/60 px-3 py-1 text-[13px] text-foreground/80 dark:bg-white/5">{f[i]}</li>
+                    <li key={f[0]} className="rounded-full border border-foreground/10 bg-white/60 px-2.5 py-0.5 text-[12px] text-foreground/80 dark:bg-white/5 sm:text-[12.5px]">{f[i]}</li>
                   ))}
                 </ul>
               </div>
 
-              <div className="mt-6 flex items-center gap-2">
+              </div>
+              <div className="flex shrink-0 items-center gap-2 border-t border-foreground/[0.06] px-5 py-3 sm:px-7 sm:py-4">
                 {n > 0 ? (
                   <button type="button" onClick={() => go(-1)} aria-label={ru ? "Назад" : "Back"}
-                    className="flex h-11 w-11 items-center justify-center rounded-full border border-foreground/10 bg-white/50 text-foreground/70 transition hover:text-foreground dark:bg-white/5">
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-foreground/10 bg-white/50 text-foreground/70 transition hover:text-foreground dark:bg-white/5">
                     <ArrowLeft className="h-4 w-4" />
                   </button>
                 ) : (
-                  <button type="button" onClick={() => change(false)} className="h-11 px-2 text-[14.5px] text-foreground/55 transition hover:text-foreground">
+                  <button type="button" onClick={() => change(false)} className="h-9 px-1 text-[13.5px] text-foreground/55 transition hover:text-foreground">
                     {ru ? "Пропустить" : "Skip"}
                   </button>
                 )}
                 <div className="ml-auto flex gap-2">
                   {last && (
                     <button type="button" onClick={() => { change(false); openArgos({ mode: "chat" }); }}
-                      className="h-11 rounded-full border border-foreground/[0.12] bg-white/55 px-5 text-[15px] transition hover:border-foreground/30 dark:bg-white/5">
+                      className="h-9 rounded-full border border-foreground/[0.12] bg-white/55 px-4 text-[13.5px] transition hover:border-foreground/30 dark:bg-white/5">
                       {ru ? "Спросить Argos" : "Ask Argos"}
                     </button>
                   )}
                   <button ref={nextRef} type="button"
                     onClick={() => { if (last) { change(false); void navigate({ to: "/discover", search: { sort: "best" } as never }); } else go(1); }}
-                    className="flex h-11 items-center gap-2 rounded-full bg-foreground px-6 text-[15px] text-background transition hover:opacity-90">
+                    className="flex h-9 items-center gap-1.5 rounded-full bg-foreground px-4 text-[13.5px] text-background transition hover:opacity-90">
                     {last ? (ru ? "Смотреть дома" : "Show me houses") : (ru ? "Далее" : "Next")}
-                    {!last && <ArrowRight className="h-4 w-4" />}
+                    {!last && <ArrowRight className="h-3.5 w-3.5" />}
                   </button>
                 </div>
               </div>
