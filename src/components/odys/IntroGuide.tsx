@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, CircleHelp, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { openArgos } from "@/components/odys/ArgosDock";
-import { useLang } from "@/lib/i18n";
+import { chooseLang, useLang } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 /**
@@ -143,6 +143,16 @@ export function IntroGuide() {
                       className={cn("h-1.5 rounded-full bg-white transition-all duration-300", k === n ? "w-6 opacity-100" : "w-1.5 opacity-60 hover:opacity-90")} />
                   ))}
                 </div>
+              </div>
+              {/* Language, right on the photo: the guide is often the first thing a visitor reads. */}
+              <div role="group" aria-label={ru ? "Язык" : "Language"}
+                className="absolute left-5 top-5 flex h-8 items-center rounded-full border border-white/50 bg-white/60 p-0.5 text-[12.5px] backdrop-blur-md dark:border-white/10 dark:bg-black/30">
+                {(["en", "ru"] as const).map((l) => (
+                  <button key={l} type="button" onClick={() => chooseLang(l)} aria-pressed={(l === "ru") === ru}
+                    className={cn("h-7 rounded-full px-3 font-medium uppercase tracking-wide transition", (l === "ru") === ru ? "bg-foreground text-background" : "text-foreground/65 hover:text-foreground")}>
+                    {l}
+                  </button>
+                ))}
               </div>
               <DialogPrimitive.Close aria-label={ru ? "Закрыть" : "Close"}
                 className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full border border-white/50 bg-white/60 text-foreground/75 backdrop-blur-md transition hover:text-foreground dark:border-white/10 dark:bg-black/30">
