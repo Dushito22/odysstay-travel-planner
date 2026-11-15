@@ -55,6 +55,9 @@ function speakBrowser(text: string, lang: string): Promise<void> {
     const best = voices.find((v) => /premium|enhanced|natural|neural|google/i.test(v.name)) ?? voices[0];
     if (best) u.voice = best;
     u.rate = 1.02;
+    synthText = clean.length; synthAt = 0;
+    u.onstart = () => onStartCb?.();
+    u.onboundary = (e) => { synthAt = e.charIndex; };
     u.onend = () => done();
     u.onerror = () => done();
     synth.speak(u);
@@ -63,6 +66,10 @@ function speakBrowser(text: string, lang: string): Promise<void> {
 
 let audio: HTMLAudioElement | null = null;
 let generation = 0;
+/** Paused by the person talking over Argos (not stopped): playback waits to be resumed or dropped. */
+let held = false;
+let onStartCb: (() => void) | null = null;
+let synthText = 0, synthAt = 0;
 /** One audio element for the whole call. iPhones only let a page play sound from an element the person
  *  started with a tap, so the call button plays a moment of silence through it and every reply reuses it. */
 let player: HTMLAudioElement | null = null;
@@ -91,8 +98,9 @@ export type VoiceResult = "voice" | "browser" | "limit" | "limit-anon" | "stoppe
 
 /** Says a reply in Argos's own voice (ElevenLabs). Resolves when he has finished speaking.
  * Falls back to the browser voice when the voice service is off, busy or the daily allowance is used. */
-export async function speak(text: string, lang: string): Promise<VoiceResult> {
+export async function speak(text: string, lang: string, onStart?: () => void): Promise<VoiceResult> {
   stopSpeaking();
+  onStartCb = onStart ?? null;
   const mine = ++generation;
   const short = lang.slice(0, 2).toLowerCase();
   try {
@@ -115,7 +123,8 @@ export async function speak(text: string, lang: string): Promise<VoiceResult> {
       audio = a;
       a.onended = () => done(true);
       a.onerror = () => done(false);
-      a.onpause = () => { if (mine !== generation) done(true); else if (!a.ended) void a.play().catch(() => done(true)); };
+      a.onpause = () => { if (mine !== generation) done(true); else if (!held && !a.ended) void a.play().catch(() => done(true)); };
+      a.onplaying = () => { const cb = onStartCb; onStartCb = null; cb?.(); };
       a.src = url;
       a.play().catch(() => done(false));
     });
@@ -133,9 +142,94 @@ export async function speak(text: string, lang: string): Promise<VoiceResult> {
 
 export const stopSpeaking = () => {
   generation++;
+  held = false;
+  onStartCb = null;
   if (audio) { audio.onpause = null; audio.pause(); audio = null; }
   if (canSpeak()) window.speechSynthesis.cancel();
 };
 
 /** Argos can always speak: his own voice, or the browser's. */
 export const canVoice = () => typeof window !== "undefined" && ("Audio" in window || canSpeak());
+
+
+/** Someone started talking over Argos: pause him and say how far into the reply he got (0..1). */
+export function holdSpeaking(): number | null {
+  if (audio && !audio.paused) {
+    held = true;
+    const d = audio.duration;
+    const r = d && Number.isFinite(d) ? audio.currentTime / d : 0.5;
+    audio.pause();
+    return r;
+  }
+  if (canSpeak() && window.speechSynthesis.speaking) {
+    held = true;
+    window.speechSynthesis.pause();
+    return synthText ? synthAt / synthText : 0.5;
+  }
+  return null;
+}
+
+/** It was only an "ага": carry on from where he stopped. */
+export function resumeSpeaking() {
+  held = false;
+  if (audio) void audio.play().catch(() => {});
+  else if (canSpeak()) window.speechSynthesis.resume();
+}
+
+// ---- Hearing the person while Argos talks (barge-in) ----
+// One microphone stream for the whole call, with the phone's echo cancellation, so Argos's own voice
+// from the speaker is mostly removed and what is left is the person.
+let mic: MediaStream | null = null;
+let actx: AudioContext | null = null;
+
+export async function openMic() {
+  if (mic || typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) return;
+  try {
+    mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    actx = new AC();
+  } catch { mic = null; actx = null; }
+}
+
+export function closeMic() {
+  mic?.getTracks().forEach((t) => t.stop());
+  mic = null;
+  void actx?.close().catch(() => {});
+  actx = null;
+}
+
+/** Calls onSpeech once the person has clearly been talking for about a third of a second. The first moment
+ *  of each watch measures how loud Argos's own leftover echo is, so his voice alone never triggers it. */
+export function watchVoice(onSpeech: () => void): () => void {
+  if (!mic || !actx) return () => {};
+  void actx.resume().catch(() => {});
+  const src = actx.createMediaStreamSource(mic);
+  const an = actx.createAnalyser();
+  an.fftSize = 1024;
+  src.connect(an);
+  const buf = new Float32Array(an.fftSize);
+  const t0 = performance.now();
+  let floor = 0, loud = 0, last = t0, stopped = false;
+  const id = window.setInterval(() => {
+    if (stopped) return;
+    an.getFloatTimeDomainData(buf);
+    let sum = 0;
+    for (let i = 0; i < buf.length; i++) sum += buf[i]! * buf[i]!;
+    const rms = Math.sqrt(sum / buf.length);
+    const now = performance.now(), dt = now - last;
+    last = now;
+    if (now - t0 < 700) { floor = Math.max(floor, rms); return; }
+    const th = Math.max(0.03, floor * 2.2);
+    loud = rms > th ? loud + dt : Math.max(0, loud - dt * 0.6);
+    if (loud > 330) { stopped = true; window.clearInterval(id); onSpeech(); }
+  }, 40);
+  return () => { stopped = true; window.clearInterval(id); try { src.disconnect(); } catch { /* gone */ } };
+}
+
+/** Listens once and resolves with what was said ("" for nothing). */
+export function listenOnce(lang: string, onText: (t: string) => void): Promise<string> {
+  return new Promise((done) => {
+    let finished = false;
+    listen(lang, onText, (t) => { if (!finished) { finished = true; done(t); } }, () => { if (!finished) { finished = true; done(""); } });
+  });
+}
