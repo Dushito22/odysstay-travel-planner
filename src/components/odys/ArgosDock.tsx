@@ -13,7 +13,7 @@ import { parseRequest, runSearch } from "@/lib/argos";
 import { isCourtPhoto, renderUrl, type FeedRow } from "@/lib/feed";
 import { speechLang, useLang } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { canListen, listen, speak, stopSpeaking, unlockAudio } from "@/lib/voice";
+import { canListen, closeMic, holdSpeaking, listen, listenOnce, openMic, resumeSpeaking, speak, stopSpeaking, unlockAudio, watchVoice } from "@/lib/voice";
 
 type Msg = { role: "user" | "argos"; text: string; rows?: FeedRow[] };
 type Mode = "chat" | "call";
@@ -100,13 +100,15 @@ export function ArgosDock() {
   }, [listingId]);
 
   useEffect(() => { bottom.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs.length, busy, partial]);
+  // However a call ends (hang up, limit, error, closing the panel), the microphone is released.
+  useEffect(() => { if (call === "ended" || call === "idle") closeMic(); }, [call]);
   useEffect(() => {
     if (call === "idle" || call === "ended") return;
     const id = window.setInterval(() => setSeconds((s) => s + 1), 1000);
     return () => window.clearInterval(id);
   }, [call]);
 
-  const ask = useCallback(async (text: string, how: Mode): Promise<string> => {
+  const ask = useCallback(async (text: string, how: Mode, note?: string): Promise<string> => {
     const history = [...msgsRef.current, { role: "user" as const, text }];
     setMsgs(history);
     setBusy(true);
@@ -118,7 +120,7 @@ export function ArgosDock() {
     let reply = t.error;
     try {
       const r = await callFunction<{ reply: string }>("argos", {
-        messages: history.slice(-10).map((m) => ({ role: m.role, text: m.text })),
+        messages: history.slice(-10).map((m, k, all) => ({ role: m.role, text: note && k === all.length - 1 ? `${m.text}\n\n${note}` : m.text })),
         language: lang === "ru" ? "Russian" : "English",
         mode: how,
         listing_id: listingId,
@@ -137,7 +139,73 @@ export function ArgosDock() {
     return reply;
   }, [lang, listingId, t.error]);
 
-  // Phone call: listen, think, speak, listen again.
+  // Phone call: listen, think, speak, listen again. While Argos speaks he keeps listening: talk over him
+  // and he pauses; an "ага" lets him carry on, anything else and he answers it, knowing where he stopped.
+  const turnRef = useRef<{ listen: () => void; say: (reply: string) => Promise<void> } | null>(null);
+  const BACKCHANNEL = /^(ага|угу|ну|да|ясно|понятно|так|хорошо|окей|ок|мм+|ммм|ok|okay|yeah|yes|yep|mhm|uh-huh|right|sure|i see|got it|sì|si|certo)[.!?,]*$/i;
+
+  const handleHeard = useCallback(async (heard: string, cut?: string) => {
+    if (!inCall.current) return;
+    misses.current = 0;
+    if (cut != null) {
+      // Show (and remember) only what he actually said before he was interrupted.
+      setMsgs((m) => { const c = [...m]; const l = c[c.length - 1]; if (l?.role === "argos") c[c.length - 1] = { ...l, text: cut ? `${cut}…` : "…" }; return c; });
+      await new Promise((r) => window.setTimeout(r, 0));
+    }
+    setCall("thinking");
+    const note = cut != null
+      ? (lang === "ru"
+        ? `(Тебя перебили. Ты успел сказать: «${cut}». Учти, что сказал человек; если он просит продолжить, продолжи с того места, не повторяясь.)`
+        : `(You were interrupted. You had got as far as: "${cut}". Take what they said into account; if they want you to go on, continue from there without repeating.)`)
+      : undefined;
+    const reply = await ask(heard, "call", note);
+    if (!inCall.current) return;
+    await turnRef.current?.say(reply);
+  }, [ask, lang]);
+
+  const say = useCallback(async (reply: string) => {
+    if (!inCall.current) return;
+    setCall("speaking");
+    let unwatch: () => void = () => {};
+    let barge: () => void = () => {};
+    const bargeIn = () => new Promise<"barge">((res) => { barge = () => res("barge"); });
+    let interrupted = bargeIn();
+    const playing = speak(reply, speechLang(lang), () => { unwatch = watchVoice(() => barge()); });
+    for (;;) {
+      const r = await Promise.race([playing, interrupted]);
+      unwatch();
+      if (!inCall.current) { stopSpeaking(); return; }
+      if (r !== "barge") {
+        if (r === "limit-anon") { inCall.current = false; setAnonOut(true); setCall("ended"); return; }
+        if (r === "limit") setNote(t.limit);
+        if (r === "stopped") return;
+        turnRef.current?.listen();
+        return;
+      }
+      // They started talking: pause, hear them out.
+      const ratio = holdSpeaking();
+      if (ratio == null) { turnRef.current?.listen(); return; }
+      setCall("listening");
+      setPartial("");
+      const heard = (await listenOnce(speechLang(lang), setPartial)).trim();
+      setPartial("");
+      if (!inCall.current) { stopSpeaking(); return; }
+      if (!heard || BACKCHANNEL.test(heard) || (heard.split(/\s+/).length < 2 && heard.length < 6)) {
+        // Just listening along, or a noise: carry on.
+        setCall("speaking");
+        interrupted = bargeIn();
+        resumeSpeaking();
+        unwatch = watchVoice(() => barge());
+        continue;
+      }
+      const upto = reply.slice(0, Math.round(reply.length * Math.min(1, Math.max(0, ratio))));
+      const cut = upto.includes(" ") && ratio < 0.97 ? upto.slice(0, upto.lastIndexOf(" ")) : upto;
+      stopSpeaking();
+      await handleHeard(heard, cut);
+      return;
+    }
+  }, [handleHeard, lang, t.limit]);
+
   const listenTurn = useCallback(() => {
     if (!inCall.current) return;
     setCall("listening");
@@ -156,18 +224,10 @@ export function ArgosDock() {
       const words = heard.trim().split(/\s+/).filter(Boolean);
       const SHORT = /^(да|нет|ага|давай|ок|окей|хорошо|спасибо|yes|no|ok|okay|sure|thanks|sì|si|grazie)[.!?]*$/i;
       if (words.length < 2 && heard.trim().length < 8 && !SHORT.test(heard.trim())) { listenTurn(); return; }
-      misses.current = 0;
-      setCall("thinking");
-      const reply = await ask(heard, "call");
-      if (!inCall.current) return;
-      setCall("speaking");
-      const how = await speak(reply, speechLang(lang));
-      if (how === "limit-anon") { inCall.current = false; setAnonOut(true); setCall("ended"); return; }
-      if (how === "limit") setNote(t.limit);
-      if (how === "stopped" || !inCall.current) return;
-      listenTurn();
+      await handleHeard(heard);
     }, (err) => { inCall.current = false; setCall("ended"); setNote(err); });
-  }, [ask, lang, t.didntCatch, t.limit]);
+  }, [handleHeard, lang, t.didntCatch]);
+  turnRef.current = { listen: listenTurn, say };
 
   const startCall = useCallback(async (helloOverride?: string) => {
     unlockAudio(); // still inside the tap that started the call
@@ -178,21 +238,21 @@ export function ArgosDock() {
     inCall.current = true;
     // On a call, a short hello: the long one took most of the first fifteen seconds.
     const hello = helloOverride ?? (msgsRef.current.length ? null : t.callHello);
+    void openMic(); // for hearing them while Argos talks; the call works without it
     if (hello) {
       setMsgs((m) => [...(helloOverride ? m : []), { role: "argos", text: hello }]);
-      setCall("speaking");
-      const how = await speak(hello, speechLang(lang));
-      if (how === "limit-anon") { inCall.current = false; setAnonOut(true); setCall("ended"); return; }
-      if (!inCall.current) return;
+      await say(hello);
+      return;
     }
     listenTurn();
-  }, [comune, lang, listenTurn, listingId, t]);
+  }, [comune, lang, listenTurn, listingId, say, t]);
 
   const endCall = useCallback(() => {
     inCall.current = false;
     stopListen.current?.();
     stopListen.current = null;
     stopSpeaking();
+    closeMic();
     setPartial("");
     setCall("ended");
   }, []);
