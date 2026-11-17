@@ -180,3 +180,7 @@ def test_dedupe_keeps_court_copy_and_lends_photos():
     c = {"id": "c", "comune": "Lucca", "property_type": "house", "price_eur": 50000, "surface_sqm": 70, "document": {"source_id": "immobiliare"}}
     assert dedupe.same(a, b) and not dedupe.same(a, c)
     assert max([a, b], key=dedupe._richness)["id"] == "b"
+    g1 = {"price_eur": 5120, "surface_sqm": None, "lat": 45.5, "lng": 9.5, "document": {"source_id": "pvp"}}
+    assert not dedupe.same(g1, {**g1})  # two garages from one court procedure
+    f1 = {"price_eur": 40500, "surface_sqm": 107.2, "document": {"source_id": "pvp"}}
+    assert not dedupe.same(f1, {**f1, "price_eur": 40000}) and dedupe.same(f1, {**f1})
