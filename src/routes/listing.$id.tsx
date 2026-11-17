@@ -684,8 +684,24 @@ function Gallery({ data, userId }: { data: ListingBundle; userId: string | null 
         </div>
       )}
       {img?.caption_en && <p className="mt-2 text-[15px] text-muted-foreground">{img.kind === "scan" ? img.caption_en : t(img.caption_en)}</p>}
+      {!hasReal && <SourceNote l={l} />}
     </div>
   );
+}
+
+/** Why an official notice looks bare next to an agency ad, and why that's the point. */
+function SourceNote({ l }: { l: ListingBundle["listing"] }) {
+  const ru = useLang() === "ru";
+  const src = String((l as { source_id?: string | null }).source_id ?? "");
+  const auction = String(l.sale_type ?? "").startsWith("auction");
+  const town = ["comune", "gazzetta", "one_euro"].includes(src) || l.sale_type === "one_euro";
+  if (!auction && !town) return null;
+  const text = town
+    ? (ru ? "Это официальное объявление мэрии: фото мало, зато без посредников и обычно намного ниже рынка. Argos может запросить фото и показ."
+      : "This is an official town-hall notice: few photos, but no agent in between and usually well under the market. Argos can ask the town hall for photos and a viewing.")
+    : (ru ? "Это торги: фото обычно из отчёта оценщика. Зато цена часто ниже оценки, а Argos прочитает отчёт и найдёт риски."
+      : "This is an auction: photos usually come from the valuer's report. The price is often under the appraisal, and Argos reads the report for risks.");
+  return <p className="mt-2 rounded-[10px] bg-muted/70 px-3.5 py-2.5 text-[14px] font-light leading-snug text-foreground/70">{text}</p>;
 }
 
 type Item = { item_en: string; low_eur: number; high_eur: number };

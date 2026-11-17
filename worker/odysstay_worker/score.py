@@ -172,11 +172,13 @@ def _proof(l: dict) -> str:
     if price and sqm and sqm > 10 and lo and hi and l.get("property_type") in RESIDENTIAL:
         gap = 100 * (1 - (price / sqm) / ((float(lo) + float(hi)) / 2))
     disc = l.get("discount_pct")
-    if (gap is not None and gap >= 40) or (disc is not None and disc >= 45):
+    if gap is not None and gap > 85:
+        return "suspect"  # a tenth of the area value: a share, a deposit, a rent or a typo, until a person checks
+    if (gap is not None and gap >= 45) or (disc is not None and disc >= 50):
         return "strong"
-    if (gap is not None and gap >= 20) or (disc is not None and disc >= 25):
+    if (gap is not None and gap >= 30) or (disc is not None and disc >= 35):
         return "some"
-    if price and sqm and sqm >= 50 and price / sqm <= 350 and l.get("property_type") in RESIDENTIAL:
+    if price and sqm and sqm >= 60 and price / sqm <= 250 and l.get("property_type") in RESIDENTIAL:
         return "some"
     return ""
 
@@ -219,16 +221,19 @@ def score_listing(l: dict, red_flags: int | dict[str, int], today: date | None =
         s += max(0.0, 2.0 - (price / sqm) / 500)
     # A high score has to be earned with proof that the price is low for what it is, not just a cheap number.
     proof = _proof(l)
-    lim, why = (97, "") if proof == "strong" else (84, "85+ needs the price checked against the area's official value or a court appraisal") \
-        if proof == "some" else (74, "75+ needs proof the price is low for the area")
+    lim, why = {
+        "strong": (97, ""),
+        "some": (82, "a top score needs the price well under the area's official value or a court appraisal"),
+        "suspect": (60, "the price is so far under the area value that it needs checking (a share, a deposit or a typo?)"),
+    }.get(proof, (68, "70+ needs proof the price is low for the area"))
     if not sqm and l.get("property_type") != "land":
-        lim, why = min(lim, 70), "size not stated, so the price can't be judged"
-    if sev.get("high"):
-        lim, why = min(lim, 74), "a serious red flag in the documents"
+        lim, why = min(lim, 66), "size not stated, so the price can't be judged"
     if l.get("occupancy") == "occupied":
-        lim, why = min(lim, 70), "occupied"
+        lim, why = min(lim, 66), "occupied"
     if proof == "strong" and not l.get("photo_urls") and lim > 84:
         lim, why = 84, "no photos yet"
+    if sev.get("high"):
+        lim, why = min(lim, 70), "a serious red flag in the documents"
     if s > lim:
         reasons.append(f"held at {lim}: {why}")
         s = lim
@@ -268,7 +273,7 @@ def run(db: Supa, log=print) -> int:
 def preview(db: Supa, log=print) -> dict:
     """What the score would be, without writing: the spread, by source, and the top houses."""
     listings = db.select("listings", {"select": "id,comune,region,price_eur,surface_sqm,property_type,sale_type,discount_pct,lat,lng,condition,"
-                                      "previous_auction_failed,occupancy,deadline_at,auction_at,status,score,photo_urls,omi_eur_m2_min,omi_eur_m2_max,duplicate_of",
+                                      "previous_auction_failed,occupancy,deadline_at,auction_at,status,score,photo_urls,omi_eur_m2_min,omi_eur_m2_max,duplicate_of,is_scrap",
                                       "is_demo": "eq.false", "status": "neq.withdrawn", "order": "id"})
     flags: dict[str, dict[str, int]] = {}
     for f in db.select("listing_red_flags", {"select": "listing_id,severity"}):
@@ -279,7 +284,7 @@ def preview(db: Supa, log=print) -> dict:
     top = []
     for l in listings:
         s, _, st = score_listing(l, flags.get(l["id"], {}))
-        if st in ("closed", "withdrawn") or l.get("duplicate_of"):
+        if st in ("closed", "withdrawn") or l.get("duplicate_of") or l.get("is_scrap"):
             continue
         new[int(s // 10)] += 1
         old[int((l.get("score") or 0) // 10)] += 1

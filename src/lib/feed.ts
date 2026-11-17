@@ -73,6 +73,10 @@ export function allowedSaleTypes(f: Pick<FeedFilters, "leases" | "oneEuro">) {
   return t;
 }
 
+/** Where a house comes from, as the buyer sees it: an agency ad, a town hall or €1 notice, or an auction. */
+export const PUBLIC_SOURCES = ["comune", "gazzetta", "one_euro"];
+export const SOURCE_KINDS = ["all", "agency", "public", "auction"] as const;
+
 export const showDemo = import.meta.env['VITE_SHOW_DEMO'] === "true";
 
 export const FEED_LIMIT = 300;
@@ -114,6 +118,10 @@ function applyFilters(q: any, f: FeedFilters, sort: string) {
   if (f.newDays > 0) q = q.gte("created_at", new Date(Date.now() - f.newDays * 864e5).toISOString());
   if (f.kind === "auction") q = q.in("sale_type", ["auction_judicial", "auction_notary"]);
   if (f.kind === "private") q = q.eq("sale_type", "sale");
+  if (f.kind === "agency") q = q.eq("source_id", "immobiliare");
+  if (f.kind === "public") q = q.in("source_id", PUBLIC_SOURCES);
+  // The same house from a second source (an agency ad of a court sale, one lot on two auction sites).
+  q = q.is("duplicate_of", null);
   q = q.or(`sale_type.in.(${allowedSaleTypes(f).join(",")}),sale_type.is.null`);
   return q;
 }

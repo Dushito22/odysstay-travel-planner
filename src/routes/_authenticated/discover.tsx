@@ -3,7 +3,7 @@ import { zodValidator } from "@tanstack/zod-adapter";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ArgosComposer } from "@/components/odys/ArgosComposer";
-import { FilterBar } from "@/components/odys/FilterBar";
+import { FilterBar, SourceTabs } from "@/components/odys/FilterBar";
 import { RESET_SEARCH } from "@/components/odys/Filters";
 import { FeedGate, PEEK } from "@/components/odys/SignInGate";
 import { ListingCard, ListingCardSkeleton } from "@/components/odys/ListingCard";
@@ -71,6 +71,7 @@ function DiscoverPage() {
 
       {/* Directly in the page column, so it stays pinned while the results scroll. */}
       <FilterBar className="mt-6" value={search} onChange={patch} onReset={() => replace(RESET_SEARCH)} right={<SaveSearchButton filters={filters} sort={sort} compact />} />
+      <SourceTabs className="mt-3" value={search.kind ?? "all"} onChange={(kind) => patch({ kind })} />
 
       <div className="mt-6">
         {error ? (

@@ -164,11 +164,13 @@ def test_high_score_needs_proof():
     base = {"price_eur": 25000, "surface_sqm": 120, "property_type": "house", "condition": "ready", "sale_type": "sale",
             "lat": 43.32, "lng": 11.33, "occupancy": "free", "photo_urls": ["x"]}
     plain, reasons, _ = score.score_listing({**base, "surface_sqm": 60, "price_eur": 60000}, 0)
-    assert plain <= 74 and any(r.startswith("held at 74") for r in reasons)
+    assert plain <= 68 and any(r.startswith("held at 68") for r in reasons)
     proven, _, _ = score.score_listing({**base, "omi_eur_m2_min": 900, "omi_eur_m2_max": 1300}, 0)
     assert proven >= 85
     no_size, _, _ = score.score_listing({**base, "surface_sqm": None, "omi_eur_m2_min": 900, "omi_eur_m2_max": 1300}, 0)
-    assert no_size <= 70
+    assert no_size <= 66
+    bogus, _, _ = score.score_listing({**base, "price_eur": 1000, "omi_eur_m2_min": 900, "omi_eur_m2_max": 1300}, 0)
+    assert bogus <= 60
 
 
 def test_dedupe_keeps_court_copy_and_lends_photos():

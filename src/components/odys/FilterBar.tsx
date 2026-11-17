@@ -36,7 +36,7 @@ export function FilterBar({ value: v, onChange, onReset, right, className }: Pro
   const priceLabel = v.minPrice && v.maxPrice ? `${formatEur(v.minPrice)} – ${formatEur(v.maxPrice)}`
     : v.maxPrice ? `${t("Up to")} ${formatEur(v.maxPrice)}` : v.minPrice ? `${t("From")} ${formatEur(v.minPrice)}` : t("Any price");
   const typeLabel = !v.types.length ? t("Any type") : v.types.length === 1 ? t(TYPE_LABELS[v.types[0]!] ?? v.types[0]!) : `${t(TYPE_LABELS[v.types[0]!] ?? "")} +${v.types.length - 1}`;
-  const extra = (v.minSurface ? 1 : 0) + (v.newDays ? 1 : 0) + (v.kind && v.kind !== "all" ? 1 : 0) + v.condition.length + (v.realPhotos ? 1 : 0)
+  const extra = (v.minSurface ? 1 : 0) + (v.newDays ? 1 : 0) + v.condition.length + (v.realPhotos ? 1 : 0)
     + (v.minScore ? 1 : 0) + (v.minDiscount ? 1 : 0) + (v.leases ? 1 : 0) + (v.unsold ? 1 : 0) + (!v.oneEuro ? 1 : 0);
   const touched = v.regions.length || v.types.length || v.minPrice || v.maxPrice || v.q || extra;
   const regionPicker = (
@@ -111,8 +111,6 @@ export function FilterBar({ value: v, onChange, onReset, right, className }: Pro
               <Section title={ru ? "Показать" : "Show"}>
                 <div className="flex flex-wrap gap-1.5">
                   <Pill active={v.newDays === 7} onClick={() => set({ newDays: v.newDays === 7 ? 0 : 7, ...(v.newDays === 7 ? {} : { sort: "newest" }) })}>{t("New this week")}</Pill>
-                  <Pill active={v.kind === "private"} onClick={() => set({ kind: v.kind === "private" ? "all" : "private" })}>{t("Private sales")}</Pill>
-                  <Pill active={v.kind === "auction"} onClick={() => set({ kind: v.kind === "auction" ? "all" : "auction" })}>{t("Auctions")}</Pill>
                 </div>
               </Section>
               <Section title={t("Min surface m²")}>
@@ -198,5 +196,46 @@ function Num({ label, value, onChange }: { label: string; value: number; onChang
         onBlur={() => onChange(Number(s) || 0)} onKeyDown={(e) => e.key === "Enter" && onChange(Number(s) || 0)}
         className="mt-0.5 h-9 w-full rounded-lg border bg-background px-2.5 text-[13px] outline-none focus:border-foreground/40" />
     </label>
+  );
+}
+
+const KIND_COPY = {
+  all: { en: "Everything", ru: "Все" },
+  agency: {
+    en: "Agencies", ru: "Агентства",
+    noteEn: "Agency listings: proper photos, viewings and room to negotiate. Prices sit closer to the market.",
+    noteRu: "Объявления агентств: нормальные фото, показы, можно торговаться. Цены ближе к рыночным.",
+  },
+  public: {
+    en: "Town halls & €1", ru: "Мэрии и дома за €1",
+    noteEn: "Straight from Italian town halls' official notices. Fewer photos, plain text and fixed deadlines, but no agent in between and prices often far below the market. Argos reads the paperwork and writes to the town hall for you.",
+    noteRu: "Прямо из официальных объявлений итальянских мэрий. Фото меньше, текст сухой, сроки жёсткие, зато без посредников и часто намного ниже рынка. Argos прочитает документы и напишет в мэрию за вас.",
+  },
+  auction: {
+    en: "Auctions", ru: "Торги",
+    noteEn: "Court and notary sales. Photos are often a few shots from the valuer's report, but the starting price can be well under the appraisal, and in court sales mortgages and liens are cleared on transfer. Argos checks the report for you.",
+    noteRu: "Судебные и нотариальные торги. Фото часто пара снимков из отчёта оценщика, зато стартовая цена бывает намного ниже оценки, а в судебных продажах ипотеки и обременения снимаются при передаче. Argos проверит отчёт за вас.",
+  },
+} as const;
+
+/** Where the houses come from, always in view: one tap to see only town-hall notices or only auctions,
+ *  with one honest line on what that source is like. */
+export function SourceTabs({ value, onChange, className }: { value: string; onChange: (kind: string) => void; className?: string }) {
+  const ru = useLang() === "ru";
+  const cur = (value in KIND_COPY ? value : "all") as keyof typeof KIND_COPY;
+  const note = cur === "all" ? null : ru ? KIND_COPY[cur].noteRu : KIND_COPY[cur].noteEn;
+  return (
+    <div className={className}>
+      <div role="tablist" aria-label={ru ? "Источник" : "Source"} className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-0.5">
+        {(Object.keys(KIND_COPY) as (keyof typeof KIND_COPY)[]).map((k) => (
+          <button key={k} type="button" role="tab" aria-selected={cur === k} onClick={() => onChange(k)}
+            className={cn("h-8 shrink-0 rounded-full px-3.5 text-[13px] transition-colors",
+              cur === k ? "bg-azure text-white" : "text-foreground/65 hover:bg-foreground/5 hover:text-foreground")}>
+            {ru ? KIND_COPY[k].ru : KIND_COPY[k].en}
+          </button>
+        ))}
+      </div>
+      {note && <p className="mt-2 max-w-[760px] text-[14px] font-light leading-snug text-foreground/65">{note}</p>}
+    </div>
   );
 }
