@@ -17,6 +17,8 @@
   python -m odysstay_worker status                     counts at a glance
   python -m odysstay_worker omi                        official OMI value per m² for each listing's zone, then rescore
   python -m odysstay_worker deep [--limit 30]          read the appraisal report of starred listings (rules, no AI)
+  python -m odysstay_worker dedupe                     mark the same house listed twice (keeps the richest copy)
+  python -m odysstay_worker score-preview              what the score would give, without writing
   python -m odysstay_worker daily                      refresh court sales, map, scores and estimates (no AI)
 """
 from __future__ import annotations
@@ -98,6 +100,8 @@ def main(argv=None):
     dp.add_argument("--limit", type=int, default=30)
     dp.add_argument("--sample", type=int, default=0, help="first queue this many top listings (for testing)")
     sub.add_parser("daily")
+    sub.add_parser("dedupe")
+    sub.add_parser("score-preview")
 
     a = p.parse_args(argv)
     from . import config
@@ -178,6 +182,12 @@ def main(argv=None):
     elif a.cmd == "pvp-probe":
         from .collectors import pvp_probe
         pvp_probe.run()
+    elif a.cmd == "dedupe":
+        from . import dedupe
+        dedupe.run(db)
+    elif a.cmd == "score-preview":
+        from . import score
+        score.preview(db)
     elif a.cmd == "geocode":
         from . import geocode
         geocode.run(db)
@@ -214,6 +224,11 @@ def main(argv=None):
             omi.run(db)
         except Exception as e:  # noqa: BLE001
             print(f"omi: error {e}")
+        from . import dedupe
+        try:
+            dedupe.run(db)
+        except Exception as e:  # noqa: BLE001
+            print(f"dedupe: error {e}")
         score.run(db)
         costs.run(db)
         status(db)
