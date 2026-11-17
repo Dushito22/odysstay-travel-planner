@@ -263,8 +263,16 @@ def run(db: Supa, log=print) -> int:
         if (l.get("score"), l.get("score_reasons"), l.get("status")) != (s, reasons, status):
             changed[l["id"]] = {"id": l["id"], "score": s, "score_reasons": reasons, "status": status}
     rows = list(changed.values())
-    for i in range(0, len(rows), 500):  # one request per 500 rows instead of one per row
-        db.upsert("listings", rows[i : i + 500], on_conflict="id")
+    import time
+    for i in range(0, len(rows), 150):  # batches: one request per 150 rows (500 timed out on a full rescore)
+        for attempt in range(4):
+            try:
+                db.upsert("listings", rows[i : i + 150], on_conflict="id")
+                break
+            except RuntimeError as e:
+                if "57014" not in str(e) or attempt == 3:
+                    raise
+                time.sleep(5 * (attempt + 1))
     n = len(changed)
     log(f"Scored {len(listings)} listings ({n} changed)")
     return n
