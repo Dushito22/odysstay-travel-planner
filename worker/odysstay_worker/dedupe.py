@@ -30,19 +30,28 @@ def _km(a: dict, b: dict) -> float | None:
     return math.hypot(dx, dy)
 
 
+def _src(l: dict) -> str:
+    return ((l.get("document") or {}).get("source_id")) or ""
+
+
 def same(a: dict, b: dict) -> bool:
     pa, pb = a.get("price_eur"), b.get("price_eur")
     if not pa or not pb or abs(pa - pb) > 0.02 * max(pa, pb):
         return False
     sa, sb = a.get("surface_sqm"), b.get("surface_sqm")
+    if _src(a) == _src(b) and _src(a) in ("pvp", "notary", "aste"):
+        # One court procedure often sells several identical lots (garages, flats in one block) at one price:
+        # only the same size to the square metre and the same price to the euro counts as the same lot.
+        return bool(sa and sb) and abs(sa - sb) <= 0.01 * max(sa, sb) and abs(pa - pb) <= 0.005 * max(pa, pb)
     if sa and sb:
         return abs(sa - sb) <= 0.06 * max(sa, sb)
+    # No size on one side: only a different source at the very same price and spot.
     d = _km(a, b)
-    return d is not None and d <= 0.3
+    return _src(a) != _src(b) and abs(pa - pb) < 1 and d is not None and d <= 0.3
 
 
 def _richness(l: dict) -> tuple:
-    src = ((l.get("document") or {}).get("source_id")) or ""
+    src = _src(l)
     filled = sum(1 for k in ("surface_sqm", "discount_pct", "condition", "occupancy", "lat") if l.get(k) is not None)
     return (SOURCE_RANK.get(src, 1), bool(l.get("photo_urls")), filled, l.get("created_at") or "")
 
