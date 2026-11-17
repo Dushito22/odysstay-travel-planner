@@ -28,8 +28,8 @@ function DiscoverPage() {
   const ru = useLang() === "ru";
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/discover" });
-  const replace = useCallback((s: FeedSearch) => navigate({ search: s, replace: true }), [navigate]);
-  const patch = (p: Partial<FeedSearch>) => navigate({ search: (prev: FeedSearch) => ({ ...prev, ...p }), replace: true });
+  const replace = useCallback((s: FeedSearch) => navigate({ search: s, replace: true, resetScroll: false }), [navigate]);
+  const patch = (p: Partial<FeedSearch>) => navigate({ search: (prev: FeedSearch) => ({ ...prev, ...p }), replace: true, resetScroll: false });
   const { profile, filters, rows, total, isLoading, error } = useFeed(search, replace);
   const signedIn = useSignedIn();
   const guest = signedIn === false;
