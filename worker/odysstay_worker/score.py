@@ -71,7 +71,8 @@ def _property(l: dict, reasons: list[str]) -> float:
         pts += 1
         reasons.append("+1 ruin: a full rebuild")
     else:
-        pts += 4
+        pts += 2
+        reasons.append("+2 condition not stated")
     kind = {"house": 6, "rural_house": 6, "building": 5, "apartment": 4, "mixed": 4, "other": 1, "commercial": 1, "garage": 0, "land": 0}
     k = kind.get(ptype or "", 2)
     pts += k
@@ -162,6 +163,24 @@ def _price(l: dict, reasons: list[str]) -> float:
     return min(30.0, pts)
 
 
+def _proof(l: dict) -> str:
+    """How sure we are the price is low: "strong" (well under the official area value or a court appraisal),
+    "some" (under it, or a very low price per m² for a real home), or "" (just a number)."""
+    price, sqm = l.get("price_eur"), l.get("surface_sqm")
+    lo, hi = l.get("omi_eur_m2_min"), l.get("omi_eur_m2_max")
+    gap = None
+    if price and sqm and sqm > 10 and lo and hi and l.get("property_type") in RESIDENTIAL:
+        gap = 100 * (1 - (price / sqm) / ((float(lo) + float(hi)) / 2))
+    disc = l.get("discount_pct")
+    if (gap is not None and gap >= 40) or (disc is not None and disc >= 45):
+        return "strong"
+    if (gap is not None and gap >= 20) or (disc is not None and disc >= 25):
+        return "some"
+    if price and sqm and sqm >= 50 and price / sqm <= 350 and l.get("property_type") in RESIDENTIAL:
+        return "some"
+    return ""
+
+
 # A plot, a garage or a shop can be a good price but is never a good home, so it cannot outscore one.
 CAPS = {"land": 48, "garage": 40, "commercial": 58, "other": 50}
 
@@ -192,19 +211,32 @@ def score_listing(l: dict, red_flags: int | dict[str, int], today: date | None =
             status = "closing_soon"
     if l.get("status") == "withdrawn":
         status = "withdrawn"
-    # The parts add up to 90. Stretch to 100 with a gentle curve so the spread reads naturally, then
-    # add tiny continuous terms so equal-looking deals still rank apart.
-    s = max(0.0, s) / 90.0
-    s = 100.0 * s ** 0.8
+    # The parts add up to 90; straight onto 100, no stretch (a curve here once put a third of Italy at 70+).
+    s = 100.0 * max(0.0, s) / 90.0
     if disc is not None:
         s += min(70.0, max(0.0, float(disc))) * 0.04
     if price and sqm and sqm > 10 and l.get("property_type") != "land":
         s += max(0.0, 2.0 - (price / sqm) / 500)
+    # A high score has to be earned with proof that the price is low for what it is, not just a cheap number.
+    proof = _proof(l)
+    lim, why = (97, "") if proof == "strong" else (84, "85+ needs the price checked against the area's official value or a court appraisal") \
+        if proof == "some" else (74, "75+ needs proof the price is low for the area")
+    if not sqm and l.get("property_type") != "land":
+        lim, why = min(lim, 70), "size not stated, so the price can't be judged"
+    if sev.get("high"):
+        lim, why = min(lim, 74), "a serious red flag in the documents"
+    if l.get("occupancy") == "occupied":
+        lim, why = min(lim, 70), "occupied"
+    if proof == "strong" and not l.get("photo_urls") and lim > 84:
+        lim, why = 84, "no photos yet"
+    if s > lim:
+        reasons.append(f"held at {lim}: {why}")
+        s = lim
     cap = CAPS.get(l.get("property_type") or "")
     if cap is None and l.get("condition") == "ruin":
         cap = 72
     if cap is not None and s > cap:
-        reasons.append(f"cap {cap}: {'a plot' if l.get('property_type') == 'land' else 'not a home'} scores lower than a house" if l.get("property_type") in CAPS else f"cap {cap}: a ruin needs a full rebuild")
+        reasons.append(f"held at {cap}: {'a plot' if l.get('property_type') == 'land' else 'not a home'} scores lower than a house" if l.get("property_type") in CAPS else f"held at {cap}: a ruin needs a full rebuild")
         s = cap
     if status in ("closed", "withdrawn"):
         s = 0.0
@@ -231,3 +263,36 @@ def run(db: Supa, log=print) -> int:
     n = len(changed)
     log(f"Scored {len(listings)} listings ({n} changed)")
     return n
+
+
+def preview(db: Supa, log=print) -> dict:
+    """What the score would be, without writing: the spread, by source, and the top houses."""
+    listings = db.select("listings", {"select": "id,comune,region,price_eur,surface_sqm,property_type,sale_type,discount_pct,lat,lng,condition,"
+                                      "previous_auction_failed,occupancy,deadline_at,auction_at,status,score,photo_urls,omi_eur_m2_min,omi_eur_m2_max,duplicate_of",
+                                      "is_demo": "eq.false", "status": "neq.withdrawn", "order": "id"})
+    flags: dict[str, dict[str, int]] = {}
+    for f in db.select("listing_red_flags", {"select": "listing_id,severity"}):
+        d = flags.setdefault(f["listing_id"], {})
+        d[f.get("severity") or "medium"] = d.get(f.get("severity") or "medium", 0) + 1
+    new, old = [0] * 11, [0] * 11
+    by_type: dict[str, list[int]] = {}
+    top = []
+    for l in listings:
+        s, _, st = score_listing(l, flags.get(l["id"], {}))
+        if st in ("closed", "withdrawn") or l.get("duplicate_of"):
+            continue
+        new[int(s // 10)] += 1
+        old[int((l.get("score") or 0) // 10)] += 1
+        b = by_type.setdefault(l.get("sale_type") or "?", [0, 0, 0])
+        b[0] += 1; b[1] += s >= 70; b[2] += s >= 85
+        top.append((s, l))
+    n = sum(new) or 1
+    log("old: " + " ".join(f"{i*10}s:{v}" for i, v in enumerate(old) if v))
+    log("new: " + " ".join(f"{i*10}s:{v}" for i, v in enumerate(new) if v))
+    log(f"new 70+: {sum(new[7:])} ({100*sum(new[7:])/n:.1f}%), 85+: {sum(1 for s, _ in top if s >= 85)}")
+    for k, (a, b, c) in sorted(by_type.items()):
+        log(f"  {k:18} {a:6} open, {b:5} at 70+, {c:4} at 85+")
+    top.sort(key=lambda x: -x[0])
+    for s, l in top[:25]:
+        log(f"  {s:3.0f} {l['comune']}, {l['region']} €{l.get('price_eur') or 0:,.0f} {l.get('surface_sqm') or '?'}m² {l.get('sale_type')} disc={l.get('discount_pct')} omi={l.get('omi_eur_m2_min')}-{l.get('omi_eur_m2_max')} photos={bool(l.get('photo_urls'))}")
+    return {"open": n}

@@ -130,7 +130,7 @@ def test_full_pipeline(monkeypatch):
 
     score.run(db, log=lambda *_: None)
     [l] = db.select("listings")
-    assert l["status"] == "active" and l["score"] >= 60
+    assert l["status"] == "active" and l["score"] >= 50
     assert any("unsold before" in r for r in l["score_reasons"])
     assert "-4 1 red flag (1 medium)" in l["score_reasons"]
 
@@ -158,3 +158,23 @@ def test_model_errors_mark_document(monkeypatch):
     [doc] = db.select("documents")
     assert doc["status"] == "error" and "no JSON" in doc["error"]
     assert db.select("listings") == []
+
+
+def test_high_score_needs_proof():
+    base = {"price_eur": 25000, "surface_sqm": 120, "property_type": "house", "condition": "ready", "sale_type": "sale",
+            "lat": 43.32, "lng": 11.33, "occupancy": "free", "photo_urls": ["x"]}
+    plain, reasons, _ = score.score_listing({**base, "surface_sqm": 60, "price_eur": 60000}, 0)
+    assert plain <= 74 and any(r.startswith("held at 74") for r in reasons)
+    proven, _, _ = score.score_listing({**base, "omi_eur_m2_min": 900, "omi_eur_m2_max": 1300}, 0)
+    assert proven >= 85
+    no_size, _, _ = score.score_listing({**base, "surface_sqm": None, "omi_eur_m2_min": 900, "omi_eur_m2_max": 1300}, 0)
+    assert no_size <= 70
+
+
+def test_dedupe_keeps_court_copy_and_lends_photos():
+    from odysstay_worker import dedupe
+    a = {"id": "a", "comune": "Lucca", "property_type": "house", "price_eur": 50000, "surface_sqm": 100, "photo_urls": ["p"], "hero_image_path": "p", "document": {"source_id": "immobiliare"}}
+    b = {"id": "b", "comune": "LUCCA", "property_type": "house", "price_eur": 50500, "surface_sqm": 103, "photo_urls": None, "discount_pct": 30, "document": {"source_id": "pvp"}}
+    c = {"id": "c", "comune": "Lucca", "property_type": "house", "price_eur": 50000, "surface_sqm": 70, "document": {"source_id": "immobiliare"}}
+    assert dedupe.same(a, b) and not dedupe.same(a, c)
+    assert max([a, b], key=dedupe._richness)["id"] == "b"
