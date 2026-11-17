@@ -62,7 +62,7 @@ async function pick(admin: ReturnType<typeof adminClient>, premium = false) {
   for (const days of premium ? [10, 30, 90] : [3, 10, 30]) {
     const { data, error } = await admin.from("listing_feed")
       .select("id, comune, province, region, price_eur, surface_sqm, property_type, condition, sale_type, occupancy, days_left, discount_pct, score, score_reasons, hero_image_path, red_flag_count")
-      .eq("is_demo", false).eq("is_scrap", false).eq("has_real_photo", true)
+      .eq("is_demo", false).eq("is_scrap", false).eq("has_real_photo", true).is("duplicate_of", null)
       .not("status", "in", "(closed,withdrawn)").in("sale_type", premium ? ["sale"] : ["sale", "auction_judicial", "auction_notary", "one_euro"])
       .in("property_type", premium ? ["house", "rural_house", "apartment"] : ["house", "rural_house", "apartment", "building"])
       .gte("price_eur", premium ? 150000 : 1000).lte("price_eur", premium ? 500000 : 150000).gte("score", premium ? 55 : 70)
@@ -411,7 +411,7 @@ Deno.serve(async (req) => {
   }));
   const sale = String(r.sale_type).startsWith("auction") ? "Судебные торги" : r.sale_type === "one_euro" ? "Дом за €1" : "Продажа";
   const facts = [sale, r.surface_sqm ? `${Math.round(r.surface_sqm)} м²` : null, `со всеми расходами ≈ ${eur(total)}`].filter(Boolean).join(" · ");
-  const caption = `<b>${esc(r.comune)}, ${esc(r.region)} · ${eur(r.price_eur)}</b>\n${esc(o.hook)}\n\n${esc(o.why)}${o.catch ? `\n<i>Минус: ${esc(o.catch)}</i>` : ""}\n\n${esc(facts)}`.slice(0, 1024);
+  const caption = `${r.score >= 85 ? "<i>Находка дня</i>\n" : ""}<b>${esc(r.comune)}, ${esc(r.region)} · ${eur(r.price_eur)}</b>\n${esc(o.hook)}\n\n${esc(o.why)}${o.catch ? `\n<i>Минус: ${esc(o.catch)}</i>` : ""}\n\n${esc(facts)}`.slice(0, 1024);
   const link = `${SITE}/listing/${r.id}?utm_source=tg_channel`;
   const markup = { inline_keyboard: [[{ text: "Смотреть дом", url: link }], [{ text: "5 таких домов каждую неделю", url: `${SITE}/login?utm_source=tg_channel` }]] };
   if (dry || !CHANNEL) return json({ posted: false, dry: true, channel_set: !!CHANNEL, caption, photo: photo(r.hero_image_path), link });

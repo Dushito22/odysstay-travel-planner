@@ -32,7 +32,7 @@ export function SaveSearchButton({ filters, sort, variant = "outline", compact =
     setBusy(false);
     if (error) toast.error("Could not save this search");
     else {
-      toast.success("Search saved. We'll email you new matches.");
+      toast.success(t("Search saved. Argos will message you in Telegram when a strong new house fits."));
       setOpen(false);
       setName("");
     }
@@ -50,7 +50,7 @@ export function SaveSearchButton({ filters, sort, variant = "outline", compact =
         <div className="space-y-2">
           <Label htmlFor="ss-name">Name</Label>
           <Input id="ss-name" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} placeholder="Sicily under €50k" autoFocus />
-          <p className="text-xs text-muted-foreground">We'll email you when new notices match.</p>
+          <p className="text-xs text-muted-foreground">{t("Argos will message you in Telegram when a strong new house fits.")}</p>
         </div>
         <DialogFooter><Button onClick={save} disabled={busy || !name.trim()}>Save</Button></DialogFooter>
       </DialogContent>

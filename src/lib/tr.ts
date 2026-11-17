@@ -26,7 +26,7 @@ export const RU: Record<string, string> = {
   "Found in the court appraisal report": "Найдено в отчёте судебного оценщика",
   "Base price": "Начальная цена", "Minimum offer": "Минимальная ставка", "Court appraisal": "Оценка суда", Surface: "Площадь",
   Condition: "Состояние", "Price per m²": "Цена за м²", Deposit: "Залог", "Sale date": "Дата торгов", "Offer deadline": "Срок подачи заявки",
-  "Deal score": "Оценка сделки", "Tap for reasons": "Нажмите, чтобы увидеть причины", "Offers valid from": "Ставки принимаются от",
+  "Deal score": "Оценка сделки", "Search saved. Argos will message you in Telegram when a strong new house fits.": "Поиск сохранён. Argos напишет в Telegram, когда появится сильный подходящий дом.", "Argos will message you in Telegram when a strong new house fits.": "Argos напишет в Telegram, когда появится сильный подходящий дом.", "Tap for reasons": "Нажмите, чтобы увидеть причины", "Offers valid from": "Ставки принимаются от",
   "Start a deal": "Начать сделку", "Sign in to start a deal": "Войдите, чтобы начать сделку", "Open your deal": "Открыть вашу сделку",
   "Ask the agent about this property": "Спросить Аргоса об этом объекте", "Unknown comune": "Коммуна не указана",
   "Location not stated": "Расположение не указано", "Listing not found": "Объявление не найдено",

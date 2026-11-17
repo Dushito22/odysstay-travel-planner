@@ -116,6 +116,16 @@ jobs:
             check)           python -m odysstay_worker check 2>&1 | tee run.log ;;
             retry-errors)    { python -m odysstay_worker check && python -m odysstay_worker extract --retry-errors --limit 150 && python -m odysstay_worker geocode && python -m odysstay_worker grants && python -m odysstay_worker score && python -m odysstay_worker status; } 2>&1 | tee run.log ;;
           esac
+      - name: New gems to buyers
+        # A house that just came in and scores 85+ goes to every buyer it fits, in Telegram (quiet hours apply).
+        # Runs every hour even when there was nothing else to do, so the 6 am daily haul goes out at 9.
+        if: always() && steps.secrets.outputs.ok == 'true'
+        working-directory: .
+        env:
+          DROP_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+        run: |
+          R=$(curl -sS --max-time 300 -X POST "$SUPABASE_URL/functions/v1/weekly-drop" -H "content-type: application/json" -H "x-drop-secret: $DROP_SECRET" -d '{"action":"gems"}' || true)
+          echo "::notice title=Gems::$(echo "$R" | head -c 600)"
       - name: Summary
         if: always() && steps.secrets.outputs.ok == 'true' && steps.queue.outputs.skip != 'true'
         run: |

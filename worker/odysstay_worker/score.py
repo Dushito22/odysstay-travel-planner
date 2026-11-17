@@ -174,11 +174,11 @@ def _proof(l: dict) -> str:
     disc = l.get("discount_pct")
     if gap is not None and gap > 85:
         return "suspect"  # a tenth of the area value: a share, a deposit, a rent or a typo, until a person checks
-    if (gap is not None and gap >= 45) or (disc is not None and disc >= 50):
+    if (gap is not None and gap >= 50) or (disc is not None and disc >= 50):
         return "strong"
-    if (gap is not None and gap >= 30) or (disc is not None and disc >= 35):
+    if (gap is not None and gap >= 35) or (disc is not None and disc >= 40):
         return "some"
-    if price and sqm and sqm >= 60 and price / sqm <= 250 and l.get("property_type") in RESIDENTIAL:
+    if price and sqm and sqm >= 60 and price / sqm <= 200 and l.get("property_type") in RESIDENTIAL:
         return "some"
     return ""
 
