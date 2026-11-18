@@ -51,6 +51,9 @@ export const Route = createFileRoute("/listing/$id")({
         { title }, { name: "description", content: desc },
         { property: "og:title", content: title }, { property: "og:description", content: desc },
         { property: "og:type", content: "article" }, { name: "twitter:card", content: "summary_large_image" },
+        { property: "og:image", content: `https://odysstay.xyz/api/og/${l.id}.png` }, { property: "og:image:width", content: "1200" },
+        { property: "og:image:height", content: "630" }, { name: "twitter:image", content: `https://odysstay.xyz/api/og/${l.id}.png` },
+        { property: "og:site_name", content: "Odysstay" },
       ],
     };
   },
