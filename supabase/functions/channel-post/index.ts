@@ -132,7 +132,25 @@ async function send(chat: string, photoUrl: string | null, caption: string, mark
   const reply = replyTo ? { reply_parameters: { message_id: replyTo, allow_sending_without_reply: true } } : {};
   const payload = photoUrl ? { chat_id: chat, photo: photoUrl, caption, parse_mode: "HTML", reply_markup: markup, ...reply }
     : { chat_id: chat, text: caption, parse_mode: "HTML", reply_markup: markup, link_preview_options: { is_disabled: true }, ...reply };
-  return await fetch(`https://api.telegram.org/bot${BOT}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) }).then((x) => x.json());
+  const res = await fetch(`https://api.telegram.org/bot${BOT}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) }).then((x) => x.json());
+  if (res.ok || !photoUrl) return res;
+  // Telegram couldn't fetch the photo (portals block it): fetch it ourselves and upload; else post the text alone.
+  const img = await fetch(photoUrl, { headers: { "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.0 Safari/605.1.15", referer: "https://www.immobiliare.it/" } }).catch(() => null);
+  const buf = img?.ok ? new Uint8Array(await img.arrayBuffer()) : null;
+  if (buf && buf.byteLength > 2000) {
+    const form = new FormData();
+    form.append("chat_id", chat);
+    form.append("caption", caption);
+    form.append("parse_mode", "HTML");
+    form.append("reply_markup", JSON.stringify(markup));
+    if (replyTo) form.append("reply_parameters", JSON.stringify({ message_id: replyTo, allow_sending_without_reply: true }));
+    form.append("photo", new Blob([buf.slice().buffer as ArrayBuffer], { type: img!.headers.get("content-type") ?? "image/jpeg" }), "house.jpg");
+    const up = await fetch(`https://api.telegram.org/bot${BOT}/sendPhoto`, { method: "POST", body: form }).then((x) => x.json());
+    if (up.ok) return up;
+    console.error("photo upload", up.description);
+  }
+  return await fetch(`https://api.telegram.org/bot${BOT}/sendMessage`, { method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ chat_id: chat, text: caption, parse_mode: "HTML", reply_markup: markup, link_preview_options: { is_disabled: true }, ...reply }) }).then((x) => x.json());
 }
 
 const TYPE_RU: Record<string, string> = { house: "Дом", rural_house: "Сельский дом", apartment: "Квартира", building: "Здание целиком" };
