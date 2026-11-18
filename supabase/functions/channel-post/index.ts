@@ -247,6 +247,12 @@ Return JSON only: {"scene": "in English, one sentence: a typical, generic landsc
   return null;
 }
 
+/** Record a post; a refused write is logged, never silent (a lost "reveal" once re-posted the answer every morning). */
+async function logPost(admin: ReturnType<typeof adminClient>, row: Row) {
+  const { error } = await admin.from("channel_posts").insert(row);
+  if (error) console.error("channel_posts insert", row.kind, error.message);
+}
+
 async function sendPng(chat: string, png: Uint8Array, caption: string, markup: unknown) {
   caption = `${caption.slice(0, 960).trimEnd()}\n\nArgos в Telegram: @odysstay_bot\nhttps://odysstay.xyz/`;
   const form = new FormData();
@@ -429,7 +435,7 @@ Deno.serve(async (req) => {
         if (dry || !CHANNEL) return json({ posted: false, dry: true, kind: "reveal", caption });
         const res = await send(CHANNEL, null, caption, markup, replyTo);
         if (!res.ok) return json({ posted: false, error: res.description ?? "telegram refused" }, 502);
-        await admin.from("channel_posts").insert({ listing_id: r.id, kind: "reveal", message_id: res.result?.message_id ?? null, text: caption });
+        await logPost(admin, { listing_id: r.id, kind: "reveal", message_id: res.result?.message_id ?? null, text: caption });
         return json({ posted: true, kind: "reveal" });
       }
       return null; // no guess pending: a normal find
@@ -441,7 +447,7 @@ Deno.serve(async (req) => {
         if (dry || !CHANNEL) return json({ posted: false, dry: true, kind: "top", caption: tp.caption, photo: tp.photoUrl });
         const res = await send(CHANNEL, tp.photoUrl, tp.caption, mk);
         if (!res.ok) return json({ posted: false, error: res.description ?? "telegram refused" }, 502);
-        await admin.from("channel_posts").insert({ listing_id: null, kind: "top", message_id: res.result?.message_id ?? null, text: tp.caption });
+        await logPost(admin, { listing_id: null, kind: "top", message_id: res.result?.message_id ?? null, text: tp.caption });
         return json({ posted: true, kind: "top", message_id: res.result?.message_id });
       }
       if (kind === "top") return null;
@@ -454,7 +460,7 @@ Deno.serve(async (req) => {
         if (dry || !CHANNEL) return json({ posted: false, dry: true, kind: "story", caption: st.caption, photo: photo(st.h.hero_image_path) });
         const res = await send(CHANNEL, photo(st.h.hero_image_path), st.caption, mk);
         if (!res.ok) return json({ posted: false, error: res.description ?? "telegram refused" }, 502);
-        await admin.from("channel_posts").insert({ listing_id: st.h.id, kind: "story", message_id: res.result?.message_id ?? null, text: st.caption });
+        await logPost(admin, { listing_id: st.h.id, kind: "story", message_id: res.result?.message_id ?? null, text: st.caption });
         return json({ posted: true, kind: "story", message_id: res.result?.message_id });
       }
       kind = "region";
@@ -466,7 +472,7 @@ Deno.serve(async (req) => {
         if (dry || !CHANNEL || !pp.png) return json({ posted: false, dry: true, kind: "poster", caption: pp.caption, prompt: pp.prompt });
         const res = await sendPng(CHANNEL, pp.png, pp.caption, mk);
         if (!res.ok) return json({ posted: false, error: res.description ?? "telegram refused" }, 502);
-        await admin.from("channel_posts").insert({ listing_id: null, kind: "poster", message_id: res.result?.message_id ?? null, text: pp.caption });
+        await logPost(admin, { listing_id: null, kind: "poster", message_id: res.result?.message_id ?? null, text: pp.caption });
         return json({ posted: true, kind: "poster", message_id: res.result?.message_id });
       }
       kind = "region";
@@ -479,7 +485,7 @@ Deno.serve(async (req) => {
         if (!res.ok) return json({ posted: false, error: res.description ?? "telegram refused" }, 502);
         await admin.from("channel_queue").update({ posted_at: new Date().toISOString(), message_id: res.result?.message_id ?? null }).eq("id", qd.q.id);
         if (qd.art) await admin.from("channel_art").update({ used_at: new Date().toISOString() }).eq("id", qd.art.id);
-        await admin.from("channel_posts").insert({ listing_id: null, kind: "queue", message_id: res.result?.message_id ?? null, text: qd.text });
+        await logPost(admin, { listing_id: null, kind: "queue", message_id: res.result?.message_id ?? null, text: qd.text });
         return json({ posted: true, kind: "queue", message_id: res.result?.message_id });
       }
       if (kind === "queue-am") return null;
@@ -509,7 +515,7 @@ Deno.serve(async (req) => {
     if (dry || !CHANNEL) return json({ posted: false, dry: true, kind: postKind, caption, photo: photoUrl });
     const res = await send(CHANNEL, photoUrl, caption, markup);
     if (!res.ok) return json({ posted: false, error: res.description ?? "telegram refused" }, 502);
-    await admin.from("channel_posts").insert({ listing_id: listingId, kind: postKind, message_id: res.result?.message_id ?? null, text: caption });
+    await logPost(admin, { listing_id: listingId, kind: postKind, message_id: res.result?.message_id ?? null, text: caption });
     return json({ posted: true, kind: postKind, message_id: res.result?.message_id });
   };
   if (["morning", "evening", "guess", "word", "region", "top", "story", "poster", "queue-eve"].includes(kindIn)) {
@@ -532,7 +538,7 @@ Deno.serve(async (req) => {
     if (dry || !CHANNEL) return json({ posted: false, dry: true, kind: "light", channel_set: !!CHANNEL, caption, photo: h ? photo(h.hero_image_path) : null });
     const res = await send(CHANNEL, h ? photo(h.hero_image_path) : null, caption, markup);
     if (!res.ok) return json({ posted: false, error: res.description ?? "telegram refused" }, 502);
-    await admin.from("channel_posts").insert({ listing_id: null, kind: "light", message_id: res.result?.message_id ?? null, text: caption });
+    await logPost(admin, { listing_id: null, kind: "light", message_id: res.result?.message_id ?? null, text: caption });
     return json({ posted: true, kind: "light", message_id: res.result?.message_id });
   }
   const total = allIn(r);
@@ -549,6 +555,6 @@ Deno.serve(async (req) => {
   if (dry || !CHANNEL) return json({ posted: false, dry: true, channel_set: !!CHANNEL, caption, photo: photo(r.hero_image_path), link });
   const res = await send(CHANNEL, photo(r.hero_image_path), caption, markup);
   if (!res.ok) return json({ posted: false, error: res.description ?? "telegram refused" }, 502);
-  await admin.from("channel_posts").insert({ listing_id: r.id, kind: "house", message_id: res.result?.message_id ?? null, text: caption });
+  await logPost(admin, { listing_id: r.id, kind: "house", message_id: res.result?.message_id ?? null, text: caption });
   return json({ posted: true, listing: r.id, message_id: res.result?.message_id });
 });
