@@ -8,15 +8,15 @@ import { BANDS, SEO_REGIONS, seoPage, type SeoPage } from "@/lib/seo-pages";
 
 async function load(p: SeoPage) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let q: any = supabase.from("listing_feed").select(FEED_COLS, { count: "planned" })
+  let q: any = supabase.from("listing_feed").select(FEED_COLS)
     .eq("is_demo", false).eq("is_scrap", false).is("duplicate_of", null).not("status", "in", "(closed,withdrawn)");
   if (p.region) q = q.eq("region", p.region);
   if (p.kind === "auction") q = q.in("sale_type", ["auction_judicial", "auction_notary"]).eq("has_real_photo", true);
   else if (p.kind === "one_euro") q = q.eq("sale_type", "one_euro");
   else q = q.eq("sale_type", "sale").eq("has_real_photo", true).in("property_type", ["house", "rural_house", "apartment", "building"]).gte("price_eur", 5000);
   if (p.max) q = q.lte("price_eur", p.max);
-  const { data, count } = await q.order("score", { ascending: false, nullsFirst: false }).limit(24);
-  return { rows: (data ?? []) as FeedRow[], count: count ?? (data?.length ?? 0) };
+  const { data } = await q.order("score", { ascending: false, nullsFirst: false }).limit(24);
+  return { rows: (data ?? []) as FeedRow[] };
 }
 
 export const Route = createFileRoute("/houses/$slug")({
@@ -29,7 +29,7 @@ export const Route = createFileRoute("/houses/$slug")({
   head: ({ loaderData }) => {
     const d = loaderData;
     if (!d) return { meta: [{ title: "Houses in Italy | Odysstay" }] };
-    const desc = `${d.count.toLocaleString("en-US")} listings. ${d.p.intro}`.slice(0, 300);
+    const desc = d.p.intro.slice(0, 300);
     return {
       meta: [
         { title: `${d.p.title} | Odysstay` }, { name: "description", content: desc },
@@ -55,7 +55,7 @@ function discoverHref(p: SeoPage) {
 }
 
 function Page() {
-  const { p, rows, count } = Route.useLoaderData();
+  const { p, rows } = Route.useLoaderData();
   const regionSlug = SEO_REGIONS.find((r) => r.region === p.region)?.slug;
   const cheapest = rows.reduce<number | null>((m, r) => (r.price_eur && (m == null || r.price_eur < m) ? r.price_eur : m), null);
   return (
@@ -68,7 +68,7 @@ function Page() {
         <h1 className="type-h2 mt-3 max-w-3xl">{p.h1}</h1>
         <p className="mt-4 max-w-2xl text-[17px] font-light leading-relaxed text-foreground/75">{p.intro}</p>
         <p className="mt-3 text-[15px] text-foreground/60">
-          {count.toLocaleString("en-US")} {count === 1 ? "listing" : "listings"} open now{cheapest ? `, from €${Math.round(cheapest).toLocaleString("en-US")}` : ""}. Best deals first.
+          {rows.length >= 24 ? "The 24 best deals open now" : `${rows.length} ${rows.length === 1 ? "listing" : "listings"} open now`}{cheapest ? `, from €${Math.round(cheapest).toLocaleString("en-US")}` : ""}. Updated daily.
         </p>
         {rows.length ? (
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -79,7 +79,7 @@ function Page() {
         )}
         <div className="mt-10">
           <a href={discoverHref(p)} className="inline-flex h-11 items-center rounded-full bg-primary px-6 text-sm font-medium text-primary-foreground">
-            See all {count > rows.length ? count.toLocaleString("en-US") : ""} with filters and the map
+            See them all with filters and the map
           </a>
         </div>
         <section className="mt-14 border-t border-foreground/10 pt-8">
