@@ -1,8 +1,9 @@
-// Our public Telegram channel, one post a day. Most days a strong new find: photo, why it's worth a look,
-// the catch and what it really costs, never the same house twice. When there's no fresh find, and every
-// third day anyway, a light post: an Italian saying with a wry line and a nudge to the site, over a pretty
-// house photo. The channel is TELEGRAM_CHANNEL_ID, or whichever channel the bot was last made admin of.
-// Called daily by .github/workflows/channel-post.yml.
+// Our public Telegram channel. With kind "auto" (the schedule) it keeps a day of three posts, Moscow time, and never
+// posts at night: ~10:00 a find (or the answer to last night's price game), ~14:00 something dreamy (a short story,
+// a retro poster, a region postcard, a word, a saying, or a hand-written post with art), ~19:00 the price game every
+// other day, otherwise another dreamy post of a different kind. A slot posts once; a late scheduler just posts late.
+// The channel is TELEGRAM_CHANNEL_ID, or whichever channel the bot was last made admin of.
+// Called every 30 minutes by .github/workflows/channel-post.yml.
 import { adminClient, callClaude, corsHeaders } from "../_shared/runtime.ts";
 
 const BOT = Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "";
@@ -161,6 +162,102 @@ async function queued(admin: ReturnType<typeof adminClient>, slot: string) {
 }
 const SALE_FILTER = ["sale", "auction_judicial", "auction_notary", "one_euro"];
 
+// ---- The day's rhythm (Moscow time: most of the audience) ----
+const MSK = 3;
+function moscowNow() {
+  const d = new Date(Date.now() + MSK * 36e5);
+  return { h: d.getUTCHours() + d.getUTCMinutes() / 60, date: d.toISOString().slice(0, 10), day: Math.floor(d.getTime() / 864e5) };
+}
+const SLOTS = { am: [9.5, 13], mid: [13, 17.5], eve: [18, 22] } as const;
+type Slot = keyof typeof SLOTS;
+const DREAMY = ["story", "poster", "region", "queue", "word", "light"] as const;
+
+/** What the schedule should post right now, or why not. */
+async function autoKind(admin: ReturnType<typeof adminClient>): Promise<{ kind?: string; skip?: string; slot?: Slot }> {
+  const now = moscowNow();
+  if (now.h < 9 || now.h >= 22) return { skip: "night in Moscow" };
+  const slot = (Object.keys(SLOTS) as Slot[]).find((k) => now.h >= SLOTS[k][0] && now.h < SLOTS[k][1]);
+  if (!slot) return { skip: "between slots" };
+  const from = new Date(Date.parse(`${now.date}T00:00:00Z`) - MSK * 36e5 + SLOTS[slot][0] * 36e5 - 30 * 6e4).toISOString();
+  const { data: recent } = await admin.from("channel_posts").select("kind, posted_at").gte("posted_at", new Date(Date.now() - 3 * 864e5).toISOString()).order("posted_at", { ascending: false });
+  const rows = (recent ?? []) as Row[];
+  if (rows.some((r) => String(r.posted_at) >= from)) return { skip: `${slot} already posted` };
+  if (slot === "am") return { kind: "morning", slot };
+  const lastGame = rows.find((r) => r.kind === "guess");
+  const gameDue = slot === "eve" && now.day % 2 === 0 && (!lastGame || Date.now() - Date.parse(String(lastGame.posted_at)) > 40 * 36e5);
+  if (gameDue) return { kind: "guess", slot };
+  // Dreamy: rotate, never the same kind as the last two dreamy posts.
+  const used = rows.filter((r) => (DREAMY as readonly string[]).includes(String(r.kind))).slice(0, 2).map((r) => String(r.kind));
+  const start = (now.day * 2 + (slot === "eve" ? 1 : 0)) % DREAMY.length;
+  for (let i = 0; i < DREAMY.length; i++) {
+    const k = DREAMY[(start + i) % DREAMY.length]!;
+    if (!used.includes(k)) return { kind: k, slot };
+  }
+  return { kind: "region", slot };
+}
+
+/** A short scene, second person, in a real town where the site has a real house. */
+async function storyPost(admin: ReturnType<typeof adminClient>, recent: string[]) {
+  const h = await prettyHouse(admin);
+  if (!h) return null;
+  const themes = ["утро и кофе на площади", "рынок по субботам", "вечерняя passeggiata", "первая зима в каменном доме", "сосед приносит вино из своего погреба", "ремонт своими руками и мастер, который всё знает", "воскресный обед, который длится до вечера", "сбор оливок в ноябре", "праздник покровителя городка", "запах моря и белья на верёвках"];
+  const theme = themes[Math.floor(Math.random() * themes.length)];
+  const o = await askJson(`You write a short story post for Odysstay's Russian-language Telegram channel, for people dreaming of a house in Italy. ${STYLE}
+Second person ("вы"), present tense, a scene of an ordinary day after you bought a house in the given town. Use only safe, general, true-to-Italy detail (no invented landmarks, shops or people's names; no numbers). 5 to 7 short sentences, specific and sensory, then one quiet closing line that ties back to finding such a house. Not a sales pitch. Don't repeat recent openings.
+Return JSON only: {"title": "2 to 5 words", "text": "the story"}`,
+    JSON.stringify({ town: h.comune, region: h.region, theme, recent_openings: recent.slice(0, 8) }), 900);
+  if (!o.text) throw new Error("story not written");
+  const caption = `<b>${esc(String(o.title ?? h.comune))}</b>\n\n${esc(String(o.text))}\n\nНа фото: настоящий дом, ${esc(h.comune)}, ${esc(h.region)} · ${eur(h.price_eur)}`.slice(0, 1024);
+  return { caption, h };
+}
+
+/** A retro travel poster of a region, drawn for us (OpenAI images, ~5 cents), with a two-line caption. */
+async function posterPost(admin: ReturnType<typeof adminClient>, recent: string[], dry: boolean) {
+  const { data } = await admin.from("listing_feed").select("region, comune").eq("is_demo", false).eq("has_real_photo", true)
+    .not("status", "in", "(closed,withdrawn)").gte("score", 70).limit(400);
+  const regions = [...new Set((data ?? []).map((x) => String(x.region)).filter((r) => REG_RU[r]))];
+  const fresh = regions.filter((r) => !recent.some((t) => t.includes(REG_RU[r]!)));
+  const region = (fresh.length ? fresh : regions)[Math.floor(Math.random() * Math.max(1, (fresh.length ? fresh : regions).length))];
+  if (!region) return null;
+  const o = await askJson(`You plan a vintage travel poster and its caption for Odysstay's Russian-language Telegram channel. ${STYLE}
+Return JSON only: {"scene": "in English, one sentence: a typical, generic landscape or village scene of this Italian region, no famous landmarks, no people's faces, no brands", "title": "the region's name in Italian, as printed on the poster", "line": "Russian, 2 short sentences: the feeling of this place and that there are houses there on the site"}`,
+    JSON.stringify({ region }), 400);
+  if (!o.scene || !o.line) throw new Error("poster not planned");
+  const prompt = `A 1950s Italian travel poster, flat colour lithograph with visible paper grain, a limited palette of azure blue, olive green, warm ochre and cream. ${o.scene} Bold elegant hand-lettered title at the top reading "${String(o.title ?? region).toUpperCase()}" and nothing else written anywhere except a small "ODYSSTAY" at the bottom. Original artwork, not in the style of any specific artist.`;
+  const caption = `<b>${esc(String(o.title ?? region))}</b>\n\n${esc(String(o.line))}`;
+  if (dry) return { caption, region, png: null as Uint8Array | null, prompt };
+  const key = Deno.env.get("OPENAI_API_KEY");
+  if (!key) return null;
+  for (const model of [...new Set([Deno.env.get("OPENAI_IMAGE_MODEL"), "gpt-image-2", "gpt-image-1.5", "gpt-image-1"].filter((m): m is string => !!m))]) {
+    const res = await fetch("https://api.openai.com/v1/images/generations", {
+      method: "POST", headers: { Authorization: `Bearer ${key}`, "content-type": "application/json" },
+      body: JSON.stringify({ model, prompt, size: "1024x1536", quality: "medium", n: 1 }),
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      console.error("poster", model, res.status, t.slice(0, 300));
+      if (res.status === 404 || /does not exist|not found|do not have access|model_not_found/i.test(t)) continue;
+      return null;
+    }
+    const j = await res.json();
+    const b64 = j?.data?.[0]?.b64_json as string | undefined;
+    if (!b64) return null;
+    return { caption, region, png: Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)), prompt };
+  }
+  return null;
+}
+
+async function sendPng(chat: string, png: Uint8Array, caption: string, markup: unknown) {
+  caption = `${caption.slice(0, 960).trimEnd()}\n\nArgos в Telegram: @odysstay_bot\nhttps://odysstay.xyz/`;
+  const form = new FormData();
+  form.append("chat_id", chat);
+  form.append("caption", caption);
+  form.append("parse_mode", "HTML");
+  form.append("reply_markup", JSON.stringify(markup));
+  form.append("photo", new Blob([png.slice().buffer as ArrayBuffer], { type: "image/png" }), "odysstay-poster.png");
+  return await fetch(`https://api.telegram.org/bot${BOT}/sendPhoto`, { method: "POST", body: form }).then((x) => x.json());
+}
+
 async function askJson(system: string, user: string, tokens = 600): Promise<Row> {
   const text = await callClaude(system, [{ role: "user", content: user }], tokens);
   const m = text.match(/\{[\s\S]*\}/);
@@ -306,7 +403,18 @@ Deno.serve(async (req) => {
     }
     return json({ fixed });
   }
-  const kindIn = String(body.kind ?? "");
+  let kindIn = String(body.kind ?? "");
+  if (kindIn === "auto") {
+    const a = await autoKind(admin);
+    if (!a.kind) return json({ posted: false, skipped: a.skip });
+    kindIn = a.kind;
+    if (kindIn === "queue") kindIn = "queue-eve";
+  }
+  // Anything automatic stays out of the night; a person can still post by hand with a kind.
+  if (!dry && body.kind === "morning" || !dry && body.kind === "evening") {
+    const h = moscowNow().h;
+    if (h < 9 || h >= 22) return json({ posted: false, skipped: "night in Moscow" });
+  }
   const day = Math.floor(Date.now() / 864e5);
   const lastTexts = (last ?? []).map((p) => String(p.text ?? "").split("\n")[0]);
   const home = { text: "Все дома в Италии", url: feedUrl() };
@@ -339,6 +447,30 @@ Deno.serve(async (req) => {
       if (kind === "top") return null;
     }
     if (kind === "evening" && day % 2 === 0) kind = "queue-eve"; // hand-written posts with art on even days
+    if (kind === "story") {
+      const st = await storyPost(admin, (last ?? []).filter((p) => p.kind === "story").map((p) => String(p.text ?? "").split("\n").slice(2, 3).join("")));
+      if (st) {
+        const mk = { inline_keyboard: [[{ text: "Смотреть этот дом", url: `${SITE}/listing/${st.h.id}?utm_source=tg_channel` }], [home]] };
+        if (dry || !CHANNEL) return json({ posted: false, dry: true, kind: "story", caption: st.caption, photo: photo(st.h.hero_image_path) });
+        const res = await send(CHANNEL, photo(st.h.hero_image_path), st.caption, mk);
+        if (!res.ok) return json({ posted: false, error: res.description ?? "telegram refused" }, 502);
+        await admin.from("channel_posts").insert({ listing_id: st.h.id, kind: "story", message_id: res.result?.message_id ?? null, text: st.caption });
+        return json({ posted: true, kind: "story", message_id: res.result?.message_id });
+      }
+      kind = "region";
+    }
+    if (kind === "poster") {
+      const pp = await posterPost(admin, lastTexts, dry).catch((e) => { console.error("poster", e); return null; });
+      if (pp) {
+        const mk = { inline_keyboard: [[{ text: `Дома: ${REG_RU[pp.region] ?? pp.region}`, url: feedUrl(pp.region) }], [home]] };
+        if (dry || !CHANNEL || !pp.png) return json({ posted: false, dry: true, kind: "poster", caption: pp.caption, prompt: pp.prompt });
+        const res = await sendPng(CHANNEL, pp.png, pp.caption, mk);
+        if (!res.ok) return json({ posted: false, error: res.description ?? "telegram refused" }, 502);
+        await admin.from("channel_posts").insert({ listing_id: null, kind: "poster", message_id: res.result?.message_id ?? null, text: pp.caption });
+        return json({ posted: true, kind: "poster", message_id: res.result?.message_id });
+      }
+      kind = "region";
+    }
     if (kind === "queue-am" || kind === "queue-eve") {
       const qd = await queued(admin, kind === "queue-am" ? "am" : "eve");
       if (qd) {
@@ -380,11 +512,11 @@ Deno.serve(async (req) => {
     await admin.from("channel_posts").insert({ listing_id: listingId, kind: postKind, message_id: res.result?.message_id ?? null, text: caption });
     return json({ posted: true, kind: postKind, message_id: res.result?.message_id });
   };
-  if (["morning", "evening", "guess", "word", "region", "top"].includes(kindIn)) {
+  if (["morning", "evening", "guess", "word", "region", "top", "story", "poster", "queue-eve"].includes(kindIn)) {
     const out = await extra().catch((e) => json({ posted: false, error: String(e?.message ?? e) }, 500));
     if (out) return out;
   }
-  const lightDue = body.kind === "light" || kindIn === "evening" || (!["house", "morning"].includes(kindIn) && (last ?? []).slice(0, 2).every((p) => p.kind === "house") && (last ?? []).length >= 2);
+  const lightDue = body.kind === "light" || kindIn === "light" || kindIn === "evening" || (!["house", "morning"].includes(kindIn) && (last ?? []).slice(0, 2).every((p) => p.kind === "house") && (last ?? []).length >= 2);
   const day2 = Math.floor(Date.now() / 864e5);
   // every third find is a better house, not a project: 150 to 500 thousand
   const r = lightDue ? null : ((day2 % 3 === 2 ? await pick(admin, true) : null) ?? await pick(admin));

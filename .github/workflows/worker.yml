@@ -8,7 +8,7 @@ name: Worker
 on:
   schedule:
     - cron: "17 5 * * *"   # daily 05:17 UTC: court sales, notary sales, €1 towns, map, scores (no AI)
-    - cron: "23 6-22 * * *" # hourly: read the documents of listings someone starred (no AI); exits at once if none
+    - cron: "3,23,43 4-21 * * *" # every 20 min (GitHub drops many): new feeder ads, starred listings' documents, gem alerts; exits at once if nothing
   workflow_dispatch:
     inputs:
       task:
