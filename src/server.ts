@@ -74,6 +74,7 @@ export default {
         return await ogCard(request, og[1]!);
       } catch (e) {
         console.error("og card", e);
+        if (new URL(request.url).searchParams.has("debug")) return new Response(String((e as Error)?.stack ?? e), { status: 500 });
         return Response.redirect(new URL("/og-default.jpg", request.url).toString(), 302);
       }
     }
