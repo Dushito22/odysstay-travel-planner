@@ -29,6 +29,7 @@ import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authentic
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedSavedRouteImport } from './routes/_authenticated/saved'
 import { Route as AuthenticatedVaultRouteImport } from './routes/_authenticated/vault'
+import { Route as GoSrcRouteImport } from './routes/go.$src'
 import { Route as GuideIndexRouteImport } from './routes/guide.index'
 import { Route as GuideSlugRouteImport } from './routes/guide.$slug'
 import { Route as ListingIdRouteImport } from './routes/listing.$id'
@@ -134,6 +135,11 @@ const AuthenticatedVaultRoute = AuthenticatedVaultRouteImport.update({
   path: '/vault',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const GoSrcRoute = GoSrcRouteImport.update({
+  id: '/go/$src',
+  path: '/go/$src',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GuideIndexRoute = GuideIndexRouteImport.update({
   id: '/guide/',
   path: '/guide/',
@@ -180,6 +186,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AuthenticatedProfileRoute
   '/saved': typeof AuthenticatedSavedRoute
   '/vault': typeof AuthenticatedVaultRoute
+  '/go/$src': typeof GoSrcRoute
   '/guide/$slug': typeof GuideSlugRoute
   '/listing/$id': typeof ListingIdRoute
   '/guide/': typeof GuideIndexRoute
@@ -206,6 +213,7 @@ export interface FileRoutesByTo {
   '/profile': typeof AuthenticatedProfileRoute
   '/saved': typeof AuthenticatedSavedRoute
   '/vault': typeof AuthenticatedVaultRoute
+  '/go/$src': typeof GoSrcRoute
   '/guide/$slug': typeof GuideSlugRoute
   '/listing/$id': typeof ListingIdRoute
   '/guide': typeof GuideIndexRoute
@@ -234,6 +242,7 @@ export interface FileRoutesById {
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/saved': typeof AuthenticatedSavedRoute
   '/_authenticated/vault': typeof AuthenticatedVaultRoute
+  '/go/$src': typeof GoSrcRoute
   '/guide/$slug': typeof GuideSlugRoute
   '/listing/$id': typeof ListingIdRoute
   '/guide/': typeof GuideIndexRoute
@@ -262,6 +271,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/saved'
     | '/vault'
+    | '/go/$src'
     | '/guide/$slug'
     | '/listing/$id'
     | '/guide/'
@@ -288,6 +298,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/saved'
     | '/vault'
+    | '/go/$src'
     | '/guide/$slug'
     | '/listing/$id'
     | '/guide'
@@ -315,6 +326,7 @@ export interface FileRouteTypes {
     | '/_authenticated/profile'
     | '/_authenticated/saved'
     | '/_authenticated/vault'
+    | '/go/$src'
     | '/guide/$slug'
     | '/listing/$id'
     | '/guide/'
@@ -335,6 +347,7 @@ export interface RootRouteChildren {
   StyleguideRoute: typeof StyleguideRoute
   TermsRoute: typeof TermsRoute
   TgRoute: typeof TgRoute
+  GoSrcRoute: typeof GoSrcRoute
   GuideSlugRoute: typeof GuideSlugRoute
   ListingIdRoute: typeof ListingIdRoute
   GuideIndexRoute: typeof GuideIndexRoute
@@ -482,6 +495,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVaultRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/go/$src': {
+      id: '/go/$src'
+      path: '/go/$src'
+      fullPath: '/go/$src'
+      preLoaderRoute: typeof GoSrcRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/guide/': {
       id: '/guide/'
       path: '/guide'
@@ -562,6 +582,7 @@ const rootRouteChildren: RootRouteChildren = {
   StyleguideRoute: StyleguideRoute,
   TermsRoute: TermsRoute,
   TgRoute: TgRoute,
+  GoSrcRoute: GoSrcRoute,
   GuideSlugRoute: GuideSlugRoute,
   ListingIdRoute: ListingIdRoute,
   GuideIndexRoute: GuideIndexRoute,

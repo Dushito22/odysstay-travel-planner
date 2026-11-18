@@ -17,7 +17,7 @@ type Overview = {
   stats: Record<string, number>;
   waitlist: { plan: string; billing: string; created_at: string; email: string }[];
   purchases: { id: string; kind: string; status: string; payment_ref: string | null; paid_note: string | null; paid_claimed_at: string | null; note: string | null; created_at: string; listing_id: string | null; email: string; listing_title: string | null; listing_price: number | null }[];
-  sources: { source: string; n: number }[];
+  sources: { source: string; n: number; visits?: number; deals?: number }[];
   users: { email: string; signup_source: string | null; created_at: string; last_sign_in_at: string | null; deals: number; saved: number }[];
 };
 
@@ -102,8 +102,8 @@ function AdminPage() {
         ))}
       </Section>
 
-      <Section title="Where sign-ups come from" empty="No sign-ups yet." rows={o.sources?.length ?? 0}>
-        {(o.sources ?? []).map((x) => <Row key={x.source} a={x.source} b={`${x.n} people`} c="" />)}
+      <Section title="Channels: visits, sign-ups, deals" empty="No sign-ups yet." rows={o.sources?.length ?? 0}>
+        {(o.sources ?? []).map((x) => <Row key={x.source} a={x.source} b={`${x.visits ?? 0} visits (30 days) · ${x.n} sign-ups · ${x.deals ?? 0} deals`} c={x.visits ? `${Math.round((100 * x.n) / x.visits)}% sign up` : ""} />)}
       </Section>
 
       <Section title="Latest users" empty="No users." rows={o.users.length}>

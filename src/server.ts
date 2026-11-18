@@ -65,7 +65,18 @@ async function feedProxy(request: Request) {
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
-    if (new URL(request.url).pathname === "/api/feed") return feedProxy(request);
+    const path = new URL(request.url).pathname;
+    if (path === "/api/feed") return feedProxy(request);
+    const og = path.match(/^\/api\/og\/([0-9a-f-]{36})(?:\.png)?$/);
+    if (og) {
+      try {
+        const { ogCard } = await import("./lib/og-card");
+        return await ogCard(request, og[1]!);
+      } catch (e) {
+        console.error("og card", e);
+        return Response.redirect(new URL("/og-default.jpg", request.url).toString(), 302);
+      }
+    }
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
